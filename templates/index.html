@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Welcome | Wide Mind Tutorials{% endblock %}
+{% block content %}
+<section class="hero">
+  <div style="
+    background:#fff3cd;
+    padding:12px;
+    border-radius:8px;
+    margin-bottom:15px;
+    font-weight:bold;
+">
+🚀 DEMO PROJECT — Educational platform with authentication, payments & protected content
+<p>
+<b>Demo Login:</b><br>
+Email: demo@widemind.test<br>
+Password: demopassword
+</p>
+</div>
+    <h1>Learn Smarter</h1>
+    <h2>Learn Deeper</h2>
+    <p class="hero-description">
+        Wide Mind Tutorials provides structured, psychology-focused learning materials.
+    </p>
+    <div class="cta-buttons">
+        <a href="/register-page" class="btn">Get Started</a>
+        <a href="/login-page" class="btn secondary">Login</a>
+    </div>
+</section>
+{% endblock %}

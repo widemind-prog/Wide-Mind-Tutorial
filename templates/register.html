@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Register | Wide Mind Tutorials{% endblock %}
+{% block content %}
+<section class="register-section">
+    <h2>Create Account</h2>
+    <form id="register-form">
+        <input type="text" name="name" placeholder="Full Name" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <select name="department" required>
+            <option value="Psychology">Psychology</option>
+        </select>
+        <select name="level" required>
+            <option value="400">400</option>
+        </select>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit" class="btn">Register</button>
+    </form>
+    <p id="register-msg"></p>
+    <p>Already registered? <a href="/login-page">Back to Login</a></p>
+</section>
+<script src="/static/js/register.js"></script>
+{% endblock %}

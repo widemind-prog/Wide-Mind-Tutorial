@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>{{ course.course_code }} - {{ course.course_title }}</h2>
+
+{% if audio_id %}
+<audio
+  id="audioPlayer"
+  controls
+  controlsList="nodownload"
+  src="/stream/audio/{{ audio_id }}">
+</audio>
+{% endif %}
+
+{% if pdf_id %}
+<a class="btn" href="/course/{{ course.id }}/pdf">
+  Open PDF
+</a>
+{% endif %}
+
+<script src="/static/js/course.js"></script>
+{% endblock %}

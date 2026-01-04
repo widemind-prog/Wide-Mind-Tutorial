@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Account | Wide Mind Tutorials{% endblock %}
+
+{% block content %}
+<section class="account-section">
+
+    <!-- USER INFO -->
+    <div class="account-box">
+        <img src="/static/images/avatar.png" alt="Profile Avatar" class="profile-avatar">
+        <h2 id="username">Loading...</h2>
+        <p>Department: <span id="department">Loading...</span></p>
+        <p>Level: <span id="level">Loading...</span></p>
+    </div>
+
+        <button id="pay-btn" class="btn" style="display:none;">
+            Pay Now
+        </button>
+    </div>
+
+    <!-- COURSES -->
+    <div class="courses-box">
+        <h3>Your Courses</h3>
+        <ul id="courses">
+            <li>Loading courses...</li>
+        </ul>
+    </div>
+
+    <button id="logout-btn" class="btn">Logout</button>
+
+</section>
+
+<script src="/static/js/account.js"></script>
+{% endblock %}

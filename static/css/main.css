@@ -1,0 +1,369 @@
+/* ==========================
+   GLOBAL STYLES
+========================== */
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    text-align: center;
+}
+
+/* ==========================
+   HEADER
+========================== */
+.site-header {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.site-header .header-logo {
+    height: auto;
+    width: 90%; /* scale smaller for mobile */
+    max-width: 350px;
+    cursor: pointer;
+    transition: transform 0.3s, background 0.3s;
+}
+
+.site-header .header-logo:hover {
+    background: #8B7500;
+    transform: scale(1.05);
+}
+
+/* ==========================
+   MAIN CONTENT
+========================== */
+main.content {
+    padding: 15px;
+    max-width: 360px; /* mobile width */
+    width: 95%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* ==========================
+   HERO
+========================== */
+.hero {
+    text-align: center;
+}
+
+.hero-description {
+    background: #fff8dc; /* light gold background */
+    padding: 20px 25px;
+    max-width: 480px; /* mobile friendly */
+    margin: 0 auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #3c2f1f;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.hero h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.hero p {
+    font-size: 2em;
+    margin-bottom: 15px;
+}
+
+.cta-buttons {
+    margin-top: 15px;
+}
+
+.cta-buttons .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: green;
+    color: #f0e6d2;
+    text-decoration: none;
+    margin: 5px;
+    border-radius: 5px;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.cta-buttons .btn:hover {
+    background: #8B7500;
+    transform: scale(1.05);
+}
+
+/* ==========================
+   FORMS
+========================== */
+form {
+    max-width: 340px;
+    width: 95%;
+    margin: 15px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+}
+
+input, textarea, button, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-family: 'Poppins', sans-serif;
+    box-sizing: border-box;
+}
+
+button, .btn {
+    cursor: pointer;
+}
+
+button {
+    background: #8B7500;
+    color: white;
+    border: none;
+    font-size: 1em;
+    transition: background 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background: #8B7500;
+    transform: scale(1.02);
+}
+
+.back-login-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: black;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-top: 10px;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.back-login-btn:hover {
+    background: #8B7500;
+    transform: scale(1.05);
+}
+
+/* ==========================
+   ACCOUNT SECTION
+========================== */
+.account-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    width: 100%;
+}
+
+.account-box, .courses-box {
+    background: #f0e6d2;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 95%;
+    max-width: 340px; /* mobile fit */
+    text-align: center;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+}
+
+.courses-box ul {
+    list-style: none;
+    padding: 0;
+}
+
+.courses-box li {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.courses-box li:last-child {
+    border-bottom: none;
+}
+/* ==========================
+   ADMIN DASHBOARD
+========================== */
+
+.admin-dashboard {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.dashboard-title {
+    font-size: 1.8em;
+    margin-bottom: 5px;
+}
+
+.dashboard-subtitle {
+    font-size: 0.95em;
+    margin-bottom: 20px;
+    opacity: 0.85;
+}
+
+.dashboard-boxes {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.dashboard-box {
+    background: white;
+    color: #222;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    text-decoration: none;
+    text-align: left;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-box h3 {
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.dashboard-box ul {
+    padding-left: 18px;
+    margin: 0;
+}
+
+.dashboard-box li {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.dashboard-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+.admin-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.admin-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.admin-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.admin-list li:last-child {
+    border-bottom: none;
+}
+/* ==========================
+   ADMIN COURSES PAGE
+========================== */
+.courses-list, .add-course {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    max-width: 480px;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.courses-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.courses-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.courses-list li:last-child {
+    border-bottom: none;
+}
+
+.add-course form input,
+.add-course form textarea,
+.add-course form button {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.add-course form textarea {
+    resize: vertical;
+}
+
+#form-feedback {
+    margin-top: 10px;
+    font-weight: bold;
+}
+/* ==========================
+   FOOTER
+========================== */
+.site-footer {
+    background: #8B7500;
+    color: #f0e6d2;
+    padding: 15px 10px;
+    text-align: center;
+    max-width: 360px; /* match main content width */
+    margin: 0 auto;
+    border-radius: 0 0 8px 8px;
+}
+
+.footer-nav {
+    display: flex;
+    flex-direction: column; /* stacked links for mobile */
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.footer-nav a {
+    color: #f0e6d2;
+    text-decoration: none;
+}
+
+/* ==========================
+   RESPONSIVE ADJUSTMENTS
+========================== */
+@media (max-width: 768px) {
+    .site-header .header-logo {
+        max-width: 300px;
+    }
+
+    .account-box, .courses-box, form {
+        width: 95%;
+        padding: 15px;
+    }
+
+    main.content {
+        padding: 15px;
+    }
+
+    .cta-buttons .btn {
+        padding: 8px 15px;
+    }
+
+    .hero h1 {
+        font-size: 1.8em;
+    }
+
+    .hero p {
+        font-size: 0.95em;
+    }
+}
