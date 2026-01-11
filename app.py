@@ -59,27 +59,26 @@ def register_page():
 def login_page():
     return render_template("login.html")
 
-@app.route("/login", methods=["POST"])
+@auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"error": "Email and password required"}), 400
+        return jsonify({"error": "Missing credentials"}), 400
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, name, department, level, password FROM users WHERE email=?", (email,))
+    c.execute("SELECT id, password FROM users WHERE email=?", (email,))
     user = c.fetchone()
     conn.close()
 
-    if user and check_password_hash(user["password"], password):
-        session.clear()
-        session["user_id"] = user["id"]
-        return jsonify({"message": "Login successful", "redirect": "/account"}), 200
+    if user and check_password_hash(user[1], password):
+        session["user_id"] = user[0]
+        return jsonify({"redirect": "/account"}), 200
 
-    return jsonify({"error": "Invalid credentials"}), 401
+    return jsonify({"error": "Invalid email or password"}), 401
 
 @app.route("/register", methods=["POST"])
 def register():
