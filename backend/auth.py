@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, session, request
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 from backend.db import get_db
 
 auth_bp = Blueprint("auth_bp", __name__)
@@ -19,16 +19,12 @@ def me():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    return jsonify({
-        "name": user["name"],
-        "department": user["department"],
-        "level": user["level"]
-    }), 200
+    return jsonify({"name": user["name"], "department": user["department"], "level": user["level"]})
 
 # Login route
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
 
@@ -41,8 +37,8 @@ def login():
     user = c.fetchone()
     conn.close()
 
-    if user and check_password_hash(user[1], password):
-        session["user_id"] = user[0]
+    if user and check_password_hash(user["password"], password):
+        session["user_id"] = user["id"]
         return jsonify({"redirect": "/account"}), 200
 
     return jsonify({"error": "Invalid email or password"}), 401

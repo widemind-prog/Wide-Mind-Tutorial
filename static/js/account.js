@@ -1,24 +1,19 @@
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        // Fetch user info
+        // 1. Fetch user info
         const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
-        if (!meRes.ok) {
-            window.location.href = "/login-page";
-            return;
-        }
+        if (!meRes.ok) return window.location.href = "/login-page";
         const user = await meRes.json();
         document.getElementById("username").textContent = user.name;
         document.getElementById("department").textContent = user.department;
         document.getElementById("level").textContent = user.level;
 
-        // Fetch payment status
+        // 2. Fetch payment status
         const payRes = await fetch("/api/payment/status", { credentials: "same-origin" });
         let payment = { status: "unpaid", amount: 20000 };
-        if (payRes.ok) {
-            payment = await payRes.json();
-        }
+        if (payRes.ok) payment = await payRes.json();
 
-        // Display payment box
+        // 3. Payment box
         const accountBox = document.querySelector(".account-box");
         const payDiv = document.createElement("div");
         payDiv.classList.add("payment-box");
@@ -35,20 +30,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         accountBox.appendChild(payDiv);
 
         if (payment.status !== "paid") {
-    const payBtn = document.getElementById("pay-btn");
-    payBtn.addEventListener("click", async () => {
-        // Fake payment process
-        const res = await fetch("/api/payment/init", {
-    method: "POST",
-    credentials: "same-origin"
-});
+            const payBtn = document.getElementById("pay-btn");
+            payBtn.addEventListener("click", async () => {
+                const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
+                const data = await res.json();
+                if (data.status) window.location.href = data.data.authorization_url;
+            });
+        }
 
-const data = await res.json();
-if (data.status) {
-    window.location.href = data.data.authorization_url;
-}
-
-        // Fetch courses
+        // 4. Fetch courses
         const courseRes = await fetch("/api/courses/my", { credentials: "same-origin" });
         const data = await courseRes.json();
         const list = document.getElementById("courses");
@@ -61,29 +51,20 @@ if (data.status) {
                 const a = document.createElement("a");
                 a.href = "#";
                 a.textContent = `${course.code} - ${course.title}`;
-
                 a.onclick = e => {
                     e.preventDefault();
-                    if (payment.status !== "paid") {
-                        alert("Payment required");
-                        return;
-                    }
+                    if (payment.status !== "paid") return alert("Payment required");
                     window.location.href = `/course/${course.id}`;
                 };
-
                 const li = document.createElement("li");
                 li.appendChild(a);
                 list.appendChild(li);
             });
         }
 
-        // Logout button
+        // 5. Logout
         const logoutBtn = document.getElementById("logout-btn");
-        if (logoutBtn) {
-            logoutBtn.addEventListener("click", () => {
-                window.location.href = "/logout";
-            });
-        }
+        if (logoutBtn) logoutBtn.addEventListener("click", () => window.location.href = "/logout");
 
     } catch (err) {
         console.error("Account page error:", err);
