@@ -48,15 +48,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             list.innerHTML = "<li>No courses yet</li>";
         } else {
             data.courses.forEach(course => {
-                const a = document.createElement("a");
-                a.href = "#";
-                a.textContent = `${course.code} - ${course.title}`;
-                a.onclick = e => {
-                    e.preventDefault();
-                    if (payment.status !== "paid") return alert("Payment required");
-                    window.location.href = `/course/${course.id}`;
-                };
                 const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.textContent = `${course.code} - ${course.title}`;
+                // Only allow navigation if paid
+                a.href = payment.status === "paid" ? `/course/${course.id}` : "#";
+                a.onclick = e => {
+                    if (payment.status !== "paid") {
+                        e.preventDefault();
+                        alert("Payment required");
+                    }
+                };
                 li.appendChild(a);
                 list.appendChild(li);
             });

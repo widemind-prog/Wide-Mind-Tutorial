@@ -10,7 +10,7 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
@@ -116,8 +116,60 @@ def my_courses():
     conn.close()
     return jsonify({"courses": courses})
 
+@app.route("/course/<int:course_id>")
+def view_course(course_id):
+    if "user_id" not in session:
+        return redirect("/login-page")
+
+    conn = get_db()
+    c = conn.cursor()
+    # Check if user has paid
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        return redirect("/account")
+
+    # Fetch course
+    c.execute("SELECT id, course_code, course_title, description FROM courses WHERE id=?", (course_id,))
+    course = c.fetchone()
+    if not course:
+        conn.close()
+        abort(404)
+
+    # Fetch materials
+    c.execute("SELECT id, filename, file_type FROM materials WHERE course_id=?", (course_id,))
+    materials = [{"id": r["id"], "filename": r["filename"], "type": r["file_type"]} for r in c.fetchall()]
+    conn.close()
+    return render_template("course.html", course=course, materials=materials)
+
 # =====================
-# PAYMENT STATUS
+# STREAM FILES
+# =====================
+@app.route("/stream/audio/<int:material_id>")
+def stream_audio(material_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='audio'", (material_id,))
+    material = c.fetchone()
+    conn.close()
+    if not material:
+        abort(404)
+    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+
+@app.route("/stream/pdf/<int:material_id>")
+def stream_pdf(material_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='pdf'", (material_id,))
+    material = c.fetchone()
+    conn.close()
+    if not material:
+        abort(404)
+    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+
+# =====================
+# PAYMENT STATUS & INIT
 # =====================
 @app.route("/api/payment/status")
 def payment_status():
@@ -132,15 +184,6 @@ def payment_status():
         return jsonify({"amount": 20000, "status": "unpaid"})
     return jsonify({"amount": payment["amount"], "status": payment["status"]})
 
-# =====================
-# STREAM FILES & COURSES
-# =====================
-# (Keep your existing /course/<id>, /stream/audio/<id>, /stream/pdf/<id>, etc.)
-# ... same as before
-
-# =====================
-# PAYMENT INIT & MARK PAID
-# =====================
 @app.route("/api/payment/init", methods=["POST"])
 def init_payment():
     if "user_id" not in session:
