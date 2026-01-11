@@ -4,19 +4,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     const payBtn = document.getElementById("pay-btn");
     const toast = document.getElementById("toast");
 
-    let lastPaymentStatus = null;
-    let pollingInterval = null;
+    let pollingId = null;
+
+    const TOAST_KEY = "paymentToastShown";
 
     /* --------------------
-       TOAST
+       TOAST (ONCE EVER)
     -------------------- */
-    function showToast() {
+    function showToastOnce() {
+        if (localStorage.getItem(TOAST_KEY) === "true") return;
+
         toast.classList.add("show");
+        localStorage.setItem(TOAST_KEY, "true");
+
         setTimeout(() => toast.classList.remove("show"), 3000);
     }
 
     /* --------------------
-       FETCH PAYMENT STATUS
+       PAYMENT STATUS
     -------------------- */
     async function checkPaymentStatus() {
         const res = await fetch("/api/payment/status", {
@@ -26,33 +31,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const payment = await res.json();
 
-        // ---- PAID ----
         if (payment.status === "paid") {
             paymentStatusEl.textContent = "PAID ✅";
             paymentStatusEl.classList.add("paid-animate");
             payBtn.style.display = "none";
 
-            // Show toast ONLY once (first time paid)
-            if (lastPaymentStatus !== "paid") {
-                showToast();
-                await loadCourses(true);
+            showToastOnce();
+            await loadCourses(true);
 
-                // STOP polling permanently
-                if (pollingInterval) {
-                    clearInterval(pollingInterval);
-                    pollingInterval = null;
-                }
+            // STOP polling forever
+            if (pollingId) {
+                clearInterval(pollingId);
+                pollingId = null;
             }
-        }
 
-        // ---- UNPAID ----
-        else {
+        } else {
             paymentStatusEl.textContent = "UNPAID ❌";
             paymentStatusEl.style.color = "red";
             payBtn.style.display = "inline-block";
         }
-
-        lastPaymentStatus = payment.status;
     }
 
     /* --------------------
@@ -91,11 +88,11 @@ document.addEventListener("DOMContentLoaded", async () => {
        COURSES
     -------------------- */
     async function loadCourses(isPaid = false) {
-        const courseRes = await fetch("/api/courses/my", {
+        const res = await fetch("/api/courses/my", {
             credentials: "same-origin"
         });
 
-        const data = await courseRes.json();
+        const data = await res.json();
         const list = document.getElementById("courses");
         list.innerHTML = "";
 
@@ -129,21 +126,17 @@ document.addEventListener("DOMContentLoaded", async () => {
        LOGOUT
     -------------------- */
     document.getElementById("logout-btn")
-        .addEventListener("click", () => {
-            window.location.href = "/logout";
-        });
+        .addEventListener("click", () => window.location.href = "/logout");
 
     /* --------------------
        INITIAL LOAD
     -------------------- */
     await checkPaymentStatus();
-    await loadCourses(lastPaymentStatus === "paid");
 
     /* --------------------
-       AUTO POLLING (STOP AFTER PAID)
+       POLLING (ONLY IF UNPAID)
     -------------------- */
-    if (lastPaymentStatus !== "paid") {
-        pollingInterval = setInterval(checkPaymentStatus, 5000);
+    if (!localStorage.getItem(TOAST_KEY)) {
+        pollingId = setInterval(checkPaymentStatus, 5000);
     }
-
 });
