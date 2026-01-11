@@ -20,8 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const msgEl = document.getElementById("register-msg");
         if (res.ok) {
             msgEl.style.color = "green";
-            msgEl.textContent = "Registration successful! Redirecting...";
-            setTimeout(() => window.location.href = data.redirect, 1500);
+            msgEl.textContent = data.message;
         } else {
             msgEl.style.color = "red";
             msgEl.textContent = data.error;

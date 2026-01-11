@@ -9,5 +9,29 @@
 </form>
 <p id="login-msg" style="color:red;"></p>
 <a href="/register-page">Register Now!</a>
-<script src="/static/js/auth.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("login-form");
+    const msgEl = document.getElementById("login-msg");
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            body: JSON.stringify({
+                email: form.email.value,
+                password: form.password.value
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            window.location.href = data.redirect;
+        } else {
+            msgEl.textContent = data.error;
+        }
+    });
+});
+</script>
 {% endblock %}

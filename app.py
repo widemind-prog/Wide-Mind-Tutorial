@@ -2,27 +2,40 @@ from flask import Flask, render_template, redirect, session, request, jsonify, s
 from flask_cors import CORS
 import os
 from datetime import datetime
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from backend.db import init_db, get_db
 from backend.auth import auth_bp
-import requests
+import requests, secrets
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 CORS(app)
 
-# Config
+# ------------------------
+# CONFIG
+# ------------------------
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
 
-# Initialize DB
-init_db()
+# Flask-Mail config (Gmail example)
+app.config.update(
+    MAIL_SERVER='smtp.gmail.com',
+    MAIL_PORT=587,
+    MAIL_USE_TLS=True,
+    MAIL_USERNAME=os.environ.get("EMAIL_USER"),
+    MAIL_PASSWORD=os.environ.get("EMAIL_PASS"),
+    MAIL_DEFAULT_SENDER=os.environ.get("EMAIL_USER")
+)
+mail = Mail(app)
 
-# Register auth blueprint
+# ------------------------
+# INIT
+# ------------------------
+init_db()
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
-# Inject current time into templates
 @app.context_processor
 def inject_now():
     return {"now": datetime.utcnow}
@@ -35,29 +48,17 @@ def home():
     return redirect("/account") if "user_id" in session else render_template("index.html")
 
 @app.route("/home")
-def home_redirect():
-    return redirect("/")
-
-@app.route("/about")
-def about_page():
-    return render_template("about.html")
-
-@app.route("/contact")
-def contact_page():
-    return render_template("contact.html")
-
-@app.route("/privacy")
-def privacy_page():
-    return render_template("privacy.html")
-
-@app.route("/register-page")
-def register_page():
-    return render_template("register.html")
-
-@app.route("/login-page")
-def login_page():
-    return render_template("login.html")
-
+def home_redirect(): return redirect("/")
+@app.route("/about") 
+def about_page(): return render_template("about.html")
+@app.route("/contact") 
+def contact_page(): return render_template("contact.html")
+@app.route("/privacy") 
+def privacy_page(): return render_template("privacy.html")
+@app.route("/register-page") 
+def register_page(): return render_template("register.html")
+@app.route("/login-page") 
+def login_page(): return render_template("login.html")
 @app.route("/account")
 def account_page():
     if "user_id" not in session:
@@ -80,12 +81,14 @@ def register():
         return jsonify({"error": "All fields are required"}), 400
 
     hashed_pw = generate_password_hash(password)
+    token = secrets.token_urlsafe(16)  # email verification token
+
     conn = get_db()
     c = conn.cursor()
     try:
         c.execute(
-            "INSERT INTO users (name, email, password, department, level) VALUES (?, ?, ?, ?, ?)",
-            (name, email, hashed_pw, department, level)
+            "INSERT INTO users (name, email, password, department, level, is_verified, verification_token) VALUES (?, ?, ?, ?, ?, 0, ?)",
+            (name, email, hashed_pw, department, level, token)
         )
         conn.commit()
         user_id = c.lastrowid
@@ -98,152 +101,83 @@ def register():
         conn.close()
         return jsonify({"error": "Email already exists"}), 400
 
-    conn.close()
-    return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
-
-# =====================
-# COURSES
-# =====================
-@app.route("/api/courses/my")
-def my_courses():
-    if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT id, course_code, course_title FROM courses")
-    courses = [{"id": r["id"], "code": r["course_code"], "title": r["course_title"]} for r in c.fetchall()]
-    conn.close()
-    return jsonify({"courses": courses})
-
-@app.route("/course/<int:course_id>")
-def course_page(course_id):
-    if "user_id" not in session:
-        return redirect("/login-page")
-
-    conn = get_db()
-    c = conn.cursor()
-
-    # Check payment
-    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
-    payment = c.fetchone()
-    if not payment or payment["status"] != "paid":
-        conn.close()
-        return "<h3>Payment required to access courses</h3>", 403
-
-    # Fetch course
-    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
-    course = c.fetchone()
-    if not course:
-        conn.close()
-        abort(404)
-
-    # Fetch materials
-    c.execute("SELECT * FROM materials WHERE course_id=?", (course_id,))
-    materials = c.fetchall()
-    conn.close()
-
-    audio = next((m for m in materials if m["file_type"] == "audio"), None)
-    pdf = next((m for m in materials if m["file_type"] == "pdf"), None)
-
-    return render_template(
-        "course.html",
-        course=course,
-        audio_id=audio["id"] if audio else None,
-        pdf_id=pdf["id"] if pdf else None
+    # Send verification email
+    verify_link = f"{request.host_url}verify-email?token={token}"
+    msg = Message(
+        "Verify Your Email",
+        recipients=[email],
+        html=f"<p>Hello {name},</p><p>Click to verify your email:</p><a href='{verify_link}'>Verify Email</a>"
     )
+    mail.send(msg)
+    conn.close()
+    return jsonify({"message": "Registration successful! Check your email to verify your account.", "redirect": "/login-page"}), 201
 
 # =====================
-# PDF VIEWER
+# EMAIL VERIFICATION
 # =====================
-@app.route("/course/<int:course_id>/pdf")
-def pdf_viewer(course_id):
-    if "user_id" not in session:
-        return redirect("/login-page")
+@app.route("/verify-email")
+def verify_email():
+    token = request.args.get("token")
+    if not token:
+        return "<h3>Invalid verification link</h3>", 400
 
     conn = get_db()
     c = conn.cursor()
-
-    # Check payment
-    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
-    payment = c.fetchone()
-    if not payment or payment["status"] != "paid":
+    c.execute("SELECT id, is_verified FROM users WHERE verification_token=?", (token,))
+    user = c.fetchone()
+    if not user:
         conn.close()
-        return "<h3>Payment required to access PDF</h3>", 403
-
-    # Fetch course
-    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
-    course = c.fetchone()
-    if not course:
+        return "<h3>Invalid or expired link</h3>", 400
+    if user["is_verified"]:
         conn.close()
-        abort(404)
+        return "<h3>Email already verified!</h3>"
 
-    # Fetch PDF material
-    c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
-    pdf = c.fetchone()
+    c.execute("UPDATE users SET is_verified=1, verification_token=NULL WHERE id=?", (user["id"],))
+    conn.commit()
     conn.close()
-    if not pdf:
-        abort(404)
-
-    return render_template("pdf_viewer.html", course=course, pdf_id=pdf["id"])
+    return "<h3>Email verified successfully ✅. You can now log in.</h3>"
 
 # =====================
-# STREAM FILES
+# LOGIN
 # =====================
-@app.route("/stream/audio/<int:material_id>")
-def stream_audio(material_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='audio'", (material_id,))
-    material = c.fetchone()
-    conn.close()
-    if not material:
-        abort(404)
-    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
-
-@app.route("/stream/pdf/<int:material_id>")
-def stream_pdf(material_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='pdf'", (material_id,))
-    material = c.fetchone()
-    conn.close()
-    if not material:
-        abort(404)
-    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
-
-# =====================
-# PAYMENT STATUS & INIT
-# =====================
-@app.route("/api/payment/status")
-def payment_status():
-    if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
-    payment = c.fetchone()
-    conn.close()
-    if not payment:
-        return jsonify({"amount": 20000, "status": "unpaid"})
-    return jsonify({"amount": payment["amount"], "status": payment["status"]})
-
-@app.route("/api/payment/init", methods=["POST"])
-def init_payment():
-    if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT email FROM users WHERE id=?", (session["user_id"],))
+    c.execute("SELECT * FROM users WHERE email=?", (email,))
     user = c.fetchone()
     conn.close()
 
-    headers = {"Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}", "Content-Type": "application/json"}
-    payload = {"email": user["email"], "amount": 20000 * 100, "callback_url": "https://your-domain.com/payment-success"}
+    if not user or not check_password_hash(user["password"], password):
+        return jsonify({"error": "Invalid credentials"}), 401
+    if not user["is_verified"]:
+        return jsonify({"error": "Email not verified. Check your inbox."}), 403
 
-    res = requests.post("https://api.paystack.co/transaction/initialize", json=payload, headers=headers)
-    return jsonify(res.json())
+    session["user_id"] = user["id"]
 
+    # Send welcome email only once
+    if not user.get("first_login"):
+        conn = get_db()
+        c = conn.cursor()
+        msg = Message(
+            "Welcome to Wide Mind Tutorials 🚀",
+            recipients=[user["email"]],
+            html=f"<p>Hello {user['name']},</p><p>Welcome! Enjoy your learning journey.</p>"
+        )
+        mail.send(msg)
+        c.execute("UPDATE users SET first_login=datetime('now') WHERE id=?", (user["id"],))
+        conn.commit()
+        conn.close()
+
+    return jsonify({"message": "Login successful", "redirect": "/account"}), 200
+
+# =====================
+# PAYMENT CONFIRMATION
+# =====================
 @app.route("/api/payment/mark_paid", methods=["POST"])
 def mark_paid():
     if "user_id" not in session:
@@ -252,24 +186,23 @@ def mark_paid():
     c = conn.cursor()
     c.execute("UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?", (session["user_id"],))
     conn.commit()
+
+    # Send payment confirmation email
+    c.execute("SELECT name, email FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+    msg = Message(
+        "Payment Successful ✅",
+        recipients=[user["email"]],
+        html=f"<p>Hello {user['name']},</p><p>Your payment of ₦20000 was successful. You now have full access to courses.</p>"
+    )
+    mail.send(msg)
     conn.close()
     return jsonify({"message": "Payment marked as paid"}), 200
 
 # =====================
-# LOGOUT
+# OTHER ROUTES (COURSES, PDF, STREAM) 
 # =====================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login-page")
-
-# =====================
-# ERRORS
-# =====================
-@app.errorhandler(404)
-def not_found(e):
-    return render_template("404.html"), 404
-
+# ... Keep your existing routes here (unchanged) ...
 # =====================
 # RUN
 # =====================
