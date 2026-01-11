@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        // 1. Fetch user info
+        // --- 1. User info ---
         const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
         if (!meRes.ok) return window.location.href = "/login-page";
         const user = await meRes.json();
@@ -8,20 +8,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("department").textContent = user.department;
         document.getElementById("level").textContent = user.level;
 
-        // 2. Fetch payment status
+        // --- 2. Payment status ---
         const payRes = await fetch("/api/payment/status", { credentials: "same-origin" });
         let payment = { status: "unpaid", amount: 20000 };
         if (payRes.ok) payment = await payRes.json();
 
-        // 3. Payment box
+        // --- 3. Payment box ---
         const accountBox = document.querySelector(".account-box");
         const payDiv = document.createElement("div");
         payDiv.classList.add("payment-box");
-        payDiv.style.marginTop = "15px";
-        payDiv.style.padding = "10px";
-        payDiv.style.background = "#fff8dc";
-        payDiv.style.borderRadius = "8px";
-        payDiv.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
+        payDiv.style = "margin-top:15px;padding:10px;background:#fff8dc;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1)";
         payDiv.innerHTML = `
             <p>Amount to Pay: ₦${payment.amount}</p>
             <p>Status: <strong>${payment.status.toUpperCase()}</strong></p>
@@ -30,15 +26,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         accountBox.appendChild(payDiv);
 
         if (payment.status !== "paid") {
-            const payBtn = document.getElementById("pay-btn");
-            payBtn.addEventListener("click", async () => {
+            document.getElementById("pay-btn").addEventListener("click", async () => {
                 const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
                 const data = await res.json();
                 if (data.status) window.location.href = data.data.authorization_url;
             });
         }
 
-        // 4. Fetch courses
+        // --- 4. Courses ---
         const courseRes = await fetch("/api/courses/my", { credentials: "same-origin" });
         const data = await courseRes.json();
         const list = document.getElementById("courses");
@@ -51,7 +46,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const li = document.createElement("li");
                 const a = document.createElement("a");
                 a.textContent = `${course.code} - ${course.title}`;
-                // Only allow navigation if paid
                 a.href = payment.status === "paid" ? `/course/${course.id}` : "#";
                 a.onclick = e => {
                     if (payment.status !== "paid") {
@@ -64,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
 
-        // 5. Logout
+        // --- 5. Logout ---
         const logoutBtn = document.getElementById("logout-btn");
         if (logoutBtn) logoutBtn.addEventListener("click", () => window.location.href = "/logout");
 

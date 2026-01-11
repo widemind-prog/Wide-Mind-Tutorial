@@ -117,31 +117,40 @@ def my_courses():
     return jsonify({"courses": courses})
 
 @app.route("/course/<int:course_id>")
-def view_course(course_id):
+def course_page(course_id):
     if "user_id" not in session:
         return redirect("/login-page")
 
     conn = get_db()
     c = conn.cursor()
-    # Check if user has paid
+    # Check payment
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
-        return redirect("/account")
+        return "<h3>Payment required to access courses</h3>", 403
 
     # Fetch course
-    c.execute("SELECT id, course_code, course_title, description FROM courses WHERE id=?", (course_id,))
+    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
 
     # Fetch materials
-    c.execute("SELECT id, filename, file_type FROM materials WHERE course_id=?", (course_id,))
-    materials = [{"id": r["id"], "filename": r["filename"], "type": r["file_type"]} for r in c.fetchall()]
+    c.execute("SELECT * FROM materials WHERE course_id=?", (course_id,))
+    materials = c.fetchall()
     conn.close()
-    return render_template("course.html", course=course, materials=materials)
+
+    audio = next((m for m in materials if m["file_type"] == "audio"), None)
+    pdf = next((m for m in materials if m["file_type"] == "pdf"), None)
+
+    return render_template(
+        "course.html",
+        course=course,
+        audio_id=audio["id"] if audio else None,
+        pdf_id=pdf["id"] if pdf else None
+    )
 
 # =====================
 # STREAM FILES
