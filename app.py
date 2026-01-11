@@ -9,7 +9,10 @@ from backend.auth import auth_bp
 app = Flask(__name__)
 CORS(app)
 
+
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
+app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY") 
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
 
 # Initialize database
@@ -243,21 +246,66 @@ def pdf_viewer(course_id):
 # =====================
 # PAYMENT ROUTES
 # =====================
-@app.route("/api/payment/status")
-def payment_status():
+@app.route("/api/payment/init", methods=["POST"])
+def init_payment():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
-    payment = c.fetchone()
+    c.execute("SELECT email FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
     conn.close()
 
-    if not payment:
-        return jsonify({"error": "Payment record not found"}), 404
+    headers = {
+        "Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}",
+        "Content-Type": "application/json"
+    }
 
-    return jsonify({"amount": payment["amount"], "status": payment["status"]})
+    payload = {
+        "email": user["email"],
+        "amount": 20000 * 100,  # Amount in kobo
+        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment-success"
+    }
+
+    res = requests.post(
+        "https://api.paystack.co/transaction/initialize",
+        json=payload,
+        headers=headers
+    )
+
+    return jsonify(res.json())
+
+
+@app.route("/api/payment/init", methods=["POST"])
+def init_payment():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT email FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+    conn.close()
+
+    headers = {
+        "Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "email": user["email"],
+        "amount": 20000 * 100,  # Amount in kobo
+        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment-success"
+    }
+
+    res = requests.post(
+        "https://api.paystack.co/transaction/initialize",
+        json=payload,
+        headers=headers
+    )
+
+    return jsonify(res.json())
 
 @app.route("/api/payment/mark_paid", methods=["POST"])
 def mark_paid():
@@ -271,6 +319,48 @@ def mark_paid():
     conn.close()
 
     return jsonify({"message": "Payment marked as paid"}), 200
+    
+@app.route("/payment-success")
+def payment_success():
+    reference = request.args.get("reference")
+    if not reference:
+        abort(400)
+
+    headers = {"Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}"}
+    res = requests.get(
+        f"https://api.paystack.co/transaction/verify/{reference}",
+        headers=headers
+    )
+
+    result = res.json()
+
+    if result["status"] and result["data"]["status"] == "success":
+        conn = get_db()
+        c = conn.cursor()
+        c.execute(
+            "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?",
+            (session["user_id"],)
+        )
+        conn.commit()
+        conn.close()
+        return redirect("/account")
+
+    abort(403)
+    
+@app.route("/paystack/webhook", methods=["POST"])
+def paystack_webhook():
+    payload = request.get_json()
+    if payload["event"] == "charge.success":
+        user_email = payload["data"]["customer"]["email"]
+        conn = get_db()
+        c = conn.cursor()
+        c.execute(
+            "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=(SELECT id FROM users WHERE email=?)",
+            (user_email,)
+        )
+        conn.commit()
+        conn.close()
+    return "", 200
 
 # =====================
 # LOGOUT

@@ -38,14 +38,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const payBtn = document.getElementById("pay-btn");
     payBtn.addEventListener("click", async () => {
         // Fake payment process
-        const res = await fetch("/api/payment/mark_paid", { method: "POST", credentials: "same-origin" });
-        if (res.ok) {
-            alert("Payment successful!");
-            window.location.reload(); // Reload so courses unlock
-        } else {
-            alert("Payment failed. Try again.");
-        }
-    });
+        const res = await fetch("/api/payment/init", {
+    method: "POST",
+    credentials: "same-origin"
+});
+
+const data = await res.json();
+if (data.status) {
+    window.location.href = data.data.authorization_url;
 }
 
         // Fetch courses
