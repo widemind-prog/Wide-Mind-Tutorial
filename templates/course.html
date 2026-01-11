@@ -13,10 +13,41 @@
 {% endif %}
 
 {% if pdf_id %}
-<a class="btn" href="/course/{{ course.id }}/pdf">
-  Open PDF
-</a>
+<button id="openPdfBtn" class="btn">Open PDF</button>
 {% endif %}
+
+<!-- PDF Modal -->
+<div id="pdfModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; overflow:auto;">
+  <button id="closePdfModal" style="position:absolute; top:15px; right:20px; font-size:24px; background:none; border:none; color:white; cursor:pointer;">&times;</button>
+  <iframe id="pdfIframe" src="" style="width:90%; height:90%; margin:50px auto; display:block; border:none;"></iframe>
+</div>
+
+<script>
+const pdfBtn = document.getElementById("openPdfBtn");
+const pdfModal = document.getElementById("pdfModal");
+const pdfIframe = document.getElementById("pdfIframe");
+const closePdf = document.getElementById("closePdfModal");
+
+if (pdfBtn) {
+  pdfBtn.addEventListener("click", () => {
+    pdfIframe.src = "/course/{{ course.id }}/pdf";
+    pdfModal.style.display = "block";
+  });
+}
+
+closePdf.addEventListener("click", () => {
+  pdfModal.style.display = "none";
+  pdfIframe.src = ""; // stop PDF from loading in background
+});
+
+// Close modal when clicking outside iframe
+pdfModal.addEventListener("click", (e) => {
+  if (e.target === pdfModal) {
+    pdfModal.style.display = "none";
+    pdfIframe.src = "";
+  }
+});
+</script>
 
 <script src="/static/js/course.js"></script>
 {% endblock %}

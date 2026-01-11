@@ -10,12 +10,13 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
+# Config
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
 
-# Initialize database
+# Initialize DB
 init_db()
 
 # Register auth blueprint
@@ -31,9 +32,7 @@ def inject_now():
 # =====================
 @app.route("/")
 def home():
-    if "user_id" in session:
-        return redirect("/account")
-    return render_template("index.html")
+    return redirect("/account") if "user_id" in session else render_template("index.html")
 
 @app.route("/home")
 def home_redirect():
@@ -123,6 +122,7 @@ def course_page(course_id):
 
     conn = get_db()
     c = conn.cursor()
+
     # Check payment
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
@@ -151,6 +151,40 @@ def course_page(course_id):
         audio_id=audio["id"] if audio else None,
         pdf_id=pdf["id"] if pdf else None
     )
+
+# =====================
+# PDF VIEWER
+# =====================
+@app.route("/course/<int:course_id>/pdf")
+def pdf_viewer(course_id):
+    if "user_id" not in session:
+        return redirect("/login-page")
+
+    conn = get_db()
+    c = conn.cursor()
+
+    # Check payment
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        return "<h3>Payment required to access PDF</h3>", 403
+
+    # Fetch course
+    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
+    course = c.fetchone()
+    if not course:
+        conn.close()
+        abort(404)
+
+    # Fetch PDF material
+    c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
+    pdf = c.fetchone()
+    conn.close()
+    if not pdf:
+        abort(404)
+
+    return render_template("pdf_viewer.html", course=course, pdf_id=pdf["id"])
 
 # =====================
 # STREAM FILES
