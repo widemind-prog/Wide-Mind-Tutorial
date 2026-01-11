@@ -1,37 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Login{% endblock %}
 {% block content %}
-<h2>Login to Your Account</h2>
-<form id="login-form">
-    <input type="email" name="email" placeholder="Email" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-</form>
-<p id="login-msg" style="color:red;"></p>
-<a href="/register-page">Register Now!</a>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("login-form");
-    const msgEl = document.getElementById("login-msg");
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const res = await fetch("/api/auth/login", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            credentials: "same-origin",
-            body: JSON.stringify({
-                email: form.email.value,
-                password: form.password.value
-            })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            window.location.href = data.redirect;
-        } else {
-            msgEl.textContent = data.error;
-        }
-    });
-});
-</script>
+<h2>Login to Your Account</h2>  
+<form id="login-form">  
+    <input type="email" name="email" placeholder="Email" required>  
+    <input type="password" name="password" placeholder="Password" required>  
+    <button type="submit">Login</button>  
+</form>  
+<p id="login-msg" style="color:red;"></p>  
+<a href="/register-page">Register Now!</a>  
+<script src="/static/js/auth.js"></script>  
 {% endblock %}
