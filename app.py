@@ -5,10 +5,10 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 from backend.db import init_db, get_db
 from backend.auth import auth_bp
+import requests
 
 app = Flask(__name__)
 CORS(app)
-
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
@@ -276,37 +276,6 @@ def init_payment():
 
     return jsonify(res.json())
 
-
-@app.route("/api/payment/init", methods=["POST"])
-def init_payment():
-    if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT email FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    conn.close()
-
-    headers = {
-        "Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "email": user["email"],
-        "amount": 20000 * 100,  # Amount in kobo
-        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment-success"
-    }
-
-    res = requests.post(
-        "https://api.paystack.co/transaction/initialize",
-        json=payload,
-        headers=headers
-    )
-
-    return jsonify(res.json())
-
 @app.route("/api/payment/mark_paid", methods=["POST"])
 def mark_paid():
     if "user_id" not in session:
@@ -319,7 +288,7 @@ def mark_paid():
     conn.close()
 
     return jsonify({"message": "Payment marked as paid"}), 200
-    
+
 @app.route("/payment-success")
 def payment_success():
     reference = request.args.get("reference")
@@ -346,7 +315,7 @@ def payment_success():
         return redirect("/account")
 
     abort(403)
-    
+
 @app.route("/paystack/webhook", methods=["POST"])
 def paystack_webhook():
     payload = request.get_json()
