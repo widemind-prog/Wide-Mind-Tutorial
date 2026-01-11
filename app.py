@@ -9,7 +9,7 @@ from backend.auth import auth_bp
 app = Flask(__name__)
 CORS(app)
 
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
 
 # Initialize database
