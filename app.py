@@ -10,14 +10,14 @@ import requests
 app = Flask(name)
 CORS(app)
 
-Config
+# config
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(file)), "files")
 
-Initialize DB
+# Initialize DB
 
 init_db()
 
