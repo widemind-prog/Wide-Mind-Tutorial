@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, session, request, jsonify, s
 from flask_cors import CORS
 import os
 from datetime import datetime
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
 from backend.db import init_db, get_db
 from backend.auth import auth_bp
 
@@ -15,18 +15,17 @@ app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__fil
 # Initialize database
 init_db()
 
-# Register auth blueprint (UNCHANGED)
+# Register auth blueprint
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
-# Inject current time into templates (UNCHANGED)
+# Inject current time into templates
 @app.context_processor
 def inject_now():
     return {"now": datetime.utcnow}
 
 # =====================
-# ORIGINAL ROUTES (UNCHANGED)
+# PAGES
 # =====================
-
 @app.route("/")
 def home():
     if "user_id" in session:
@@ -59,27 +58,15 @@ def register_page():
 def login_page():
     return render_template("login.html")
 
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    data = request.get_json(silent=True) or {}
-    email = data.get("email")
-    password = data.get("password")
+@app.route("/account")
+def account_page():
+    if "user_id" not in session:
+        return redirect("/login-page")
+    return render_template("account.html")
 
-    if not email or not password:
-        return jsonify({"error": "Missing credentials"}), 400
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT id, password FROM users WHERE email=?", (email,))
-    user = c.fetchone()
-    conn.close()
-
-    if user and check_password_hash(user[1], password):
-        session["user_id"] = user[0]
-        return jsonify({"redirect": "/account"}), 200
-
-    return jsonify({"error": "Invalid email or password"}), 401
-
+# =====================
+# REGISTER
+# =====================
 @app.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -116,12 +103,9 @@ def register():
     conn.close()
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
-@app.route("/account")
-def account_page():
-    if "user_id" not in session:
-        return redirect("/login-page")
-    return render_template("account.html")
-
+# =====================
+# COURSES
+# =====================
 @app.route("/api/courses/my")
 def my_courses():
     if "user_id" not in session:
@@ -163,7 +147,6 @@ def course_page(course_id):
 
     audio_id = None
     pdf_id = None
-
     for m in materials:
         if m["file_type"] == "audio":
             audio_id = m["id"]
@@ -178,9 +161,8 @@ def course_page(course_id):
     )
 
 # =====================
-# 🔐 NEW PROTECTED FILE ROUTES (ADDED ONLY)
+# STREAM FILES
 # =====================
-
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
     if "user_id" not in session:
@@ -243,33 +225,24 @@ def pdf_viewer(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    # Check payment
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
         abort(403)
 
-    # Get PDF material ID
-    c.execute(
-        "SELECT id FROM materials WHERE course_id=? AND file_type='pdf'",
-        (course_id,)
-    )
+    c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
     pdf = c.fetchone()
     conn.close()
 
     if not pdf:
         abort(404)
 
-    return render_template(
-        "pdf_viewer.html",
-        pdf_id=pdf["id"]
-    )
-    
-# =====================
-# PAYMENT ROUTES (UNCHANGED)
-# =====================
+    return render_template("pdf_viewer.html", pdf_id=pdf["id"])
 
+# =====================
+# PAYMENT ROUTES
+# =====================
 @app.route("/api/payment/status")
 def payment_status():
     if "user_id" not in session:
@@ -299,23 +272,24 @@ def mark_paid():
 
     return jsonify({"message": "Payment marked as paid"}), 200
 
+# =====================
+# LOGOUT
+# =====================
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login-page")
 
 # =====================
-# ERROR HANDLER (UNCHANGED)
+# ERROR HANDLER
 # =====================
-
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
 
 # =====================
-# RUN SERVER (UNCHANGED)
+# RUN SERVER
 # =====================
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5002))
     app.run(host="0.0.0.0", port=port, debug=True)
