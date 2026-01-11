@@ -7,13 +7,18 @@
     <!-- USER INFO -->
     <div class="account-box">
         <img src="/static/images/avatar.png" alt="Profile Avatar" class="profile-avatar">
+
         <h2 id="username">Loading...</h2>
         <p>Department: <span id="department">Loading...</span></p>
         <p>Level: <span id="level">Loading...</span></p>
-    </div>
+
+        <p>
+            Payment Status:
+            <strong id="payment-status">Checking...</strong>
+        </p>
 
         <button id="pay-btn" class="btn" style="display:none;">
-            Pay Now
+            Pay Now ❌
         </button>
     </div>
 
@@ -28,6 +33,45 @@
     <button id="logout-btn" class="btn">Logout</button>
 
 </section>
+
+<!-- TOAST -->
+<div id="toast" class="toast">Payment Verified ✅</div>
+
+<style>
+/* Paid animation */
+.paid-animate {
+    animation: pop 0.6s ease-out;
+    color: green;
+}
+
+@keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    70% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #2ecc71;
+    color: white;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.4s ease;
+    z-index: 9999;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>
 
 <script src="/static/js/account.js"></script>
 {% endblock %}
