@@ -1,5 +1,6 @@
 Flask
 Flask-Cors
+Flask-Mail
 Werkzeug
 gunicorn
 requests
