@@ -3,8 +3,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const paymentStatusEl = document.getElementById("payment-status");
     const payBtn = document.getElementById("pay-btn");
     const toast = document.getElementById("toast");
+    const coursesList = document.getElementById("courses");
 
     let pollingId = null;
+    let isPaid = false;
 
     const TOAST_KEY = "paymentToastShown";
 
@@ -21,6 +23,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /* --------------------
+       LOAD COURSES
+    -------------------- */
+    async function loadCourses() {
+        const res = await fetch("/api/courses/my", {
+            credentials: "same-origin"
+        });
+
+        const data = await res.json();
+        coursesList.innerHTML = "";
+
+        if (!data.courses || data.courses.length === 0) {
+            coursesList.innerHTML = "<li>No courses yet</li>";
+            return;
+        }
+
+        data.courses.forEach(course => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+
+            a.textContent = `${course.code} - ${course.title}`;
+
+            if (isPaid) {
+                a.href = `/course/${course.id}`;
+            } else {
+                a.href = "#";
+                a.addEventListener("click", e => {
+                    e.preventDefault();
+                    alert("Payment required to access this course");
+                });
+            }
+
+            li.appendChild(a);
+            coursesList.appendChild(li);
+        });
+    }
+
+    /* --------------------
        PAYMENT STATUS
     -------------------- */
     async function checkPaymentStatus() {
@@ -32,20 +71,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         const payment = await res.json();
 
         if (payment.status === "paid") {
-            paymentStatusEl.textContent = "PAID ✅";
-            paymentStatusEl.classList.add("paid-animate");
-            payBtn.style.display = "none";
+            if (!isPaid) {
+                isPaid = true;
+                paymentStatusEl.textContent = "PAID ✅";
+                paymentStatusEl.classList.add("paid-animate");
+                payBtn.style.display = "none";
 
-            showToastOnce();
-            await loadCourses(true);
+                showToastOnce();
+                await loadCourses();
 
-            // STOP polling forever
-            if (pollingId) {
-                clearInterval(pollingId);
-                pollingId = null;
+                if (pollingId) {
+                    clearInterval(pollingId);
+                    pollingId = null;
+                }
             }
-
         } else {
+            isPaid = false;
             paymentStatusEl.textContent = "UNPAID ❌";
             paymentStatusEl.style.color = "red";
             payBtn.style.display = "inline-block";
@@ -85,41 +126,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     /* --------------------
-       COURSES
+       INITIAL LOAD
     -------------------- */
-    async function loadCourses(isPaid = false) {
-        const res = await fetch("/api/courses/my", {
-            credentials: "same-origin"
-        });
+    await checkPaymentStatus();   // sets isPaid
+    await loadCourses();          // ALWAYS load courses once
 
-        const data = await res.json();
-        const list = document.getElementById("courses");
-        list.innerHTML = "";
-
-        if (!data.courses || data.courses.length === 0) {
-            list.innerHTML = "<li>No courses yet</li>";
-            return;
-        }
-
-        data.courses.forEach(course => {
-            const li = document.createElement("li");
-            const a = document.createElement("a");
-
-            a.textContent = `${course.code} - ${course.title}`;
-
-            if (isPaid) {
-                a.href = `/course/${course.id}`;
-            } else {
-                a.href = "#";
-                a.onclick = e => {
-                    e.preventDefault();
-                    alert("Payment required");
-                };
-            }
-
-            li.appendChild(a);
-            list.appendChild(li);
-        });
+    /* --------------------
+       POLLING (ONLY IF UNPAID)
+    -------------------- */
+    if (!isPaid) {
+        pollingId = setInterval(checkPaymentStatus, 5000);
     }
 
     /* --------------------
@@ -128,15 +144,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("logout-btn")
         .addEventListener("click", () => window.location.href = "/logout");
 
-    /* --------------------
-       INITIAL LOAD
-    -------------------- */
-    await checkPaymentStatus();
-
-    /* --------------------
-       POLLING (ONLY IF UNPAID)
-    -------------------- */
-    if (!localStorage.getItem(TOAST_KEY)) {
-        pollingId = setInterval(checkPaymentStatus, 5000);
-    }
 });
