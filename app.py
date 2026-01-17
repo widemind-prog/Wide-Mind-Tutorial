@@ -9,6 +9,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
+from backend.payment import payment_bp
+from backend.webhook import webhook_bp
+
 import requests
 import hashlib
 import hmac
@@ -36,6 +39,8 @@ app.config.update(
 # =====================
 app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(payment_bp)
+app.register_blueprint(webhook_bp)
 
 # =====================
 # INITIALIZE DB
@@ -264,6 +269,10 @@ def payment_status():
         return jsonify({"amount": 20000, "status": "unpaid"})
 
     return jsonify({"amount": payment["amount"], "status": payment["status"]})
+    
+@app.route("/payment-success")
+def payment_success():
+    return render_template("payment_success.html")
 
 # =====================
 # LOGOUT
