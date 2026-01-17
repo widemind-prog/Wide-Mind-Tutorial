@@ -5,9 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const toast = document.getElementById("toast");
     const coursesList = document.getElementById("courses");
 
-    let pollingId = null;
     let isPaid = false;
-
     const TOAST_KEY = "paymentToastShown";
 
     /* --------------------
@@ -26,10 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
        LOAD COURSES
     -------------------- */
     async function loadCourses() {
-        const res = await fetch("/api/courses/my", {
-            credentials: "same-origin"
-        });
-
+        const res = await fetch("/api/courses/my", { credentials: "same-origin" });
         const data = await res.json();
         coursesList.innerHTML = "";
 
@@ -41,9 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         data.courses.forEach(course => {
             const li = document.createElement("li");
             const a = document.createElement("a");
-
             a.textContent = `${course.code} - ${course.title}`;
-
             if (isPaid) {
                 a.href = `/course/${course.id}`;
             } else {
@@ -53,7 +46,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     alert("Payment required to access this course");
                 });
             }
-
             li.appendChild(a);
             coursesList.appendChild(li);
         });
@@ -63,28 +55,16 @@ document.addEventListener("DOMContentLoaded", async () => {
        PAYMENT STATUS
     -------------------- */
     async function checkPaymentStatus() {
-        const res = await fetch("/api/payment/status", {
-            credentials: "same-origin"
-        });
+        const res = await fetch("/api/payment/status", { credentials: "same-origin" });
         if (!res.ok) return;
 
         const payment = await res.json();
-
         if (payment.status === "paid") {
-            if (!isPaid) {
-                isPaid = true;
-                paymentStatusEl.textContent = "PAID ✅";
-                paymentStatusEl.classList.add("paid-animate");
-                payBtn.style.display = "none";
-
-                showToastOnce();
-                await loadCourses();
-
-                if (pollingId) {
-                    clearInterval(pollingId);
-                    pollingId = null;
-                }
-            }
+            isPaid = true;
+            paymentStatusEl.textContent = "PAID ✅";
+            paymentStatusEl.classList.add("paid-animate");
+            payBtn.style.display = "none";
+            showToastOnce();
         } else {
             isPaid = false;
             paymentStatusEl.textContent = "UNPAID ❌";
@@ -96,15 +76,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* --------------------
        USER INFO
     -------------------- */
-    const meRes = await fetch("/api/auth/me", {
-        credentials: "same-origin"
-    });
-
+    const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
     if (!meRes.ok) {
         window.location.href = "/login-page";
         return;
     }
-
     const user = await meRes.json();
     document.getElementById("username").textContent = user.name;
     document.getElementById("department").textContent = user.department;
@@ -114,11 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
        PAY BUTTON
     -------------------- */
     payBtn.addEventListener("click", async () => {
-        const res = await fetch("/api/payment/init", {
-            method: "POST",
-            credentials: "same-origin"
-        });
-
+        const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
         const data = await res.json();
         if (data.status) {
             window.location.href = data.data.authorization_url;
@@ -130,13 +102,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     -------------------- */
     await checkPaymentStatus();   // sets isPaid
     await loadCourses();          // ALWAYS load courses once
-
-    /* --------------------
-       POLLING (ONLY IF UNPAID)
-    -------------------- */
-    if (!isPaid) {
-        pollingId = setInterval(checkPaymentStatus, 5000);
-    }
 
     /* --------------------
        LOGOUT

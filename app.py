@@ -5,8 +5,7 @@ from flask import (
 from flask_cors import CORS
 import os
 from datetime import datetime
-from werkzeug.security import generate_password_hash
-from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
@@ -110,31 +109,29 @@ def register():
     conn = get_db()
     c = conn.cursor()
 
-    # Check if email already exists
     c.execute("SELECT id FROM users WHERE email=?", (email,))
     if c.fetchone():
         conn.close()
         return jsonify({"error": "Email already exists"}), 400
 
-    # Insert user
     c.execute(
         "INSERT INTO users (name, email, password, department, level) VALUES (?, ?, ?, ?, ?)",
         (name, email, hashed_pw, department, level)
     )
     user_id = c.lastrowid
 
-    # Create payment record
     c.execute(
         "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
         (user_id, 20000, "unpaid")
     )
+
     conn.commit()
     conn.close()
 
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
 # =====================
-# COURSES FOR USERS (ALL VISIBLE, UNPAID OR PAID)
+# COURSES FOR USERS
 # =====================
 @app.route("/api/courses/my")
 def my_courses():
@@ -153,7 +150,7 @@ def my_courses():
     return jsonify({"courses": courses})
 
 # =====================
-# SINGLE COURSE PAGE (PAYMENT REQUIRED)
+# COURSE PAGE
 # =====================
 @app.route("/course/<int:course_id>")
 def course_page(course_id):
@@ -163,34 +160,27 @@ def course_page(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    # Check payment
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
         return "<h3>Payment required to access courses</h3>", 403
 
-    # Fetch course
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
 
-    # Fetch all materials (audios and pdfs) with titles
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='audio'", (course_id,))
     audios = c.fetchall()
+
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
     pdfs = c.fetchall()
 
     conn.close()
 
-    return render_template(
-        "course.html",
-        course=course,
-        audios=audios,
-        pdfs=pdfs
-    )
+    return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
 
 # =====================
 # PDF VIEWER
@@ -202,14 +192,13 @@ def pdf_viewer(course_id):
 
     conn = get_db()
     c = conn.cursor()
-    # Check payment
+
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
-    # Fetch course
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
@@ -219,14 +208,11 @@ def pdf_viewer(course_id):
     c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
     pdf = c.fetchone()
     conn.close()
+
     if not pdf:
         abort(404)
 
-    return render_template(
-        "pdf_viewer.html",
-        course=course,
-        pdf_id=pdf["id"]
-    )
+    return render_template("pdf_viewer.html", course=course, pdf_id=pdf["id"])
 
 # =====================
 # STREAM FILES
@@ -238,8 +224,10 @@ def stream_audio(material_id):
     c.execute("SELECT filename FROM materials WHERE id=? AND file_type='audio'", (material_id,))
     material = c.fetchone()
     conn.close()
+
     if not material:
         abort(404)
+
     return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
 
 @app.route("/stream/pdf/<int:material_id>")
@@ -249,8 +237,10 @@ def stream_pdf(material_id):
     c.execute("SELECT filename FROM materials WHERE id=? AND file_type='pdf'", (material_id,))
     material = c.fetchone()
     conn.close()
+
     if not material:
         abort(404)
+
     return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
 
 # =====================
@@ -272,100 +262,8 @@ def payment_status():
 
     if not payment:
         return jsonify({"amount": 20000, "status": "unpaid"})
+
     return jsonify({"amount": payment["amount"], "status": payment["status"]})
-
-# =====================
-# PAYMENT INIT
-# =====================
-@app.route("/api/payment/init", methods=["POST"])
-def init_payment():
-    if "user_id" not in session or is_admin(session["user_id"]):
-        abort(403)
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT email FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    conn.close()
-
-    headers = {
-        "Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "email": user["email"],
-        "amount": 20000 * 100,
-        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment-success"
-    }
-
-    res = requests.post(
-        "https://api.paystack.co/transaction/initialize",
-        json=payload,
-        headers=headers
-    )
-
-    return jsonify(res.json())
-
-# =====================
-# PAYMENT CALLBACK
-# =====================
-@app.route("/payment-success")
-def payment_success():
-    reference = request.args.get("reference")
-    if not reference:
-        abort(400)
-
-    headers = {"Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}"}
-    res = requests.get(f"https://api.paystack.co/transaction/verify/{reference}", headers=headers)
-    data = res.json()
-
-    if data["status"] and data["data"]["status"] == "success":
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?", (session["user_id"],))
-        conn.commit()
-        conn.close()
-        return redirect("/account")
-
-    return "<h3>Payment failed</h3>", 400
-
-# =====================
-# PAYSTACK WEBHOOK
-# =====================
-@app.route("/paystack/webhook", methods=["POST"])
-def paystack_webhook():
-    signature = request.headers.get("x-paystack-signature")
-    payload = request.get_data()
-    expected = hmac.new(app.config["PAYSTACK_SECRET_KEY"].encode(), payload, hashlib.sha512).hexdigest()
-    if signature != expected:
-        abort(403)
-
-    event = request.get_json()
-    if event["event"] == "charge.success":
-        email = event["data"]["customer"]["email"]
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=(SELECT id FROM users WHERE email=?)", (email,))
-        conn.commit()
-        conn.close()
-
-    return "", 200
-
-# =====================
-# LOGOUT
-# =====================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login-page")
-
-# =====================
-# ERRORS
-# =====================
-@app.errorhandler(404)
-def not_found(e):
-    return render_template("404.html"), 404
 
 # =====================
 # RUN
