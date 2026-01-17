@@ -15,7 +15,7 @@ import hashlib
 import hmac
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # =====================
 # CONFIG
