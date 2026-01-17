@@ -266,6 +266,14 @@ def payment_status():
     return jsonify({"amount": payment["amount"], "status": payment["status"]})
 
 # =====================
+# LOGOUT
+# =====================
+@app.route("/logout")
+def logout():
+    session.clear()  # clears all session data
+    return redirect("/login-page")  # redirect to login page
+    
+# =====================
 # RUN
 # =====================
 if __name__ == "__main__":
