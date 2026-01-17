@@ -66,9 +66,8 @@ def login():
         return jsonify({"error": "Invalid email or password"}), 401
 
     # ✅ Login success
-session.permanent = True
-session["user_id"] = user["id"]
-
+    session.permanent = True
+    session["user_id"] = user["id"]
 
     # Redirect based on role
     if is_admin(user["id"]):
