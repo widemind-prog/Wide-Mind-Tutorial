@@ -91,7 +91,7 @@ def init_db():
                           (course_id, f, file_type))
 
     # -------------------------
-    # CREATE DEMO USER
+    # CREATE DEMO STUDENT USER
     # -------------------------
     demo_email = "demo@widemind.test"
     demo_password = "demopassword"
@@ -101,19 +101,36 @@ def init_db():
         hashed_pw = generate_password_hash(demo_password)
         c.execute(
             "INSERT INTO users (name, email, password, department, level, role, is_suspended) VALUES (?, ?, ?, ?, ?, 'student', 0)",
-            ("Admin Wide", demo_email, hashed_pw, "Psychology", "400")
+            ("Demo User", demo_email, hashed_pw, "Psychology", "400")
         )
         demo_user_id = c.lastrowid
-
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
             (demo_user_id, 20000, "paid")
+        )
+
+    # -------------------------
+    # CREATE ADMIN USER
+    # -------------------------
+    admin_email = "wideminddevs@gmail.com"
+
+    # ✅ Paste your pre-generated hash here
+    admin_hashed_password = "scrypt:32768:8:1$AMDSiSevHwChJp23$083a029ff1370771a4afd5e72bcb3803bafccdac058f559a997d6641084e6b955489fc4df1678bb19d857516c7c22844601494c0c50e75a56ab90e1c25b46e8e"  
+
+    c.execute("SELECT id FROM users WHERE email=?", (admin_email,))
+    if not c.fetchone():
+        c.execute(
+            "INSERT INTO users (name, email, password, role, is_suspended) VALUES (?, ?, ?, 'admin', 0)",
+            ("Admin Wide", admin_email, admin_hashed_password)
         )
 
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully.")
 
+# -------------------------
+# CHECK IF ADMIN
+# -------------------------
 def is_admin(user_id):
     conn = get_db()
     c = conn.cursor()
