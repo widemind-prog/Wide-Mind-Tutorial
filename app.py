@@ -15,7 +15,6 @@ import hashlib
 import hmac
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
 
 # =====================
 # CONFIG
@@ -26,6 +25,11 @@ app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["UPLOAD_FOLDER"] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "files"
+)
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax"
 )
 
 # =====================
