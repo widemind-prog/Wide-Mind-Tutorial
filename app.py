@@ -29,10 +29,10 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
     "files"
 )
 
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax"
-)
+if os.environ.get("ENV") == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True
+else:
+    app.config["SESSION_COOKIE_SECURE"] = False  # must be False for HTTP
 
 # =====================
 # REGISTER BLUEPRINTS

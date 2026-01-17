@@ -2,57 +2,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const toast = document.getElementById("admin-toast");
 
-    function showToast(message) {
+    function showToast(message, isError = false) {
         if (!toast) return;
+
         toast.textContent = message;
+        toast.style.background = isError ? "#a00000" : "#333";
         toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 3000);
+
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 3000);
     }
 
-    /* --------------------
-       HANDLE ADMIN ACTIONS VIA AJAX
-    -------------------- */
-    document.querySelectorAll("form").forEach(form => {
+    // Intercept ALL admin forms
+    document.querySelectorAll(".admin-dashboard form").forEach(form => {
+
         form.addEventListener("submit", async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // ⛔ stop reload
 
-            // Determine action URL
-            const action = form.getAttribute("action") || (e.submitter && e.submitter.getAttribute("formaction"));
-            if (!action) return;
+            const button = e.submitter;
+            if (!button || !button.formAction) return;
 
-            // Optional confirmation for delete buttons
-            if (e.submitter && e.submitter.textContent.toLowerCase().includes("delete")) {
-                if (!confirm("Are you sure you want to delete?")) return;
+            // Confirm delete
+            if (button.textContent.toLowerCase().includes("delete")) {
+                if (!confirm("This action is permanent. Continue?")) return;
             }
 
             try {
-                const res = await fetch(action, {
+                const res = await fetch(button.formAction, {
                     method: "POST",
                     credentials: "same-origin"
                 });
-                const data = await res.json();
 
-                if (res.ok && data.message) {
-                    showToast(data.message);
-
-                    // Update the UI without full reload
-                    // For users page
-                    if (action.includes("/users/suspend/") || action.includes("/users/mark-paid/") || action.includes("/users/delete/")) {
-                        setTimeout(() => location.reload(), 600);
-                    }
-
-                    // For courses page
-                    if (action.includes("/courses/delete/") || action.includes("/courses/material/delete/")) {
-                        setTimeout(() => location.reload(), 600);
-                    }
-                } else {
-                    showToast(data.error || "Action failed");
+                if (!res.ok) {
+                    showToast("Action failed", true);
+                    return;
                 }
+
+                showToast("Action successful");
+
+                // Refresh once after short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
+
             } catch (err) {
                 console.error(err);
-                showToast("An error occurred");
+                showToast("Server error", true);
             }
         });
+
     });
 
 });

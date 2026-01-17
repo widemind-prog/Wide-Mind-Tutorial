@@ -7,11 +7,15 @@ payment_bp = Blueprint("payment_bp", __name__)
 
 @payment_bp.route("/api/payment/init", methods=["POST"])
 def init_payment():
+    """
+    Initialize Paystack payment for the logged-in user.
+    Full-page redirect is used instead of modal.
+    """
     if "user_id" not in session:
         return jsonify({"status": False, "message": "Not authenticated"}), 401
 
     user_id = session["user_id"]
-    amount = 20000 * 100  # Paystack expects amount in kobo
+    amount = 20000 * 100  # Paystack expects amount in kobo (₦20,000)
 
     # Get user email from DB
     conn = get_db()
@@ -30,12 +34,18 @@ def init_payment():
     payload = {
         "email": user["email"],
         "amount": amount,
-        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment-success"  # replace with your actual callback
+        # Redirect to account page with query string for toast
+        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/account?payment=callback"
     }
 
-    resp = requests.post("https://api.paystack.co/transaction/initialize", json=payload, headers=headers)
-    resp_json = resp.json()
+    try:
+        resp = requests.post("https://api.paystack.co/transaction/initialize", json=payload, headers=headers)
+        resp.raise_for_status()
+        resp_json = resp.json()
+    except requests.RequestException as e:
+        return jsonify({"status": False, "message": "Failed to initialize payment"}), 500
 
     if resp_json.get("status"):
         return jsonify({"status": True, "data": resp_json["data"]})
-    return jsonify({"status": False, "message": "Failed to initialize payment"})
+    else:
+        return jsonify({"status": False, "message": resp_json.get("message", "Failed to initialize payment")})

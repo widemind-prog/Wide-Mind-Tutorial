@@ -2,29 +2,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const paymentStatusEl = document.getElementById("payment-status");
     const payBtn = document.getElementById("pay-btn");
-    const toast = document.getElementById("toast");
     const coursesList = document.getElementById("courses");
+    const logoutBtn = document.getElementById("logout-btn");
 
-    let isPaid = false;
-    const TOAST_KEY = "paymentToastShown";
+    let isPaid = false; // tracks if user has paid
 
     /* --------------------
-       TOAST (ONCE EVER)
+       HELPER: GET URL PARAMS
     -------------------- */
-    function showToastOnce(message = "Payment successful ✅") {
-        if (localStorage.getItem(TOAST_KEY) === "true") return;
-
-        toast.textContent = message;
-        toast.classList.add("show");
-        localStorage.setItem(TOAST_KEY, "true");
-
-        setTimeout(() => toast.classList.remove("show"), 3000);
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
     }
 
     /* --------------------
        LOAD COURSES
     -------------------- */
     async function loadCourses() {
+        if (!coursesList) return;
+
         const res = await fetch("/api/courses/my", { credentials: "same-origin" });
         const data = await res.json();
         coursesList.innerHTML = "";
@@ -38,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const li = document.createElement("li");
             const a = document.createElement("a");
             a.textContent = `${course.code} - ${course.title}`;
+
             if (isPaid) {
                 a.href = `/course/${course.id}`;
             } else {
@@ -47,74 +44,106 @@ document.addEventListener("DOMContentLoaded", async () => {
                     alert("Payment required to access this course");
                 });
             }
+
             li.appendChild(a);
             coursesList.appendChild(li);
         });
     }
 
     /* --------------------
-       PAYMENT STATUS
-       showPopup = true if we want to alert user of cancelled payment
+       CHECK PAYMENT STATUS
     -------------------- */
-    async function checkPaymentStatus(showPopup = false) {
+    async function checkPaymentStatus() {
+        if (!paymentStatusEl || !payBtn) return;
+
         const res = await fetch("/api/payment/status", { credentials: "same-origin" });
         if (!res.ok) return;
 
         const payment = await res.json();
+
         if (payment.status === "paid") {
             if (!isPaid) {
                 isPaid = true;
                 paymentStatusEl.textContent = "PAID ✅";
                 paymentStatusEl.classList.add("paid-animate");
                 payBtn.style.display = "none";
-                showToastOnce("Payment successful ✅");
                 await loadCourses();
             }
         } else {
-            if (showPopup) alert("Payment cancelled ❌");
             isPaid = false;
             paymentStatusEl.textContent = "UNPAID ❌";
             paymentStatusEl.style.color = "red";
             payBtn.style.display = "inline-block";
+            await loadCourses();
         }
     }
 
     /* --------------------
-       USER INFO
+       LOAD USER INFO
     -------------------- */
-    const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
-    if (!meRes.ok) {
-        if (meRes.status === 401) {
+    try {
+        const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
+        if (!meRes.ok) {
             window.location.href = "/login-page";
             return;
         }
+        const user = await meRes.json();
+        const usernameEl = document.getElementById("username");
+        const departmentEl = document.getElementById("department");
+        const levelEl = document.getElementById("level");
+
+        if (usernameEl) usernameEl.textContent = user.name;
+        if (departmentEl) departmentEl.textContent = user.department;
+        if (levelEl) levelEl.textContent = user.level;
+    } catch (err) {
+        console.error("Failed to load user info:", err);
     }
-    const user = await meRes.json();
-    document.getElementById("username").textContent = user.name;
-    document.getElementById("department").textContent = user.department;
-    document.getElementById("level").textContent = user.level;
 
     /* --------------------
        PAY BUTTON
     -------------------- */
-    payBtn.addEventListener("click", async () => {
-        const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
-        const data = await res.json();
-        if (data.status) {
-            window.location.href = data.data.authorization_url;
-        }
-    });
+    if (payBtn) {
+        payBtn.addEventListener("click", async () => {
+            try {
+                const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
+                const data = await res.json();
+                if (data.status) {
+                    // Redirect to Paystack full page
+                    window.location.href = data.data.authorization_url;
+                } else {
+                    alert(data.message || "Payment initialization failed");
+                }
+            } catch (err) {
+                console.error("Payment initiation failed:", err);
+                alert("Payment initiation failed. Try again.");
+            }
+        });
+    }
+
+    /* --------------------
+       PAYSTACK REDIRECT HANDLING
+    -------------------- */
+    const paymentRedirect = getQueryParam("payment");
+    if (paymentRedirect === "callback") {
+        alert("Payment successful ✅");
+        // Remove query string so message doesn't repeat on reload
+        window.history.replaceState({}, document.title, "/account");
+        await checkPaymentStatus();
+    }
 
     /* --------------------
        INITIAL LOAD
     -------------------- */
-    await checkPaymentStatus(true);
+    await checkPaymentStatus();
     await loadCourses();
 
     /* --------------------
        LOGOUT
     -------------------- */
-    document.getElementById("logout-btn")
-        .addEventListener("click", () => window.location.href = "/logout");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            window.location.href = "/logout";
+        });
+    }
 
 });
