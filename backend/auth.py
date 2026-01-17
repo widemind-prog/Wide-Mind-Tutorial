@@ -1,10 +1,13 @@
 from flask import Blueprint, jsonify, session, request
 from werkzeug.security import check_password_hash
-from backend.db import get_db
+from backend.db import get_db, is_admin
 
 auth_bp = Blueprint("auth_bp", __name__)
 
-# Get current user info
+# ---------------------
+# GET CURRENT USER
+# ---------------------
+
 @auth_bp.route("/me", methods=["GET"])
 def me():
     if "user_id" not in session:
@@ -12,16 +15,26 @@ def me():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT name, department, level FROM users WHERE id=?", (session["user_id"],))
+    c.execute(
+        "SELECT name, department, level FROM users WHERE id=?",
+        (session["user_id"],)
+    )
     user = c.fetchone()
     conn.close()
 
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    return jsonify({"name": user["name"], "department": user["department"], "level": user["level"]})
+    return jsonify({
+        "name": user["name"],
+        "department": user["department"],
+        "level": user["level"]
+    })
 
-# Login route
+# ---------------------
+# LOGIN
+# ---------------------
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json() or {}
@@ -33,12 +46,30 @@ def login():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, password FROM users WHERE email=?", (email,))
+    c.execute(
+        "SELECT id, password, is_suspended FROM users WHERE email=?",
+        (email,)
+    )
     user = c.fetchone()
     conn.close()
 
-    if user and check_password_hash(user["password"], password):
-        session["user_id"] = user["id"]
-        return jsonify({"redirect": "/account"}), 200
+    # User not found
+    if not user:
+        return jsonify({"error": "Invalid email or password"}), 401
 
-    return jsonify({"error": "Invalid email or password"}), 401
+    # User suspended
+    if user["is_suspended"]:
+        return jsonify({"error": "Account suspended"}), 403
+
+    # Password check
+    if not check_password_hash(user["password"], password):
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    # ✅ Login success
+    session["user_id"] = user["id"]
+
+    # Redirect based on role
+    if is_admin(user["id"]):
+        return jsonify({"redirect": "/admin"}), 200
+    else:
+        return jsonify({"redirect": "/account"}), 200

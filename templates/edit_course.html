@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Course{% endblock %}
+
+{% block content %}
+
+<section class="admin-dashboard">
+
+    <h1 class="dashboard-title">Edit Course</h1>
+
+    <form method="POST" class="admin-box">
+
+        <label>Course Code</label>
+        <input
+            type="text"
+            name="course_code"
+            value="{{ course.course_code }}"
+            required>
+
+        <label>Course Title</label>
+        <input
+            type="text"
+            name="course_title"
+            value="{{ course.course_title }}"
+            required>
+
+        <label>Description</label>
+        <textarea
+            name="description"
+            rows="5">{{ course.description }}</textarea>
+
+        <button type="submit">Save Changes</button>
+
+    </form>
+
+    <a href="/admin/courses" class="back-login-btn">
+        ← Back to Courses
+    </a>
+
+</section>
+
+{% endblock %}

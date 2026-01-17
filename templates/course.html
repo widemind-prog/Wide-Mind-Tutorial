@@ -3,20 +3,73 @@
 
 <h2>{{ course.course_code }} - {{ course.course_title }}</h2>
 
-{% if audio_id %}
-<audio
-  id="audioPlayer"
-  controls
-  controlsList="nodownload"
-  src="/stream/audio/{{ audio_id }}">
-</audio>
-{% endif %}
+<div class="materials-section">
 
-{% if pdf_id %}
-<a class="btn" href="/course/{{ course.id }}/pdf">
-Open PDF 📝
-</a>
-{% endif %}
+    {% if audios %}
+    <div class="materials-box">
+        <h3>Audio Sessions</h3>
+        <ul>
+            {% for audio in audios %}
+            <li>
+                <strong>{{ audio.title }}</strong>
+                <audio
+                    controls
+                    controlsList="nodownload"
+                    src="/stream/audio/{{ audio.id }}">
+                    Your browser does not support the audio element.
+                </audio>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if pdfs %}
+    <div class="materials-box">
+        <h3>PDF Materials</h3>
+        <ul>
+            {% for pdf in pdfs %}
+            <li>
+                <strong>{{ pdf.title }}</strong>
+                <!-- Updated link to use PDF viewer page -->
+                <a class="btn" href="/course/{{ course.id }}/pdf" target="_blank">
+                    Open PDF 📝
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+.materials-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.materials-box {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.materials-box h3 {
+    margin-top: 0;
+}
+
+.materials-box ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.materials-box li {
+    margin-bottom: 10px;
+}
+</style>
 
 <script src="/static/js/course.js"></script>
 {% endblock %}

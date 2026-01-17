@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h1 class="dashboard-title">Admin Dashboard</h1>
+    <p class="dashboard-subtitle">Manage users and courses</p>
+
+    <div class="dashboard-boxes">
+
+        <!-- USERS -->
+        <a href="/admin/users" class="dashboard-box">
+            <h3>Users</h3>
+            <ul>
+                <li>View all users</li>
+                <li>Suspend users</li>
+                <li>Delete users</li>
+                <li>Manage payments</li>
+            </ul>
+        </a>
+
+        <!-- COURSES -->
+        <a href="/admin/courses" class="dashboard-box">
+            <h3>Courses</h3>
+            <ul>
+                <li>Add/Edit/Delete courses</li>
+                <li>Upload course materials</li>
+            </ul>
+        </a>
+
+<button id="logout-btn" class="btn">Logout</button>
+
+<script>
+document.getElementById("logout-btn").addEventListener("click", function() {
+    window.location.href = "/logout";
+});
+</script>
+
+    </div>
+</div>
+{% endblock %}

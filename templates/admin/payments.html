@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Admin - Payments{% endblock %}
+
+{% block content %}
+<div class="admin-box">
+    <h2>Payments</h2>
+
+    <ul class="admin-list">
+        {% for payment in payments %}
+        <li>
+            <strong>{{ payment.name }}</strong> ({{ payment.email }})
+            <br>
+            Amount: ₦{{ payment.amount }}
+            <br>
+            Status: <strong>{{ payment.status }}</strong>
+
+            {% if payment.status != "paid" %}
+            <button onclick="markPaid({{ payment.user_id }})">
+                Mark as Paid
+            </button>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script>
+function markPaid(userId) {
+    if (!confirm("Mark this payment as PAID?")) return;
+    fetch(`/admin/payments/mark-paid/${userId}`, {method: "POST"})
+        .then(() => location.reload());
+}
+</script>
+{% endblock %}

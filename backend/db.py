@@ -111,6 +111,14 @@ def init_db():
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully.")
+    
+def is_admin(user_id):
+  conn = get_db()
+  c = conn.cursor()
+  c.execute("SELECT role FROM users WHERE id=?", (user_id,))
+  user = c.fetchone()
+  conn.close()
+  return user and user["role"] == "admin"
 
 # -------------------------
 # HASH PASSWORD UTILITY
