@@ -13,31 +13,38 @@ def paystack_webhook():
     payload = request.get_data()
 
     # Verify signature
-    computed_hash = hmac.new(paystack_secret.encode(), payload, hashlib.sha512).hexdigest()
+    computed_hash = hmac.new(
+        paystack_secret.encode(),
+        payload,
+        hashlib.sha512
+    ).hexdigest()
+
     if hash != computed_hash:
         return "Unauthorized", 401
 
     event = request.json
+
     if event["event"] == "charge.success":
-        # Get email
         email = event["data"]["customer"]["email"]
+        ref = event["data"]["reference"]
+
         conn = get_db()
         c = conn.cursor()
+
+        # Prevent replay (duplicate reference)
+        c.execute("SELECT reference FROM payments WHERE reference=?", (ref,))
+        if c.fetchone():
+            conn.close()
+            return jsonify({"status": "duplicate"}), 200
+
         # Mark user's payment as paid
-        c.execute("UPDATE payments SET status='paid' WHERE user_id=(SELECT id FROM users WHERE email=?)", (email,))
+        c.execute("""
+            UPDATE payments
+            SET status='paid', reference=?
+            WHERE user_id=(SELECT id FROM users WHERE email=?)
+        """, (ref, email))
+
         conn.commit()
         conn.close()
 
-    return jsonify({"status": "ok"})
-    
-    ref = event["data"]["reference"]
-
-c.execute("SELECT reference FROM payments WHERE reference=?", (ref,))
-if c.fetchone():
-    return jsonify({"status": "duplicate"}), 200
-
-c.execute("""
-    UPDATE payments
-    SET status='paid', reference=?
-    WHERE user_id=(SELECT id FROM users WHERE email=?)
-""", (ref, email))
+    return jsonify({"status": "ok"}), 200
