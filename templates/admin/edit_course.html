@@ -6,6 +6,7 @@
 
 <!-- COURSE DETAILS -->
 <form method="POST" class="admin-box">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label>Course Code</label>
     <input type="text" name="course_code" value="{{ course.course_code }}" required>
 
@@ -27,6 +28,7 @@
         <li>
             <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
             <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
                     Delete
                 </button>
@@ -43,9 +45,12 @@
 <div class="admin-box">
     <h3>Add PDF Material</h3>
     <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label>Title:</label>
         <input type="text" name="title" placeholder="Enter PDF title" required>
         <input type="file" name="pdf" accept=".pdf" required>
+        <!-- File preview -->
+        <div class="file-preview" style="margin-top:5px; font-size:0.9em; color:#555;">No file selected</div>
         <button type="submit">Upload PDF</button>
     </form>
 </div>
@@ -54,9 +59,12 @@
 <div class="admin-box">
     <h3>Add Audio Material</h3>
     <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label>Title:</label>
         <input type="text" name="title" placeholder="Enter Audio title" required>
-        <input type="file" name="audio" accept="audio/*" required>
+        <input type="file" name="audio" accept=".mp3,.wav" required>
+        <!-- File preview -->
+        <div class="file-preview" style="margin-top:5px; font-size:0.9em; color:#555;">No file selected</div>
         <button type="submit">Upload Audio</button>
     </form>
 </div>

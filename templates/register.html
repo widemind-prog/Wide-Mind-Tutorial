@@ -5,6 +5,7 @@
 <section class="register-section">  
     <h2>Create Account</h2>  
     <form id="register-form">  
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="name" placeholder="Full Name" required>  
         <input type="email" name="email" placeholder="Email" required>  
         <select name="department" required>  

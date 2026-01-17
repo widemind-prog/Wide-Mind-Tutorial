@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, session, request
 from werkzeug.security import check_password_hash
 from backend.db import get_db, is_admin
+from time import time
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -74,3 +75,17 @@ def login():
         return jsonify({"redirect": "/admin"}), 200
     else:
         return jsonify({"redirect": "/account"}), 200
+        
+LOGIN_ATTEMPTS = {}
+
+def is_rate_limited(ip):
+    now = time()
+    attempts = LOGIN_ATTEMPTS.get(ip, [])
+    attempts = [t for t in attempts if now - t < 300]
+    LOGIN_ATTEMPTS[ip] = attempts
+    return len(attempts) > 5
+    
+ip = request.remote_addr
+if is_rate_limited(ip):
+    abort(429)
+LOGIN_ATTEMPTS.setdefault(ip, []).append(time())

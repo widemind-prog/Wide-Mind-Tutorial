@@ -18,6 +18,7 @@
             <h3>Add New Course</h3>
 
             <form method="POST" action="/admin/courses/add">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input
                     type="text"
                     name="course_code"
@@ -58,6 +59,7 @@
 
                     <!-- DELETE -->
                     <form method="POST" action="/admin/courses/delete/{{ course.id }}">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button
                             type="submit"
                             class="btn danger"

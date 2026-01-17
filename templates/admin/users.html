@@ -39,6 +39,7 @@
 
                 <!-- ACTIONS -->
                 <form method="POST">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
                     <!-- TOGGLE SUSPEND -->
                     <button formaction="/admin/users/suspend/{{ user.id }}" type="submit">

@@ -3,6 +3,7 @@ import hmac
 import hashlib
 from backend.db import get_db
 import os
+from datetime import datetime
 
 webhook_bp = Blueprint("webhook_bp", __name__)
 
@@ -27,6 +28,7 @@ def paystack_webhook():
     if event["event"] == "charge.success":
         email = event["data"]["customer"]["email"]
         ref = event["data"]["reference"]
+        now = datetime.utcnow().isoformat()
 
         conn = get_db()
         c = conn.cursor()
@@ -37,12 +39,12 @@ def paystack_webhook():
             conn.close()
             return jsonify({"status": "duplicate"}), 200
 
-        # Mark user's payment as paid
+        # Mark user's payment as paid and record timestamp
         c.execute("""
             UPDATE payments
-            SET status='paid', reference=?
+            SET status='paid', reference=?, paid_at=?
             WHERE user_id=(SELECT id FROM users WHERE email=?)
-        """, (ref, email))
+        """, (ref, now, email))
 
         conn.commit()
         conn.close()
