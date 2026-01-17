@@ -84,8 +84,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     -------------------- */
     const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
     if (!meRes.ok) {
-        window.location.href = "/login-page";
-        return;
+        if (meRes.status === 401) {
+            window.location.href = "/login-page";
+            return;
+        }
     }
     const user = await meRes.json();
     document.getElementById("username").textContent = user.name;

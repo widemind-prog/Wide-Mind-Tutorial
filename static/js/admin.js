@@ -38,8 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Update the UI without full reload
                     // For users page
                     if (action.includes("/users/suspend/") || action.includes("/users/mark-paid/") || action.includes("/users/delete/")) {
-                        // Reload users grid
-                        setTimeout(() => location.reload(), 600); // slight delay to show toast
+                        setTimeout(() => location.reload(), 600);
                     }
 
                     // For courses page
