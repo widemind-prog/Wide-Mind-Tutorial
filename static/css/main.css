@@ -367,3 +367,27 @@ button:hover {
         font-size: 0.95em;
     }
 }
+
+/* Admin toast */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #0a7c2f;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: none;
+    z-index: 9999;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.toast.show {
+    display: block;
+    animation: fadeInOut 3s forwards;
+}
+@keyframes fadeInOut {
+    0% {opacity: 0; transform: translateY(20px);}
+    10% {opacity: 1; transform: translateY(0);}
+    90% {opacity: 1;}
+    100% {opacity: 0; transform: translateY(20px);}
+}

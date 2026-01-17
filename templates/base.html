@@ -5,14 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Wide Mind Tutorials{% endblock %}</title>
 <link rel="stylesheet" href="/static/css/main.css">
+<style>
+/* TOAST NOTIFICATIONS */
+.toast, .admin-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #333;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+.toast.show, .admin-toast.show {
+    opacity: 1;
+}
+</style>
 </head>
 <body>
 <header class="site-header">
     <a href="/"><img src="/static/images/logo.png" alt="Wide Mind Tutorials" class="header-logo"></a>
 </header>
+
 <main class="content">
     {% block content %}{% endblock %}
 </main>
+
 <footer class="site-footer">
     <nav class="footer-nav">
         <a href="/home">Home</a>
@@ -22,5 +42,16 @@
     </nav>
     <p>&copy; {{ now().year }} Wide Mind Tutorials</p>
 </footer>
+
+<!-- TOAST CONTAINERS -->
+<div id="toast" class="toast"></div>
+<div id="admin-toast" class="admin-toast"></div>
+
+<!-- SCRIPTS -->
+{% block scripts %}
+<script src="/static/js/account.js"></script>
+<script src="/static/js/admin.js"></script>
+{% endblock %}
+
 </body>
 </html>

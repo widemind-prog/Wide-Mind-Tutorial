@@ -11,9 +11,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* --------------------
        TOAST (ONCE EVER)
     -------------------- */
-    function showToastOnce() {
+    function showToastOnce(message = "Payment successful ✅") {
         if (localStorage.getItem(TOAST_KEY) === "true") return;
 
+        toast.textContent = message;
         toast.classList.add("show");
         localStorage.setItem(TOAST_KEY, "true");
 
@@ -53,19 +54,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* --------------------
        PAYMENT STATUS
+       showPopup = true if we want to alert user of cancelled payment
     -------------------- */
-    async function checkPaymentStatus() {
+    async function checkPaymentStatus(showPopup = false) {
         const res = await fetch("/api/payment/status", { credentials: "same-origin" });
         if (!res.ok) return;
 
         const payment = await res.json();
         if (payment.status === "paid") {
-            isPaid = true;
-            paymentStatusEl.textContent = "PAID ✅";
-            paymentStatusEl.classList.add("paid-animate");
-            payBtn.style.display = "none";
-            showToastOnce();
+            if (!isPaid) {
+                isPaid = true;
+                paymentStatusEl.textContent = "PAID ✅";
+                paymentStatusEl.classList.add("paid-animate");
+                payBtn.style.display = "none";
+                showToastOnce("Payment successful ✅");
+                await loadCourses();
+            }
         } else {
+            if (showPopup) alert("Payment cancelled ❌");
             isPaid = false;
             paymentStatusEl.textContent = "UNPAID ❌";
             paymentStatusEl.style.color = "red";
@@ -100,8 +106,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* --------------------
        INITIAL LOAD
     -------------------- */
-    await checkPaymentStatus();   // sets isPaid
-    await loadCourses();          // ALWAYS load courses once
+    await checkPaymentStatus(true);
+    await loadCourses();
 
     /* --------------------
        LOGOUT
