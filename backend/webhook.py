@@ -29,3 +29,15 @@ def paystack_webhook():
         conn.close()
 
     return jsonify({"status": "ok"})
+    
+    ref = event["data"]["reference"]
+
+c.execute("SELECT reference FROM payments WHERE reference=?", (ref,))
+if c.fetchone():
+    return jsonify({"status": "duplicate"}), 200
+
+c.execute("""
+    UPDATE payments
+    SET status='paid', reference=?
+    WHERE user_id=(SELECT id FROM users WHERE email=?)
+""", (ref, email))

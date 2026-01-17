@@ -31,8 +31,15 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 
 if os.environ.get("ENV") == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
-else:
-    app.config["SESSION_COOKIE_SECURE"] = False  # must be False for HTTP
+    app.debug = False
+
+    
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=3600  # 1 hour
+)
+
 
 # =====================
 # REGISTER BLUEPRINTS
@@ -95,6 +102,19 @@ def account_page():
         return redirect("/admin")
     return render_template("account.html")
 
+
+@app.before_request
+def block_suspended_users():
+    if "user_id" in session:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
+        user = c.fetchone()
+        conn.close()
+        if user and user["is_suspended"]:
+            session.clear()
+            return redirect("/login-page")
+            
 # =====================
 # REGISTER
 # =====================
@@ -224,9 +244,24 @@ def pdf_viewer(course_id):
 # =====================
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
+    if "user_id" not in session:
+        abort(403)
+
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='audio'", (material_id,))
+
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        abort(403)
+
+    c.execute("""
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
+        WHERE m.id=? AND m.file_type='audio'
+    """, (material_id,))
     material = c.fetchone()
     conn.close()
 
@@ -234,12 +269,29 @@ def stream_audio(material_id):
         abort(404)
 
     return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+
+
 
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
+    if "user_id" not in session:
+        abort(403)
+
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='pdf'", (material_id,))
+
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        abort(403)
+
+    c.execute("""
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
+        WHERE m.id=? AND m.file_type='pdf'
+    """, (material_id,))
     material = c.fetchone()
     conn.close()
 
@@ -247,6 +299,8 @@ def stream_pdf(material_id):
         abort(404)
 
     return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+
+
 
 # =====================
 # PAYMENT STATUS
