@@ -6,6 +6,7 @@ from flask_cors import CORS
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
@@ -54,6 +55,22 @@ def home():
         return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("index.html")
 
+@app.route("/home")
+def home_redirect():
+    return redirect("/")
+
+@app.route("/about")
+def about_page():
+    return render_template("about.html")
+
+@app.route("/contact")
+def contact_page():
+    return render_template("contact.html")
+
+@app.route("/privacy")
+def privacy_page():
+    return render_template("privacy.html")
+
 @app.route("/login-page")
 def login_page():
     return render_template("login.html")
@@ -76,37 +93,41 @@ def account_page():
 @app.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
+    name = data.get("name")
+    email = data.get("email")
+    password = data.get("password")
+    department = data.get("department")
+    level = data.get("level")
 
-    hashed_pw = generate_password_hash(data["password"])
+    if not all([name, email, password, department, level]):
+        return jsonify({"error": "All fields are required"}), 400
+
+    hashed_pw = generate_password_hash(password)
     conn = get_db()
     c = conn.cursor()
 
-    try:
-        c.execute("""
-            INSERT INTO users (name, email, password, department, level)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            data["name"],
-            data["email"],
-            hashed_pw,
-            data["department"],
-            data["level"]
-        ))
-
-        user_id = c.lastrowid
-
-        c.execute("""
-            INSERT INTO payments (user_id, amount, status)
-            VALUES (?, 20000, 'unpaid')
-        """)
-
-        conn.commit()
-    except Exception:
+    # Check if email already exists
+    c.execute("SELECT id FROM users WHERE email=?", (email,))
+    if c.fetchone():
         conn.close()
         return jsonify({"error": "Email already exists"}), 400
 
+    # Insert user
+    c.execute(
+        "INSERT INTO users (name, email, password, department, level) VALUES (?, ?, ?, ?, ?)",
+        (name, email, hashed_pw, department, level)
+    )
+    user_id = c.lastrowid
+
+    # Create payment record
+    c.execute(
+        "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
+        (user_id, 20000, "unpaid")
+    )
+    conn.commit()
     conn.close()
-    return jsonify({"redirect": "/login-page"}), 201
+
+    return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
 # =====================
 # COURSES FOR USERS (ALL VISIBLE, UNPAID OR PAID)
@@ -128,7 +149,7 @@ def my_courses():
     return jsonify({"courses": courses})
 
 # =====================
-# SINGLE COURSE PAGE (PAYMENT REQUIRED TO ACCESS)
+# SINGLE COURSE PAGE (PAYMENT REQUIRED)
 # =====================
 @app.route("/course/<int:course_id>")
 def course_page(course_id):
@@ -138,7 +159,7 @@ def course_page(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    # Check if paid
+    # Check payment
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
@@ -152,10 +173,9 @@ def course_page(course_id):
         conn.close()
         abort(404)
 
-    # Fetch all materials with custom names (titles)
+    # Fetch all materials (audios and pdfs) with titles
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='audio'", (course_id,))
     audios = c.fetchall()
-
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
     pdfs = c.fetchall()
 
@@ -178,26 +198,23 @@ def pdf_viewer(course_id):
 
     conn = get_db()
     c = conn.cursor()
-
+    # Check payment
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
+    # Fetch course
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
 
-    c.execute(
-        "SELECT id FROM materials WHERE course_id=? AND file_type='pdf'",
-        (course_id,)
-    )
+    c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
     pdf = c.fetchone()
     conn.close()
-
     if not pdf:
         abort(404)
 
@@ -214,39 +231,23 @@ def pdf_viewer(course_id):
 def stream_audio(material_id):
     conn = get_db()
     c = conn.cursor()
-    c.execute(
-        "SELECT filename FROM materials WHERE id=? AND file_type='audio'",
-        (material_id,)
-    )
+    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='audio'", (material_id,))
     material = c.fetchone()
     conn.close()
-
     if not material:
         abort(404)
-
-    return send_from_directory(
-        app.config["UPLOAD_FOLDER"],
-        material["filename"]
-    )
+    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
 
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     conn = get_db()
     c = conn.cursor()
-    c.execute(
-        "SELECT filename FROM materials WHERE id=? AND file_type='pdf'",
-        (material_id,)
-    )
+    c.execute("SELECT filename FROM materials WHERE id=? AND file_type='pdf'", (material_id,))
     material = c.fetchone()
     conn.close()
-
     if not material:
         abort(404)
-
-    return send_from_directory(
-        app.config["UPLOAD_FOLDER"],
-        material["filename"]
-    )
+    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
 
 # =====================
 # PAYMENT STATUS
@@ -267,7 +268,6 @@ def payment_status():
 
     if not payment:
         return jsonify({"amount": 20000, "status": "unpaid"})
-
     return jsonify({"amount": payment["amount"], "status": payment["status"]})
 
 # =====================
@@ -312,25 +312,14 @@ def payment_success():
     if not reference:
         abort(400)
 
-    headers = {
-        "Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}"
-    }
-
-    res = requests.get(
-        f"https://api.paystack.co/transaction/verify/{reference}",
-        headers=headers
-    )
-
+    headers = {"Authorization": f"Bearer {app.config['PAYSTACK_SECRET_KEY']}"}
+    res = requests.get(f"https://api.paystack.co/transaction/verify/{reference}", headers=headers)
     data = res.json()
 
     if data["status"] and data["data"]["status"] == "success":
         conn = get_db()
         c = conn.cursor()
-        c.execute("""
-            UPDATE payments
-            SET status='paid', paid_at=datetime('now')
-            WHERE user_id=?
-        """, (session["user_id"],))
+        c.execute("UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?", (session["user_id"],))
         conn.commit()
         conn.close()
         return redirect("/account")
@@ -344,13 +333,7 @@ def payment_success():
 def paystack_webhook():
     signature = request.headers.get("x-paystack-signature")
     payload = request.get_data()
-
-    expected = hmac.new(
-        app.config["PAYSTACK_SECRET_KEY"].encode(),
-        payload,
-        hashlib.sha512
-    ).hexdigest()
-
+    expected = hmac.new(app.config["PAYSTACK_SECRET_KEY"].encode(), payload, hashlib.sha512).hexdigest()
     if signature != expected:
         abort(403)
 
@@ -359,11 +342,7 @@ def paystack_webhook():
         email = event["data"]["customer"]["email"]
         conn = get_db()
         c = conn.cursor()
-        c.execute("""
-            UPDATE payments
-            SET status='paid', paid_at=datetime('now')
-            WHERE user_id=(SELECT id FROM users WHERE email=?)
-        """, (email,))
+        c.execute("UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=(SELECT id FROM users WHERE email=?)", (email,))
         conn.commit()
         conn.close()
 
