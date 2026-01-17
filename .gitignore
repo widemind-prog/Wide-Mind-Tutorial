@@ -1,0 +1,21 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SQLite database
+backend/tutor.db
+
+# Environment / secret keys
+*.env
+
+# Node / JS dependencies (if any)
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
