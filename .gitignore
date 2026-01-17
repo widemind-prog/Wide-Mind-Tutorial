@@ -1,21 +1,57 @@
+# -------------------------
 # Python cache files
+# -------------------------
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
+# -------------------------
 # SQLite database
+# -------------------------
+*.db
 backend/tutor.db
+*.trashed-*
 
+# -------------------------
 # Environment / secret keys
+# -------------------------
 *.env
 
+# -------------------------
 # Node / JS dependencies (if any)
+# -------------------------
 node_modules/
 
+# -------------------------
 # OS junk
+# -------------------------
 .DS_Store
 Thumbs.db
 
-# VSCode
+# -------------------------
+# IDE / Editor settings
+# -------------------------
 .vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# -------------------------
+# Logs
+# -------------------------
+*.log
+
+# -------------------------
+# Compiled / built files
+# -------------------------
+dist/
+build/
+*.egg-info/
+
+# -------------------------
+# Misc
+# -------------------------
+*.swp
+*.bak
+*.tmp

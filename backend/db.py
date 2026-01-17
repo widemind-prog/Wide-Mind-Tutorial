@@ -31,7 +31,9 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             department TEXT,
-            level TEXT
+            level TEXT,
+            role TEXT DEFAULT 'student',
+            is_suspended INTEGER DEFAULT 0
         )
     """)
 
@@ -98,8 +100,8 @@ def init_db():
     if not c.fetchone():
         hashed_pw = generate_password_hash(demo_password)
         c.execute(
-            "INSERT INTO users (name, email, password, department, level) VALUES (?, ?, ?, ?, ?)",
-            ("Demo Admin", demo_email, hashed_pw, "Psychology", "400")
+            "INSERT INTO users (name, email, password, department, level, role, is_suspended) VALUES (?, ?, ?, ?, ?, 'student', 0)",
+            ("Admin Wide", demo_email, hashed_pw, "Psychology", "400")
         )
         demo_user_id = c.lastrowid
 
@@ -111,14 +113,14 @@ def init_db():
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully.")
-    
+
 def is_admin(user_id):
-  conn = get_db()
-  c = conn.cursor()
-  c.execute("SELECT role FROM users WHERE id=?", (user_id,))
-  user = c.fetchone()
-  conn.close()
-  return user and user["role"] == "admin"
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    conn.close()
+    return user and user["role"] == "admin"
 
 # -------------------------
 # HASH PASSWORD UTILITY
