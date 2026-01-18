@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // -------------------------
   let hasAccess = false;
   try {
-    const res = await fetch("/api/payment/status");
+    const res = await fetch("/payment/status");
     const data = await res.json();
 
     if (res.ok && data.status !== "unpaid") {
