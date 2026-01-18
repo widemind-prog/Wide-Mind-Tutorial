@@ -137,21 +137,8 @@ def add_security_headers(response):
 # -------------------------
 @app.route("/logout")
 def logout():
-    # Clear the session
     session.clear()
-
-    # Prepare response to remove cookies
-    response = make_response(redirect("/"))
-    response.set_cookie(
-        "session", "", expires=0, path="/", secure=os.environ.get("ENV") == "production",
-        httponly=True, samesite="Lax"
-    )
-    response.set_cookie(
-        "csrf_token", "", expires=0, path="/", secure=os.environ.get("ENV") == "production",
-        httponly=True, samesite="Lax"
-    )
-
-    return response
+    return redirect("/")
 # -------------------------
 # FRONTEND PAGES
 # -------------------------

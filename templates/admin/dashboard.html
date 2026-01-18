@@ -28,7 +28,10 @@
             </ul>
         </a>
 
-<button id="logout-btn" class="btn">Logout</button>
+<!-- Anywhere you want a logout button -->
+<form action="/logout" method="get">
+    <button type="submit">Logout</button>
+</form>
 
 <script>
 document.getElementById("logout-btn").addEventListener("click", function() {
