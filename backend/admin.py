@@ -13,7 +13,7 @@ import logging
 # ---------------------
 # BLUEPRINT
 # ---------------------
-admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
+admin_bp = Blueprint("admin_bp", __name__, url_prefix="/dashboard")
 
 # ---------------------
 # UPLOAD CONFIG
@@ -64,7 +64,7 @@ def allowed_file(filename):
 # ---------------------
 # DASHBOARD
 # ---------------------
-@admin_bp.route("/dashboard")
+@admin_bp.route("/")
 @admin_required
 def dashboard():
     return render_template("admin/dashboard.html")
