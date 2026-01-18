@@ -3,13 +3,18 @@
 {% block content %}
 
 <h2>Login to Your Account</h2>  
+
 <form id="login-form">
+    <!-- Hidden CSRF token -->
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    
     <input type="email" name="email" placeholder="Email" required>  
     <input type="password" name="password" placeholder="Password" required>  
     <button type="submit">Login</button>  
 </form>  
+
 <p id="login-msg" style="color:red;"></p>  
 <a href="/register-page">Register Now!</a>  
+
 <script src="/static/js/auth.js"></script>  
 {% endblock %}

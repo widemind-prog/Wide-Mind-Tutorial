@@ -1,14 +1,3 @@
-// -------------------------
-// auth.js
-// -------------------------
-
-// Helper to read cookie by name
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(";").shift();
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("login-form");
     if (!loginForm) return;
@@ -16,13 +5,14 @@ document.addEventListener("DOMContentLoaded", () => {
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const csrfToken = getCookie("csrf_token"); // get CSRF token from cookie
+        // Read CSRF token directly from hidden input
+        const csrfToken = loginForm.querySelector('input[name="_csrf_token"]').value;
 
         const res = await fetch("/login", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",
-                "X-CSRF-Token": csrfToken  // 🔥 send CSRF token
+                "X-CSRF-Token": csrfToken  // send CSRF token
             },
             credentials: "include",   // keeps session cookie
             body: JSON.stringify({
@@ -33,11 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const data = await res.json();
 
-        if (res.ok && data.redirect) {
-            window.location.href = data.redirect;
+        const msgEl = document.getElementById("login-msg");
+
+        if (res.ok) {
+            msgEl.style.color = "green";
+            msgEl.textContent = "Login successful! Redirecting...";
+            setTimeout(() => window.location.href = data.redirect || "/dashboard", 1000);
         } else {
-            document.getElementById("login-msg").textContent =
-                data.error || "Login failed";
+            msgEl.style.color = "red";
+            msgEl.textContent = data.error || "Login failed";
         }
     });
 });
