@@ -334,13 +334,13 @@ def courses_page():
     c.execute("SELECT * FROM courses ORDER BY id DESC")
     courses = c.fetchall()
     conn.close()
-    return render_template("courses.html", courses=courses)
+    return render_template("course.html", courses=courses)  # <-- changed to match your template
 
 @app.route("/dashboard")
 def dashboard_page():
     if "user_id" not in session:
         return redirect("/login-page")
-    return render_template("dashboard.html")
+    return render_template("admin/dashboard.html")  # admin folder
 
 @app.route("/login-page")
 def login_page():
@@ -351,6 +351,25 @@ def admin_page():
     if "user_id" not in session or not is_admin(session["user_id"]):
         return redirect("/login-page")
     return render_template("admin/dashboard.html")
+
+# Example admin sub-pages
+@app.route("/admin/users")
+def admin_users():
+    if "user_id" not in session or not is_admin(session["user_id"]):
+        return redirect("/login-page")
+    return render_template("admin/users.html")
+
+@app.route("/admin/courses")
+def admin_courses():
+    if "user_id" not in session or not is_admin(session["user_id"]):
+        return redirect("/login-page")
+    return render_template("admin/courses.html")
+
+@app.route("/admin/edit-course")
+def admin_edit_course():
+    if "user_id" not in session or not is_admin(session["user_id"]):
+        return redirect("/login-page")
+    return render_template("admin/edit_course.html")
 
 # -------------------------
 # RUN APP (LOCAL ONLY)
