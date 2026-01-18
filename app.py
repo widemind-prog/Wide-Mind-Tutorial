@@ -131,47 +131,12 @@ def add_security_headers(response):
     return response
 
 # -------------------------
-# LOGIN ROUTE
-# -------------------------
-@app.route("/login", methods=["POST"])
-def login():
-    data = request.get_json() or {}
-    email = data.get("email")
-    password = data.get("password")
-    if not email or not password:
-        return jsonify({"error": "Email and password required"}), 400
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT id, password, role, is_suspended FROM users WHERE email=?", (email,))
-    user = c.fetchone()
-    conn.close()
-
-    if not user or user["is_suspended"] or not check_password_hash(user["password"], password):
-        return jsonify({"error": "Invalid credentials"}), 403
-
-    session.clear()
-    session["user_id"] = user["id"]
-    session["_csrf_token"] = secrets.token_hex(16)
-
-    response = make_response(jsonify({"message": "Login successful"}))
-    response.set_cookie(
-        key="csrf_token",
-        value=session["_csrf_token"],
-        secure=secure_cookie,
-        httponly=True,
-        samesite="Lax",
-        path="/"
-    )
-    return response
-
-# -------------------------
 # LOGOUT
 # -------------------------
 @app.route("/logout")
 def logout():
     session.clear()
-    response = make_response(redirect("/login"))
+    response = make_response(redirect("/index"))
     response.set_cookie("session", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
     response.set_cookie("csrf_token", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
     return response
@@ -190,16 +155,7 @@ def index():
             return redirect("/dashboard")
         # Normal user → account page
         return redirect("/account")
-
-@app.route("/login")
-def login():
-    return render_template("login.html")
-    if "user_id" in session:
-        # Admin → admin dashboard
-        if is_admin(session["user_id"]):
-            return redirect("/dashboard")
-        # Normal user → account page
-        return redirect("/account")
+      
     
 @app.route("/dashboard")
 def dashboard():
