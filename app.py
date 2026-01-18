@@ -17,19 +17,6 @@ from backend.payment import payment_bp
 from backend.webhook import webhook_bp
 import secrets
 import logging
-# INIT DB
-with app.app_context():
-    init_db()
-
-# Test DB after tables exist
-try:
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT * FROM users LIMIT 1")
-    print(">>> DB test successful:", c.fetchall())
-    conn.close()
-except Exception as e:
-    print(">>> DB test failed:", e)
 
 # -------------------------
 # LOGGING
@@ -50,7 +37,7 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 
 if os.environ.get("ENV") == "production":
-    app.debug = True  # <-- temporarily enable debug for troubleshooting
+    app.debug = True  # temporarily enable debug for troubleshooting
     app.config["SESSION_COOKIE_SECURE"] = True
 else:
     app.debug = True
@@ -70,6 +57,23 @@ CORS(
 )
 
 app.jinja_env.globals['now'] = datetime.utcnow
+
+# -------------------------
+# INIT DB (AFTER APP DEFINITION)
+# -------------------------
+with app.app_context():
+    init_db()
+
+    # Test DB after tables exist
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM users LIMIT 1")
+        print(">>> DB test successful:", c.fetchall())
+        conn.close()
+    except Exception as e:
+        print(">>> DB test failed:", e)
+
 # -------------------------
 # REGISTER BLUEPRINTS
 # -------------------------
@@ -309,7 +313,7 @@ def index():
 @app.route("/register-page")
 def register_page():
     return render_template("register.html")
-    
+
 @app.route("/about")
 def about():
     return render_template("about.html")
@@ -317,7 +321,7 @@ def about():
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
-    
+
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html")
