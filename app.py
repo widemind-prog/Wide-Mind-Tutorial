@@ -268,6 +268,18 @@ def api_courses():
     conn.close()
     return jsonify(courses_with_materials)
     
+
+@app.route("/course/<int:course_id>")
+def view_course(course_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
+    course = c.fetchone()
+    c.execute("SELECT * FROM materials WHERE course_id=?", (course_id,))
+    materials = c.fetchall()
+    conn.close()
+    return render_template("course.html", course=course, materials=materials)
+    
 # -------------------------
 # STREAM FILES SECURELY
 # -------------------------

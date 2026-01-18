@@ -42,14 +42,14 @@
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
                     <!-- TOGGLE SUSPEND -->
-                    <button formaction="/admin/users/suspend/{{ user.id }}" type="submit">
+                    <button formaction="/dashboard/users/suspend/{{ user.id }}" type="submit">
                         {% if user.is_suspended %}Unsuspend{% else %}Suspend{% endif %}
                     </button>
 
                     <!-- TOGGLE PAYMENT -->
                     {% if user.role != "admin" %}
                         <button
-                            formaction="/admin/users/mark-paid/{{ user.id }}"
+                            formaction="/dashboard/users/mark-paid/{{ user.id }}"
                             type="submit"
                             style="background:#0a7c2f;">
                             {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
@@ -58,7 +58,7 @@
 
                     <!-- DELETE -->
                     <button
-                        formaction="/admin/users/delete/{{ user.id }}"
+                        formaction="/dashboard/users/delete/{{ user.id }}"
                         type="submit"
                         onclick="return confirm('This action is permanent. Continue?')"
                         style="background:#a00000;">

@@ -27,7 +27,7 @@
         {% for material in materials %}
         <li>
             <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
-            <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
+            <form method="POST" action="/dashboard/courses/material/delete/{{ material.id }}" style="display:inline;">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
                     Delete
@@ -44,7 +44,7 @@
 <!-- ADD PDF -->
 <div class="admin-box">
     <h3>Add PDF Material</h3>
-    <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}" enctype="multipart/form-data">
+    <form method="POST" action="/dashboard/courses/material/add/pdf/{{ course.id }}" enctype="multipart/form-data">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label>Title:</label>
         <input type="text" name="title" placeholder="Enter PDF title" required>
@@ -58,7 +58,7 @@
 <!-- ADD AUDIO -->
 <div class="admin-box">
     <h3>Add Audio Material</h3>
-    <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}" enctype="multipart/form-data">
+    <form method="POST" action="/dashboard/courses/material/add/audio/{{ course.id }}" enctype="multipart/form-data">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label>Title:</label>
         <input type="text" name="title" placeholder="Enter Audio title" required>

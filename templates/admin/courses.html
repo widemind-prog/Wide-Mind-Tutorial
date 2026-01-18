@@ -17,7 +17,7 @@
         <div class="course-box add-course-box">
             <h3>Add New Course</h3>
 
-            <form method="POST" action="/admin/courses/add">
+            <form method="POST" action="/dashboard/courses/add">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input
                     type="text"
@@ -53,12 +53,12 @@
                 <div class="course-actions">
 
                     <!-- EDIT -->
-                    <a href="/admin/courses/edit/{{ course.id }}" class="btn">
+                    <a href="/dashboard/courses/edit/{{ course.id }}" class="btn">
                         Edit
                     </a>
 
                     <!-- DELETE -->
-                    <form method="POST" action="/admin/courses/delete/{{ course.id }}">
+                    <form method="POST" action="/dashboard/courses/delete/{{ course.id }}">
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button
                             type="submit"
