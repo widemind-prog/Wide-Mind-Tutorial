@@ -65,7 +65,7 @@ with app.app_context():
 # REGISTER BLUEPRINTS
 # -------------------------
 app.register_blueprint(admin_bp)
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
 
@@ -152,70 +152,6 @@ def index():
 
     return render_template("index.html")
 
-# ---------------------
-# LOGIN
-# ---------------------
-@app.route("/login", methods=["GET"])
-def login():
-    return render_template("login.html")
-    
-@app.route("/login", methods=["POST"])
-def login():
-    ip = request.remote_addr or "unknown"
-
-    # 🔐 Rate limit check
-    if is_rate_limited(ip):
-        return jsonify({
-            "error": "Too many login attempts. Try again later."
-        }), 429
-
-    LOGIN_ATTEMPTS.setdefault(ip, []).append(time())
-
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify({"error": "Missing credentials"}), 400
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute(
-        "SELECT id, password, is_suspended FROM users WHERE email=?",
-        (email,)
-    )
-    user = c.fetchone()
-    conn.close()
-
-    # Invalid credentials
-    if not user or not check_password_hash(user["password"], password):
-        return jsonify({"error": "Invalid email or password"}), 401
-
-    # Suspended user
-    if user["is_suspended"]:
-        return jsonify({"error": "Account suspended"}), 403
-
-    # ✅ Login success
-    LOGIN_ATTEMPTS.pop(ip, None)
-
-    # Prevent session fixation
-    session.clear()
-    session.permanent = True
-    session["user_id"] = user["id"]
-
-    # Role-based redirect
-    if is_admin(user["id"]):
-        redirect_url = "/dashboard"
-    else:
-        redirect_url = "/account"
-
-    return jsonify({
-        "message": "Login successful",
-        "redirect": redirect_url
-    }), 200
     
 @app.route("/dashboard")
 def dashboard():

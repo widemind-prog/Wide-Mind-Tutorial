@@ -39,7 +39,7 @@ def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if "user_id" not in session or not is_admin(session["user_id"]):
-            return redirect("/login")
+            return redirect("/auth/login")
         return func(*args, **kwargs)
     return wrapper
 
