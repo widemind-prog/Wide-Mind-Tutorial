@@ -29,9 +29,15 @@
             <li>Loading courses...</li>
         </ul>
     </div>
-
+    
     <button id="logout-btn" class="btn">Logout</button>
 
+<script>
+document.getElementById("logout-btn").addEventListener("click", function() {
+    // Redirect to the logout route
+    window.location.href = "/logout";
+});
+</script>
 </section>
 
 <!-- TOAST -->
