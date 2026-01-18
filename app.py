@@ -271,6 +271,8 @@ def api_courses():
 
 @app.route("/course/<int:course_id>")
 def view_course(course_id):
+  if "user_id" not in session:
+        return redirect("/login")
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
