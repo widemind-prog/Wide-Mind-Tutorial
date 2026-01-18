@@ -159,7 +159,7 @@ def index():
 def login():
     return render_template("login.html")
     
-@apl.route("/login", methods=["POST"])
+@app.route("/login", methods=["POST"])
 def login():
     ip = request.remote_addr or "unknown"
 
