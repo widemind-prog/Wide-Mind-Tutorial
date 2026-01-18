@@ -9,6 +9,7 @@ from flask_cors import CORS
 import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
@@ -149,27 +150,35 @@ def index():
         if is_admin(session["user_id"]):
             return redirect("/dashboard")
         return redirect("/account")
-
     return render_template("index.html")
-# app.py
+
 @app.route("/login", methods=["GET"])
 def login_page():
+    if "user_id" in session:
+        if is_admin(session["user_id"]):
+            return redirect("/dashboard")
+        return redirect("/account")
     return render_template("login.html")
 
-    
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session or not is_admin(session["user_id"]):
         return redirect("/")
     return render_template("dashboard.html")
 
-# Show registration page
+@app.route("/account")
+def account():
+    if "user_id" not in session:
+        return redirect("/login")
+    return render_template("account.html")
+
+# -------------------------
+# REGISTER
+# -------------------------
 @app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
 
-
-# Handle registration form submission
 @app.route("/register", methods=["POST"])
 def register_post():
     name = request.form.get("name")
@@ -179,16 +188,21 @@ def register_post():
     if not name or not email or not password:
         return "Missing fields", 400
 
-    # Save user to DB, hash password, etc.
+    # Save user to DB with hashed password
     conn = get_db()
     c = conn.cursor()
-    c.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-              (name, email, generate_password_hash(password)))
+    c.execute(
+        "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+        (name, email, generate_password_hash(password))
+    )
     conn.commit()
     conn.close()
 
     return redirect("/login")
 
+# -------------------------
+# OTHER PAGES
+# -------------------------
 @app.route("/about")
 def about():
     return render_template("about.html")
