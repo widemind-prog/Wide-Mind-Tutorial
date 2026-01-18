@@ -159,11 +159,6 @@ def login_page():
         return redirect("/account")
     return render_template("login.html")
 
-@app.route("/dashboard")
-def dashboard():
-    if "user_id" not in session or not is_admin(session["user_id"]):
-        return redirect("/")
-    return render_template("dashboard.html")
 
 @app.route("/account")
 def account():
@@ -242,6 +237,31 @@ def course():
     conn.close()
     return render_template("course.html", courses=courses_with_materials)
 
+@app.route("/api/courses")
+def api_courses():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM courses ORDER BY id DESC")
+    courses = c.fetchall()
+
+    courses_with_materials = []
+    for course in courses:
+        c.execute(
+            "SELECT id, filename, file_type, title FROM materials WHERE course_id=?",
+            (course["id"],)
+        )
+        materials = c.fetchall()
+        courses_with_materials.append({
+            "course": course,
+            "materials": materials
+        })
+
+    conn.close()
+    return jsonify(courses_with_materials)
+    
 # -------------------------
 # STREAM FILES SECURELY
 # -------------------------

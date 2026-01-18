@@ -13,7 +13,7 @@ import logging
 # ---------------------
 # BLUEPRINT
 # ---------------------
-admin_bp = Blueprint("admin_bp", __name__, url_prefix="/dashboard")
+admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
 
 # ---------------------
 # UPLOAD CONFIG
@@ -67,7 +67,7 @@ def allowed_file(filename):
 @admin_bp.route("/dashboard")
 @admin_required
 def dashboard():
-    return render_template("dashboard.html")
+    return render_template("admin/dashboard.html")
 
 # ---------------------
 # USERS
@@ -196,7 +196,7 @@ def add_course():
         conn.close()
         return jsonify({"error": "Cannot add course, check uniqueness and integrity"}), 400
     conn.close()
-    return redirect("/dashboard/courses")
+    return redirect("/admin/courses")
 
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
@@ -275,7 +275,7 @@ def add_material(file_type, course_id):
         conn.close()
         return jsonify({"error": "Cannot add material, check course exists"}), 400
     conn.close()
-    return redirect(f"/dashboard/courses/edit/{course_id}")
+    return redirect(f"/admin/courses/edit/{course_id}")
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
 @admin_required
@@ -311,4 +311,4 @@ def delete_material(material_id):
         return jsonify({"error": "Cannot delete material due to integrity constraints"}), 400
 
     conn.close()
-    return redirect(f"/dashboard/courses/edit/{material['course_id']}")
+    return redirect(f"/admin/courses/edit/{material['course_id']}")

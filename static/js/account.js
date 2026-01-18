@@ -18,22 +18,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* --------------------
        LOAD COURSES
     -------------------- */
-    async function loadCourses() {
-        if (!coursesList) return;
+ async function loadCourses() {
+    if (!coursesList) return;
 
-        const res = await fetch("/course", { credentials: "same-origin" });
-        const data = await res.json();
+    try {
+        // Fetch JSON from the new API
+        const res = await fetch("/api/courses", { credentials: "same-origin" });
+        if (!res.ok) {
+            coursesList.innerHTML = "<li>Failed to load courses</li>";
+            return;
+        }
+
+        const courses_with_materials = await res.json();
         coursesList.innerHTML = "";
 
-        if (!data.courses || data.courses.length === 0) {
+        if (!courses_with_materials || courses_with_materials.length === 0) {
             coursesList.innerHTML = "<li>No courses yet</li>";
             return;
         }
 
-        data.courses.forEach(course => {
+        courses_with_materials.forEach(item => {
+            const course = item.course;
             const li = document.createElement("li");
             const a = document.createElement("a");
-            a.textContent = `${course.code} - ${course.title}`;
+            a.textContent = `${course.course_code} - ${course.course_title}`;
 
             if (isPaid) {
                 a.href = `/course/${course.id}`;
@@ -48,8 +56,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             li.appendChild(a);
             coursesList.appendChild(li);
         });
+    } catch (err) {
+        console.error("Failed to load courses:", err);
+        coursesList.innerHTML = "<li>Error loading courses</li>";
     }
-
+}
     /* --------------------
        CHECK PAYMENT STATUS
     -------------------- */
