@@ -1,3 +1,5 @@
+print(">>> admin.py imported")
+
 from flask import Blueprint, jsonify, session
 import requests
 import os

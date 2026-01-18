@@ -1,3 +1,5 @@
+print(">>> admin.py imported")
+
 from flask import Blueprint, render_template, jsonify, session, redirect, request, abort
 from backend.db import get_db, is_admin, execute_with_fk_logging
 from functools import wraps

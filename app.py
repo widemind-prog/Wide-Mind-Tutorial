@@ -1,3 +1,5 @@
+print(">>> app.py imported")
+
 from flask import (
     Flask, render_template, redirect, session,
     request, jsonify, send_from_directory, abort, make_response

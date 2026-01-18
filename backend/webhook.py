@@ -1,3 +1,5 @@
+print(">>> admin.py imported")
+
 from flask import Blueprint, request, jsonify
 import hmac
 import hashlib
