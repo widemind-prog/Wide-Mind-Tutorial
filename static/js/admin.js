@@ -1,13 +1,6 @@
 // -------------------------
-// admin.js
+// admin.js (Updated CSRF + Improved Toast)
 // -------------------------
-
-// Helper to read cookie by name
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(";").shift();
-}
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -79,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            e.preventDefault(); // stop reload
+            e.preventDefault(); // stop page reload
 
             const button = e.submitter;
             if (!button || !button.formAction) return;
@@ -92,9 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const formData = new FormData(form);
 
-                // 🔥 Append CSRF token to FormData for POST
-                const csrfToken = getCookie("csrf_token");
-                if (csrfToken) formData.append("_csrf_token", csrfToken);
+                // 🔥 Grab CSRF token directly from hidden input
+                const csrfInput = form.querySelector('input[name="_csrf_token"]');
+                if (csrfInput) formData.append("_csrf_token", csrfInput.value);
 
                 const res = await fetch(button.formAction, {
                     method: "POST",
@@ -109,7 +102,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 showToast("Action successful");
 
-                // Refresh once after short delay
+                // -----------------------------
+                // Remove deleted element immediately
+                // -----------------------------
+                if (button.textContent.toLowerCase().includes("delete")) {
+                    const card = button.closest(".user-card, .course-box, li");
+                    if (card) card.remove();
+                    return;
+                }
+
+                // Refresh page for other actions (optional)
                 setTimeout(() => {
                     window.location.reload();
                 }, 800);

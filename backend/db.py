@@ -77,13 +77,14 @@ def init_db():
         )
     """)
 
-    # Materials table
+    # Materials table (added `title` column)
     c.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             course_id INTEGER NOT NULL,
             filename TEXT NOT NULL,
             file_type TEXT NOT NULL,
+            title TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE CASCADE
         )
@@ -114,8 +115,10 @@ def init_db():
     # SEED COURSES & MATERIALS
     # -------------------------
     courses = [
-        ("Psy432", "Adolescent Psychology", "Adolescent development", ["lesson1.mp3", "lesson1.pdf"]),
-        ("Psy409", "Biological Psychology", "Neural processes", ["lesson2.mp3", "lesson2.pdf"])
+        ("Psy432", "Adolescent Psychology", "Adolescent development",
+         [("lesson1.mp3", "Adolescent Audio Lesson 1"), ("lesson1.pdf", "Adolescent PDF Lesson 1")]),
+        ("Psy409", "Biological Psychology", "Neural processes",
+         [("lesson2.mp3", "Biology Audio Lesson 2"), ("lesson2.pdf", "Biology PDF Lesson 2")])
     ]
 
     for code, title, desc, files in courses:
@@ -124,10 +127,11 @@ def init_db():
             execute_with_fk_logging(c, "INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)",
                                     (code, title, desc))
             course_id = c.lastrowid
-            for f in files:
+            for f, f_title in files:
                 file_type = "audio" if f.endswith(".mp3") else "pdf"
-                execute_with_fk_logging(c, "INSERT INTO materials (course_id, filename, file_type) VALUES (?, ?, ?)",
-                                        (course_id, f, file_type))
+                execute_with_fk_logging(c, """
+                    INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)
+                """, (course_id, f, file_type, f_title))
 
     # -------------------------
     # CREATE DEMO STUDENT USER

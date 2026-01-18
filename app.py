@@ -30,24 +30,25 @@ logging.basicConfig(
 # -------------------------
 # FLASK INIT
 # -------------------------
-app = Flask(__name__)  # must define app first
+app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["UPLOAD_FOLDER"] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "files"
 )
 
-if os.environ.get("ENV") == "production":
-    app.debug = True  # temporarily enable debug for troubleshooting
-    app.config["SESSION_COOKIE_SECURE"] = True
-else:
-    app.debug = True
-
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=1)
 )
+
+if os.environ.get("ENV") == "production":
+    app.debug = True
+    secure_cookie = True
+else:
+    app.debug = True
+    secure_cookie = False
 
 CORS(
     app,
@@ -60,20 +61,10 @@ CORS(
 app.jinja_env.globals['now'] = datetime.utcnow
 
 # -------------------------
-# INIT DB (AFTER APP DEFINITION)
+# INIT DB
 # -------------------------
 with app.app_context():
     init_db()
-
-    # Test DB after tables exist
-    try:
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("SELECT * FROM users LIMIT 1")
-        print(">>> DB test successful:", c.fetchall())
-        conn.close()
-    except Exception as e:
-        print(">>> DB test failed:", e)
 
 # -------------------------
 # REGISTER BLUEPRINTS
@@ -84,7 +75,7 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
 
 # -------------------------
-# CSRF TOKEN (SAFE)
+# CSRF TOKEN
 # -------------------------
 def generate_csrf_token():
     if not has_request_context():
@@ -102,16 +93,11 @@ app.jinja_env.globals["csrf_token"] = generate_csrf_token
 def csrf_protect():
     if not has_request_context():
         return
-
     if request.path.startswith("/webhook/"):
         return
-
     if request.method == "POST":
         token = session.get("_csrf_token")
-        form_token = (
-            request.form.get("_csrf_token")
-            or request.headers.get("X-CSRF-Token")
-        )
+        form_token = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
         if not token or token != form_token:
             abort(403)
 
@@ -120,22 +106,16 @@ def csrf_protect():
 # -------------------------
 @app.before_request
 def block_suspended_users():
-    if not has_request_context():
+    if not has_request_context() or "user_id" not in session:
         return
-
-    if "user_id" in session:
-        conn = get_db()
-        c = conn.cursor()
-        c.execute(
-            "SELECT is_suspended FROM users WHERE id=?",
-            (session["user_id"],)
-        )
-        user = c.fetchone()
-        conn.close()
-
-        if user and user["is_suspended"]:
-            session.clear()
-            return redirect("/login-page")
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+    conn.close()
+    if user and user["is_suspended"]:
+        session.clear()
+        return redirect("/login-page")
 
 # -------------------------
 # SECURITY HEADERS
@@ -158,23 +138,16 @@ def login():
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
-
     if not email or not password:
         return jsonify({"error": "Email and password required"}), 400
 
     conn = get_db()
     c = conn.cursor()
-    c.execute(
-        "SELECT id, password, role, is_suspended FROM users WHERE email=?",
-        (email,)
-    )
+    c.execute("SELECT id, password, role, is_suspended FROM users WHERE email=?", (email,))
     user = c.fetchone()
     conn.close()
 
-    if not user or user["is_suspended"]:
-        return jsonify({"error": "Invalid credentials"}), 403
-
-    if not check_password_hash(user["password"], password):
+    if not user or user["is_suspended"] or not check_password_hash(user["password"], password):
         return jsonify({"error": "Invalid credentials"}), 403
 
     session.clear()
@@ -185,7 +158,7 @@ def login():
     response.set_cookie(
         key="csrf_token",
         value=session["_csrf_token"],
-        secure=True,
+        secure=secure_cookie,
         httponly=True,
         samesite="Lax",
         path="/"
@@ -193,39 +166,87 @@ def login():
     return response
 
 # -------------------------
+# LOGOUT
+# -------------------------
+@app.route("/logout")
+def logout():
+    session.clear()
+    response = make_response(redirect("/login-page"))
+    response.set_cookie("session", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
+    response.set_cookie("csrf_token", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
+    return response
+
+# -------------------------
+# FRONTEND PAGES
+# -------------------------
+@app.route("/")
+@app.route("/index")
+def index():
+    return render_template("index.html")
+
+@app.route("/register-page")
+def register_page():
+    return render_template("register.html")
+
+@app.route("/login-page")
+def login_page():
+    return render_template("login.html")
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+# -------------------------
+# USER COURSES PAGE (course.html)
+# -------------------------
+@app.route("/courses")
+def courses_page():
+    if "user_id" not in session:
+        return redirect("/login-page")
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM courses ORDER BY id DESC")
+    courses = c.fetchall()
+
+    # Fetch materials with titles for each course
+    courses_with_materials = []
+    for course in courses:
+        c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course["id"],))
+        materials = c.fetchall()
+        courses_with_materials.append({"course": course, "materials": materials})
+
+    conn.close()
+    return render_template("course.html", courses=courses_with_materials)
+
+# -------------------------
 # STREAM FILES SECURELY
 # -------------------------
 ALLOWED_FILE_TYPES = {"pdf", "audio"}
 
 def stream_file(material_id, file_type):
-    if not has_request_context():
-        abort(403)
-
-    if file_type not in ALLOWED_FILE_TYPES:
-        abort(400)
-
-    if "user_id" not in session:
+    if "user_id" not in session or file_type not in ALLOWED_FILE_TYPES:
         abort(403)
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute(
-        "SELECT status FROM payments WHERE user_id=?",
-        (session["user_id"],)
-    )
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
         abort(403)
 
-    c.execute(
-        "SELECT filename, file_type FROM materials WHERE id=?",
-        (material_id,)
-    )
+    c.execute("SELECT filename, file_type FROM materials WHERE id=?", (material_id,))
     material = c.fetchone()
     conn.close()
-
     if not material or material["file_type"] != file_type:
         abort(404)
 
@@ -243,60 +264,6 @@ def stream_pdf(material_id):
     return stream_file(material_id, "pdf")
 
 # -------------------------
-# PAYMENT STATUS
-# -------------------------
-@app.route("/api/payment/status")
-def payment_status():
-    if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
-
-    if is_admin(session["user_id"]):
-        return jsonify({"status": "admin"})
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute(
-        "SELECT amount, status FROM payments WHERE user_id=?",
-        (session["user_id"],)
-    )
-    payment = c.fetchone()
-    conn.close()
-
-    if not payment:
-        return jsonify({"amount": 20000, "status": "unpaid"})
-
-    return jsonify(
-        {"amount": payment["amount"], "status": payment["status"]}
-    )
-
-# -------------------------
-# LOGOUT (SECURE)
-# -------------------------
-@app.route("/logout")
-def logout():
-    session.clear()
-    response = make_response(redirect("/login-page"))
-    response.set_cookie(
-        key="session",
-        value="",
-        expires=0,
-        path="/",
-        secure=True,
-        httponly=True,
-        samesite="Lax"
-    )
-    response.set_cookie(
-        key="csrf_token",
-        value="",
-        expires=0,
-        path="/",
-        secure=True,
-        httponly=True,
-        samesite="Lax"
-    )
-    return response
-
-# -------------------------
 # PAYMENT SUCCESS PAGE
 # -------------------------
 @app.route("/payment-success")
@@ -304,75 +271,26 @@ def payment_success():
     return render_template("payment_success.html")
 
 # -------------------------
-# FRONTEND PAGES
+# PAYMENT STATUS
 # -------------------------
-@app.route("/")
-@app.route("/index")
-def index():
-    return render_template("index.html")
+@app.route("/api/payment/status")
+def payment_status():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    if is_admin(session["user_id"]):
+        return jsonify({"status": "admin"})
 
-@app.route("/register-page")
-def register_page():
-    return render_template("register.html")
-
-@app.route("/about")
-def about():
-    return render_template("about.html")
-
-@app.route("/contact")
-def contact():
-    return render_template("contact.html")
-
-@app.route("/privacy")
-def privacy():
-    return render_template("privacy.html")
-
-@app.route("/courses")
-def courses_page():
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM courses ORDER BY id DESC")
-    courses = c.fetchall()
+    c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
     conn.close()
-    return render_template("course.html", courses=courses)  # <-- changed to match your template
-
-@app.route("/dashboard")
-def dashboard_page():
-    if "user_id" not in session:
-        return redirect("/login-page")
-    return render_template("admin/dashboard.html")  # admin folder
-
-@app.route("/login-page")
-def login_page():
-    return render_template("login.html")
-
-@app.route("/admin-page")
-def admin_page():
-    if "user_id" not in session or not is_admin(session["user_id"]):
-        return redirect("/login-page")
-    return render_template("admin/dashboard.html")
-
-# Example admin sub-pages
-@app.route("/admin/users")
-def admin_users():
-    if "user_id" not in session or not is_admin(session["user_id"]):
-        return redirect("/login-page")
-    return render_template("admin/users.html")
-
-@app.route("/admin/courses")
-def admin_courses():
-    if "user_id" not in session or not is_admin(session["user_id"]):
-        return redirect("/login-page")
-    return render_template("admin/courses.html")
-
-@app.route("/admin/edit-course")
-def admin_edit_course():
-    if "user_id" not in session or not is_admin(session["user_id"]):
-        return redirect("/login-page")
-    return render_template("admin/edit_course.html")
+    if not payment:
+        return jsonify({"amount": 20000, "status": "unpaid"})
+    return jsonify({"amount": payment["amount"], "status": payment["status"]})
 
 # -------------------------
-# RUN APP (LOCAL ONLY)
+# RUN APP
 # -------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5002))

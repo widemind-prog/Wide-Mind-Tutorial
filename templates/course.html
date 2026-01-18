@@ -1,53 +1,70 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>{{ course.course_code }} - {{ course.course_title }}</h2>
+<h1>Available Courses</h1>
 
-<div class="materials-section">
+{% for item in courses %}
+<div class="course-box">
+    <h2>{{ item.course.course_code }} - {{ item.course.course_title }}</h2>
+    <p>{{ item.course.description }}</p>
 
-    {% if audios %}
-    <div class="materials-box">
-        <h3>Audio Sessions</h3>
-        <ul>
-            {% for audio in audios %}
-            <li>
-                <strong>{{ audio.title }}</strong>
-                <audio
-                    controls
-                    controlsList="nodownload"
-                    src="/stream/audio/{{ audio.id }}">
-                    Your browser does not support the audio element.
-                </audio>
-            </li>
-            {% endfor %}
-        </ul>
+    {% set audios = item.materials | selectattr("file_type", "equalto", "audio") | list %}
+    {% set pdfs = item.materials | selectattr("file_type", "equalto", "pdf") | list %}
+
+    <div class="materials-section">
+
+        {% if audios %}
+        <div class="materials-box">
+            <h3>Audio Sessions</h3>
+            <ul>
+                {% for audio in audios %}
+                <li>
+                    <strong>{{ audio.title }}</strong>
+                    <audio
+                        controls
+                        controlsList="nodownload"
+                        src="/stream/audio/{{ audio.id }}">
+                        Your browser does not support the audio element.
+                    </audio>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if pdfs %}
+        <div class="materials-box">
+            <h3>PDF Materials</h3>
+            <ul>
+                {% for pdf in pdfs %}
+                <li>
+                    <strong>{{ pdf.title }}</strong>
+                    <a class="btn" href="/stream/pdf/{{ pdf.id }}" target="_blank">
+                        Open PDF 📝
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
     </div>
-    {% endif %}
-
-    {% if pdfs %}
-    <div class="materials-box">
-        <h3>PDF Materials</h3>
-        <ul>
-            {% for pdf in pdfs %}
-            <li>
-                <strong>{{ pdf.title }}</strong>
-                <!-- Updated link to use PDF viewer page -->
-                <a class="btn" href="/course/{{ course.id }}/pdf" target="_blank">
-                    Open PDF 📝
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
 </div>
+{% endfor %}
 
 <style>
+.course-box {
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    background: #fafafa;
+}
+
 .materials-section {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
 }
 
 .materials-box {
