@@ -152,6 +152,10 @@ def index():
 
     return render_template("index.html")
 
+@app.route("/login")
+def register():
+    return render_template("login.html")
+    
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session or not is_admin(session["user_id"]):
