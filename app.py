@@ -30,7 +30,8 @@ logging.basicConfig(
 # -------------------------
 # FLASK INIT
 # -------------------------
-app = Flask(__name__)
+app = Flask(__name__)  # must define app first
+
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["UPLOAD_FOLDER"] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "files"
