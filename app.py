@@ -8,7 +8,6 @@ from flask import (
 from flask_cors import CORS
 import os
 from datetime import datetime, timedelta
-from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
@@ -43,12 +42,8 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=1)
 )
 
-if os.environ.get("ENV") == "production":
-    app.debug = True
-    secure_cookie = True
-else:
-    app.debug = True
-    secure_cookie = False
+secure_cookie = os.environ.get("ENV") == "production"
+app.debug = True
 
 CORS(
     app,
@@ -58,7 +53,7 @@ CORS(
     )
 )
 
-app.jinja_env.globals['now'] = datetime.utcnow
+app.jinja_env.globals["now"] = datetime.utcnow
 
 # -------------------------
 # INIT DB
@@ -97,8 +92,9 @@ def csrf_protect():
         return
     if request.method == "POST":
         token = session.get("_csrf_token")
-        form_token = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
-        if not token or token != form_token:
+        header_token = request.headers.get("X-CSRF-Token")
+        form_token = request.form.get("_csrf_token")
+        if not token or token not in (header_token, form_token):
             abort(403)
 
 # -------------------------
@@ -106,16 +102,18 @@ def csrf_protect():
 # -------------------------
 @app.before_request
 def block_suspended_users():
-    if not has_request_context() or "user_id" not in session:
+    if "user_id" not in session:
         return
+
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
     user = c.fetchone()
     conn.close()
+
     if user and user["is_suspended"]:
         session.clear()
-        return redirect("/login-page")
+        return redirect("/")
 
 # -------------------------
 # SECURITY HEADERS
@@ -136,7 +134,7 @@ def add_security_headers(response):
 @app.route("/logout")
 def logout():
     session.clear()
-    response = make_response(redirect("/index"))
+    response = make_response(redirect("/"))
     response.set_cookie("session", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
     response.set_cookie("csrf_token", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
     return response
@@ -144,23 +142,22 @@ def logout():
 # -------------------------
 # FRONTEND PAGES
 # -------------------------
-
 @app.route("/")
 @app.route("/index")
 def index():
-    return render_template("index.html")
     if "user_id" in session:
-        # Admin → admin dashboard
         if is_admin(session["user_id"]):
             return redirect("/dashboard")
-        # Normal user → account page
         return redirect("/account")
-      
-    
+
+    return render_template("index.html")
+
 @app.route("/dashboard")
 def dashboard():
+    if "user_id" not in session or not is_admin(session["user_id"]):
+        return redirect("/")
     return render_template("dashboard.html")
-    
+
 @app.route("/register")
 def register():
     return render_template("register.html")
@@ -178,24 +175,29 @@ def privacy():
     return render_template("privacy.html")
 
 # -------------------------
-# USER COURSES PAGE (course.html)
+# USER COURSES PAGE
 # -------------------------
 @app.route("/course")
 def course():
     if "user_id" not in session:
-        return redirect("/login")
+        return redirect("/")
 
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM courses ORDER BY id DESC")
     courses = c.fetchall()
 
-    # Fetch materials with titles for each course
     courses_with_materials = []
     for course in courses:
-        c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course["id"],))
+        c.execute(
+            "SELECT id, filename, file_type, title FROM materials WHERE course_id=?",
+            (course["id"],)
+        )
         materials = c.fetchall()
-        courses_with_materials.append({"course": course, "materials": materials})
+        courses_with_materials.append({
+            "course": course,
+            "materials": materials
+        })
 
     conn.close()
     return render_template("course.html", courses=courses_with_materials)
@@ -211,6 +213,7 @@ def stream_file(material_id, file_type):
 
     conn = get_db()
     c = conn.cursor()
+
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
@@ -220,11 +223,14 @@ def stream_file(material_id, file_type):
     c.execute("SELECT filename, file_type FROM materials WHERE id=?", (material_id,))
     material = c.fetchone()
     conn.close()
+
     if not material or material["file_type"] != file_type:
         abort(404)
 
-    safe_filename = secure_filename(material["filename"])
-    resp = send_from_directory(app.config["UPLOAD_FOLDER"], safe_filename)
+    resp = send_from_directory(
+        app.config["UPLOAD_FOLDER"],
+        secure_filename(material["filename"])
+    )
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -250,6 +256,7 @@ def payment_success():
 def payment_status():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
+
     if is_admin(session["user_id"]):
         return jsonify({"status": "admin"})
 
@@ -258,9 +265,14 @@ def payment_status():
     c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     conn.close()
+
     if not payment:
         return jsonify({"amount": 20000, "status": "unpaid"})
-    return jsonify({"amount": payment["amount"], "status": payment["status"]})
+
+    return jsonify({
+        "amount": payment["amount"],
+        "status": payment["status"]
+    })
 
 # -------------------------
 # RUN APP

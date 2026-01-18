@@ -196,18 +196,16 @@ def add_course():
         conn.close()
         return jsonify({"error": "Cannot add course, check uniqueness and integrity"}), 400
     conn.close()
-    return redirect("/admin/courses")
+    return redirect("/dashboard/courses")
 
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
 def edit_course(course_id):
-    if request.method == "POST":
-        csrf_protect()
-
     conn = get_db()
     c = conn.cursor()
 
     if request.method == "POST":
+        csrf_protect()
         try:
             execute_with_fk_logging(c, """
                 UPDATE courses
