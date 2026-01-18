@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function loadCourses() {
         if (!coursesList) return;
 
-        const res = await fetch("/courses/my", { credentials: "same-origin" });
+        const res = await fetch("/course", { credentials: "same-origin" });
         const data = await res.json();
         coursesList.innerHTML = "";
 
@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function checkPaymentStatus() {
         if (!paymentStatusEl || !payBtn) return;
 
-        const res = await fetch("/payment/status", { credentials: "same-origin" });
+        const res = await fetch("api/payment/status", { credentials: "same-origin" });
         if (!res.ok) return;
 
         const payment = await res.json();
@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const meRes = await fetch("/auth/me", { credentials: "same-origin" });
         if (!meRes.ok) {
-            window.location.href = "/login-page";
+            window.location.href = "/login";
             return;
         }
         const user = await meRes.json();
@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (payBtn) {
         payBtn.addEventListener("click", async () => {
             try {
-                const res = await fetch("/payment/init", { method: "POST", credentials: "same-origin" });
+                const res = await fetch("api/payment/init", { method: "POST", credentials: "same-origin" });
                 const data = await res.json();
                 if (data.status) {
                     // Redirect to Paystack full page
