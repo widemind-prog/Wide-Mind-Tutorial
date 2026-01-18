@@ -18,6 +18,16 @@ from backend.webhook import webhook_bp
 import secrets
 import logging
 
+
+try:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users LIMIT 1")
+    print(">>> DB test successful:", c.fetchall())
+    conn.close()
+except Exception as e:
+    print(">>> DB test failed:", e)
+
 # -------------------------
 # LOGGING
 # -------------------------
@@ -37,7 +47,7 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 
 if os.environ.get("ENV") == "production":
-    app.debug = False
+    app.debug = True  # <-- temporarily enable debug for troubleshooting
     app.config["SESSION_COOKIE_SECURE"] = True
 else:
     app.debug = True
