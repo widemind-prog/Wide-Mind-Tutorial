@@ -249,14 +249,20 @@ def api_courses():
 
     courses_with_materials = []
     for course in courses:
+        # convert sqlite Row to dict
+        course_dict = dict(course)
+
         c.execute(
             "SELECT id, filename, file_type, title FROM materials WHERE course_id=?",
             (course["id"],)
         )
         materials = c.fetchall()
+        # convert each material to dict
+        materials_list = [dict(m) for m in materials]
+
         courses_with_materials.append({
-            "course": course,
-            "materials": materials
+            "course": course_dict,
+            "materials": materials_list
         })
 
     conn.close()
