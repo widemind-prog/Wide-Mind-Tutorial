@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, session, request
+print(">>> auth.py imported")
+
+from flask import Blueprint, jsonify, session, request, abort
 from werkzeug.security import check_password_hash
 from backend.db import get_db, is_admin
 from time import time
@@ -6,9 +8,22 @@ from time import time
 auth_bp = Blueprint("auth_bp", __name__)
 
 # ---------------------
+# RATE LIMITING
+# ---------------------
+LOGIN_ATTEMPTS = {}
+RATE_LIMIT_WINDOW = 300  # 5 minutes
+MAX_ATTEMPTS = 5
+
+def is_rate_limited(ip):
+    now = time()
+    attempts = LOGIN_ATTEMPTS.get(ip, [])
+    attempts = [t for t in attempts if now - t < RATE_LIMIT_WINDOW]
+    LOGIN_ATTEMPTS[ip] = attempts
+    return len(attempts) >= MAX_ATTEMPTS
+
+# ---------------------
 # GET CURRENT USER
 # ---------------------
-
 @auth_bp.route("/me", methods=["GET"])
 def me():
     if "user_id" not in session:
@@ -35,9 +50,16 @@ def me():
 # ---------------------
 # LOGIN
 # ---------------------
-
 @auth_bp.route("/login", methods=["POST"])
 def login():
+    ip = request.remote_addr or "unknown"
+
+    # 🔐 Rate limit check
+    if is_rate_limited(ip):
+        return jsonify({"error": "Too many login attempts. Try again later."}), 429
+
+    LOGIN_ATTEMPTS.setdefault(ip, []).append(time())
+
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
@@ -66,7 +88,9 @@ def login():
     if not check_password_hash(user["password"], password):
         return jsonify({"error": "Invalid email or password"}), 401
 
-    # ✅ Login success
+    # ✅ Login success → reset attempts
+    LOGIN_ATTEMPTS.pop(ip, None)
+
     session.permanent = True
     session["user_id"] = user["id"]
 
@@ -75,17 +99,3 @@ def login():
         return jsonify({"redirect": "/admin"}), 200
     else:
         return jsonify({"redirect": "/account"}), 200
-        
-LOGIN_ATTEMPTS = {}
-
-def is_rate_limited(ip):
-    now = time()
-    attempts = LOGIN_ATTEMPTS.get(ip, [])
-    attempts = [t for t in attempts if now - t < 300]
-    LOGIN_ATTEMPTS[ip] = attempts
-    return len(attempts) > 5
-    
-ip = request.remote_addr
-if is_rate_limited(ip):
-    abort(429)
-LOGIN_ATTEMPTS.setdefault(ip, []).append(time())

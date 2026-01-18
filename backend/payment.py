@@ -1,4 +1,4 @@
-print(">>> admin.py imported")
+print(">>> payment.py imported")
 
 from flask import Blueprint, jsonify, session
 import requests
