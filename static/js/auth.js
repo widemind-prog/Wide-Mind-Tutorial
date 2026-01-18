@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const csrfToken = getCookie("csrf_token"); // get CSRF token from cookie
 
-        const res = await fetch("/api/auth/login", {
+        const res = await fetch("/login", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",

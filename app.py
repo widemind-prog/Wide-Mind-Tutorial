@@ -17,7 +17,11 @@ from backend.payment import payment_bp
 from backend.webhook import webhook_bp
 import secrets
 import logging
+# INIT DB
+with app.app_context():
+    init_db()
 
+# Test DB after tables exist
 try:
     conn = get_db()
     c = conn.cursor()
@@ -73,12 +77,6 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
-
-# -------------------------
-# INIT DB (RENDER SAFE)
-# -------------------------
-with app.app_context():
-    init_db()
 
 # -------------------------
 # CSRF TOKEN (SAFE)
@@ -308,7 +306,10 @@ def payment_success():
 def index():
     return render_template("index.html")
 
-
+@app.route("/register-page")
+def register_page():
+    return render_template("register.html")
+    
 @app.route("/about")
 def about():
     return render_template("about.html")
