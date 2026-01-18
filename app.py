@@ -308,9 +308,6 @@ def payment_success():
 def index():
     return render_template("index.html")
 
-@app.route("/home")
-def home():
-    return render_template("home.html")
 
 @app.route("/about")
 def about():
@@ -319,6 +316,10 @@ def about():
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+    
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
 
 @app.route("/courses")
 def courses_page():

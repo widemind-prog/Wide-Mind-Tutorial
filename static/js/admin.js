@@ -1,3 +1,14 @@
+// -------------------------
+// admin.js
+// -------------------------
+
+// Helper to read cookie by name
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
     const toast = document.getElementById("admin-toast");
@@ -24,7 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // File name preview
     // -----------------------------
     document.querySelectorAll('form input[type="file"]').forEach(fileInput => {
-        // create or find preview element
         let preview = fileInput.parentElement.querySelector(".file-preview");
         if (!preview) {
             preview = document.createElement("div");
@@ -69,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            e.preventDefault(); // ⛔ stop reload
+            e.preventDefault(); // stop reload
 
             const button = e.submitter;
             if (!button || !button.formAction) return;
@@ -81,6 +91,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const formData = new FormData(form);
+
+                // 🔥 Append CSRF token to FormData for POST
+                const csrfToken = getCookie("csrf_token");
+                if (csrfToken) formData.append("_csrf_token", csrfToken);
 
                 const res = await fetch(button.formAction, {
                     method: "POST",
