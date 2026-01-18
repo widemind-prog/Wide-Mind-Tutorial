@@ -292,13 +292,17 @@ def delete_material(material_id):
         abort(404)
 
     filepath = os.path.join(UPLOAD_FOLDER, material["filename"])
+    
+    # -----------------------------
+    # Properly handle missing file
+    # -----------------------------
     if not os.path.exists(filepath):
-    logger.warning(f"File {filepath} not found when deleting material id {material_id}")
-else:
-    try:
-        os.remove(filepath)
-    except Exception as e:
-        logger.warning(f"Failed to delete file {filepath}: {e}")
+        logger.warning(f"File {filepath} not found when deleting material id {material_id}")
+    else:
+        try:
+            os.remove(filepath)
+        except Exception as e:
+            logger.warning(f"Failed to delete file {filepath}: {e}")
 
     try:
         execute_with_fk_logging(c, "DELETE FROM materials WHERE id=?", (material_id,))
