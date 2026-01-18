@@ -7,7 +7,7 @@ from flask import (
 )
 from flask_cors import CORS
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from backend.db import init_db, get_db, is_admin
@@ -17,7 +17,6 @@ from backend.payment import payment_bp
 from backend.webhook import webhook_bp
 import secrets
 import logging
-
 
 try:
     conn = get_db()
@@ -66,6 +65,7 @@ CORS(
     )
 )
 
+app.jinja_env.globals['now'] = datetime.utcnow
 # -------------------------
 # REGISTER BLUEPRINTS
 # -------------------------
