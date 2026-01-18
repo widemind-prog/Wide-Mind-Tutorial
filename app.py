@@ -151,6 +151,10 @@ def index():
         return redirect("/account")
 
     return render_template("index.html")
+# app.py
+@app.route("/login", methods=["GET"])
+def login_page():
+    return render_template("login.html")
 
     
 @app.route("/dashboard")
