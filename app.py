@@ -57,7 +57,9 @@ app.register_blueprint(webhook_bp)
 # -------------------------
 # INIT DB
 # -------------------------
-init_db()
+@app.before_first_request
+def initialize_database():
+    init_db()
 
 # -------------------------
 # CSRF PROTECTION
