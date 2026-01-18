@@ -171,7 +171,7 @@ def login():
 @app.route("/logout")
 def logout():
     session.clear()
-    response = make_response(redirect("/login-page"))
+    response = make_response(redirect("/login"))
     response.set_cookie("session", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
     response.set_cookie("csrf_token", "", expires=0, path="/", secure=secure_cookie, httponly=True, samesite="Lax")
     return response
@@ -179,18 +179,35 @@ def logout():
 # -------------------------
 # FRONTEND PAGES
 # -------------------------
+
 @app.route("/")
 @app.route("/index")
 def index():
     return render_template("index.html")
+    if "user_id" in session:
+        # Admin → admin dashboard
+        if is_admin(session["user_id"]):
+            return redirect("/dashboard")
+        # Normal user → account page
+        return redirect("/account")
 
-@app.route("/register-page")
-def register_page():
-    return render_template("register.html")
-
-@app.route("/login-page")
-def login_page():
+@app.route("/login")
+def login():
     return render_template("login.html")
+    if "user_id" in session:
+        # Admin → admin dashboard
+        if is_admin(session["user_id"]):
+            return redirect("/dashboard")
+        # Normal user → account page
+        return redirect("/account")
+    
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+    
+@app.route("/register")
+def register():
+    return render_template("register.html")
 
 @app.route("/about")
 def about():
@@ -207,10 +224,10 @@ def privacy():
 # -------------------------
 # USER COURSES PAGE (course.html)
 # -------------------------
-@app.route("/courses")
-def courses_page():
+@app.route("/course")
+def course():
     if "user_id" not in session:
-        return redirect("/login-page")
+        return redirect("/login")
 
     conn = get_db()
     c = conn.cursor()

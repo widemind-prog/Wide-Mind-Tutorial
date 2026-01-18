@@ -96,6 +96,6 @@ def login():
 
     # Redirect based on role
     if is_admin(user["id"]):
-        return jsonify({"redirect": "/admin"}), 200
+        return jsonify({"redirect": "/dashboard"}), 200
     else:
         return jsonify({"redirect": "/account"}), 200

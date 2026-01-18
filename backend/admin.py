@@ -13,7 +13,7 @@ import logging
 # ---------------------
 # BLUEPRINT
 # ---------------------
-admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
+admin_bp = Blueprint("admin_bp", __name__, url_prefix="/dashboard")
 
 # ---------------------
 # UPLOAD CONFIG
@@ -39,7 +39,7 @@ def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if "user_id" not in session or not is_admin(session["user_id"]):
-            return redirect("/login-page")
+            return redirect("/login")
         return func(*args, **kwargs)
     return wrapper
 
@@ -64,10 +64,10 @@ def allowed_file(filename):
 # ---------------------
 # DASHBOARD
 # ---------------------
-@admin_bp.route("/")
+@admin_bp.route("/dashboard")
 @admin_required
 def dashboard():
-    return render_template("admin/dashboard.html")
+    return render_template("dashboard.html")
 
 # ---------------------
 # USERS
@@ -277,7 +277,7 @@ def add_material(file_type, course_id):
         conn.close()
         return jsonify({"error": "Cannot add material, check course exists"}), 400
     conn.close()
-    return redirect(f"/admin/courses/edit/{course_id}")
+    return redirect(f"/dashboard/courses/edit/{course_id}")
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
 @admin_required
@@ -313,4 +313,4 @@ def delete_material(material_id):
         return jsonify({"error": "Cannot delete material due to integrity constraints"}), 400
 
     conn.close()
-    return redirect(f"/admin/courses/edit/{material['course_id']}")
+    return redirect(f"/dashboard/courses/edit/{material['course_id']}")
