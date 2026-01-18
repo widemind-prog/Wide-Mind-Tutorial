@@ -155,7 +155,11 @@ def index():
 # ---------------------
 # LOGIN
 # ---------------------
-@auth_bp.route("/login", methods=["POST"])
+@app.route("/login", methods=["GET"])
+def login():
+    return render_template("login.html")
+    
+@apl.route("/login", methods=["POST"])
 def login():
     ip = request.remote_addr or "unknown"
 
@@ -219,9 +223,31 @@ def dashboard():
         return redirect("/")
     return render_template("dashboard.html")
 
-@app.route("/register")
+# Show registration page
+@app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
+
+
+# Handle registration form submission
+@app.route("/register", methods=["POST"])
+def register_post():
+    name = request.form.get("name")
+    email = request.form.get("email")
+    password = request.form.get("password")
+
+    if not name or not email or not password:
+        return "Missing fields", 400
+
+    # Save user to DB, hash password, etc.
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+              (name, email, generate_password_hash(password)))
+    conn.commit()
+    conn.close()
+
+    return redirect("/login")
 
 @app.route("/about")
 def about():
