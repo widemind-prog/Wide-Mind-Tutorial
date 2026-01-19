@@ -54,6 +54,7 @@ def init_db():
             course_id INTEGER NOT NULL,
             filename TEXT NOT NULL,
             file_type TEXT NOT NULL,
+            title TEXT NOT NULL,
             FOREIGN KEY(course_id) REFERENCES courses(id)
         )
     """)
@@ -69,20 +70,6 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-def migrate_db():
-    conn = get_db()
-    c = conn.cursor()
-    try:
-        c.execute("ALTER TABLE materials ADD COLUMN title TEXT")
-        print("✅ Column 'title' added to materials table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" in str(e).lower():
-            print("⚠️ Column 'title' already exists, skipping migration")
-        else:
-            raise
-    conn.commit()
-    conn.close()
-    
     # -------------------------
     # SEED COURSES & MATERIALS
     # -------------------------
@@ -100,8 +87,8 @@ def migrate_db():
             # Add materials
             for f in files:
                 file_type = "audio" if f.endswith(".mp3") else "pdf"
-                c.execute("INSERT INTO materials (course_id, filename, file_type) VALUES (?, ?, ?)",
-                          (course_id, f, file_type))
+                c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
+                          (course_id, f, file_type, title))
 
     # -------------------------
     # CREATE DEMO STUDENT USER

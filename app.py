@@ -31,7 +31,7 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 
 if os.environ.get("ENV") == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
-    app.debug = True
+    app.debug = False
 
     
 app.config.update(
@@ -53,7 +53,6 @@ app.register_blueprint(webhook_bp)
 # INITIALIZE DB
 # =====================
 init_db()
-migrate_db()
 
 # =====================
 # TEMPLATE CONTEXT

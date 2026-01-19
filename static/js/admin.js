@@ -14,14 +14,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 3000);
     }
 
-    // Intercept ALL admin forms
+    // Intercept ONLY forms with buttons that have class "btn-ajax"
     document.querySelectorAll(".admin-dashboard form").forEach(form => {
 
+        // Look for buttons inside the form that need fetch
+        const ajaxButtons = form.querySelectorAll(".btn-ajax");
+
+        if (ajaxButtons.length === 0) return; // normal form, do nothing
+
         form.addEventListener("submit", async (e) => {
-            e.preventDefault(); // ⛔ stop reload
+            e.preventDefault();
 
             const button = e.submitter;
-            if (!button || !button.formAction) return;
+            if (!button) return;
+
+            const url = button.formAction || form.action;
+            if (!url) {
+                showToast("No action URL defined for this form.", true);
+                return;
+            }
 
             // Confirm delete
             if (button.textContent.toLowerCase().includes("delete")) {
@@ -29,19 +40,22 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             try {
-                const res = await fetch(button.formAction, {
+                const formData = new FormData(form);
+
+                const res = await fetch(url, {
                     method: "POST",
+                    body: formData,
                     credentials: "same-origin"
                 });
 
                 if (!res.ok) {
-                    showToast("Action failed", true);
+                    const text = await res.text();
+                    showToast(text || "Action failed", true);
                     return;
                 }
 
                 showToast("Action successful");
 
-                // Refresh once after short delay
                 setTimeout(() => {
                     window.location.reload();
                 }, 800);

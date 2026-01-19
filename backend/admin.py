@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, session, redirect, request, abort
+from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash
 from backend.db import get_db, is_admin
 from functools import wraps
 import os
@@ -130,14 +130,17 @@ def courses():
     return render_template("admin/courses.html", courses=courses)
 
 
-@admin_bp.route("/courses/add", methods=["POST"])
+@admin_bp.route("/courses/add", methods=["GET", "POST"])
 @admin_required
 def add_course():
+    # If accessed via GET, just go back
+    if request.method == "GET":
+        return redirect("/admin/courses")
+
     course_code = request.form.get("course_code", "").strip()
     course_title = request.form.get("course_title", "").strip()
     description = request.form.get("description", "").strip()
 
-    # Validate required fields
     if not course_code or not course_title:
         flash("Course code and title are required.", "error")
         return redirect("/admin/courses")
@@ -145,25 +148,23 @@ def add_course():
     conn = get_db()
     c = conn.cursor()
 
-    # Check for duplicate course_code
     c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
     if c.fetchone():
-        flash(f"Course code '{course_code}' already exists.", "error")
         conn.close()
+        flash(f"Course code '{course_code}' already exists.", "error")
         return redirect("/admin/courses")
 
-    # Insert new course
     c.execute("""
         INSERT INTO courses (course_code, course_title, description)
         VALUES (?, ?, ?)
     """, (course_code, course_title, description))
-    
+
     conn.commit()
     conn.close()
 
-    flash(f"Course '{course_code} - {course_title}' added successfully!", "success")
+    flash("Course added successfully!", "success")
     return redirect("/admin/courses")
-
+    
 
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
