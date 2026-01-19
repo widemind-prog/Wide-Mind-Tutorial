@@ -31,7 +31,7 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 
 if os.environ.get("ENV") == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
-    app.debug = False
+    app.debug = True
 
     
 app.config.update(
