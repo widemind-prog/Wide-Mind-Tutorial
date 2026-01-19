@@ -6,17 +6,16 @@
 
 <!-- COURSE DETAILS -->
 <form method="POST" class="admin-box">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <label>Course Code</label>
-  <input type="text" name="course_code" value="{{ course.course_code }}" required>
+    <label>Course Code</label>
+    <input type="text" name="course_code" value="{{ course.course_code }}" required>
 
-  <label>Course Title</label>
-  <input type="text" name="course_title" value="{{ course.course_title }}" required>
+    <label>Course Title</label>
+    <input type="text" name="course_title" value="{{ course.course_title }}" required>
 
-  <label>Description</label>
-  <textarea name="description" rows="4">{{ course.description }}</textarea>
+    <label>Description</label>
+    <textarea name="description" rows="4">{{ course.description }}</textarea>
 
-  <button type="submit">Save Changes</button>
+    <button type="submit">Save Changes</button>
 </form>
 
 <!-- EXISTING MATERIALS -->
@@ -26,10 +25,11 @@
     <ul>
         {% for material in materials %}
         <li>
-            <span><strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})</span>
-            <form method="POST" action="/dashboard/courses/material/delete/{{ material.id }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" style="background:#a00000;">Delete</button>
+            <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
+            <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
+                <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
+                    Delete
+                </button>
             </form>
         </li>
         {% endfor %}
@@ -42,12 +42,10 @@
 <!-- ADD PDF -->
 <div class="admin-box">
     <h3>Add PDF Material</h3>
-    <form method="POST" action="/dashboard/courses/material/add/pdf/{{ course.id }}" enctype="multipart/form-data">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}" enctype="multipart/form-data">
         <label>Title:</label>
         <input type="text" name="title" placeholder="Enter PDF title" required>
         <input type="file" name="pdf" accept=".pdf" required>
-        <div class="file-preview" style="margin-top:5px; font-size:0.9em; color:#555;">No file selected</div>
         <button type="submit">Upload PDF</button>
     </form>
 </div>
@@ -55,43 +53,18 @@
 <!-- ADD AUDIO -->
 <div class="admin-box">
     <h3>Add Audio Material</h3>
-    <form method="POST" action="/dashboard/courses/material/add/audio/{{ course.id }}" enctype="multipart/form-data">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}" enctype="multipart/form-data">
         <label>Title:</label>
         <input type="text" name="title" placeholder="Enter Audio title" required>
-        <input type="file" name="audio" accept=".mp3,.wav" required>
-        <div class="file-preview" style="margin-top:5px; font-size:0.9em; color:#555;">No file selected</div>
+        <input type="file" name="audio" accept="audio/*" required>
         <button type="submit">Upload Audio</button>
     </form>
 </div>
 
-<a href="/dashboard/courses" class="back-login-btn">← Back to Courses</a>
-
+<a href="/admin/courses" class="back-login-btn">← Back to Courses</a>
 <!-- Toast for admin actions -->
 <div id="admin-toast" class="toast"></div>
 
 <script src="/static/js/admin.js"></script>
 
-<style>
-.admin-box ul {
-    list-style: none;
-    padding-left: 0;
-}
-.admin-box li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-.admin-box li form button {
-    padding: 3px 8px;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.admin-box li form button:hover {
-    opacity: 0.85;
-}
-</style>
 {% endblock %}

@@ -1,12 +1,15 @@
 {% extends "base.html" %}
+
 {% block title %}Admin – Users{% endblock %}
 
 {% block content %}
 <section class="admin-dashboard">
+
     <h1 class="dashboard-title">User Management</h1>
     <p class="dashboard-subtitle">View users, manage access, and handle payments.</p>
 
     <div class="admin-box">
+
         {% if users %}
         <div class="users-grid">
             {% for user in users %}
@@ -36,30 +39,31 @@
 
                 <!-- ACTIONS -->
                 <form method="POST">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
                     <!-- TOGGLE SUSPEND -->
-                    <button formaction="/dashboard/users/suspend/{{ user.id }}" type="submit">
+                    <button formaction="/admin/users/suspend/{{ user.id }}" type="submit">
                         {% if user.is_suspended %}Unsuspend{% else %}Suspend{% endif %}
                     </button>
 
                     <!-- TOGGLE PAYMENT -->
                     {% if user.role != "admin" %}
-                    <button
-                        formaction="/dashboard/users/mark-paid/{{ user.id }}"
-                        type="submit"
-                        style="background:#0a7c2f;">
-                        {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
-                    </button>
+                        <button
+                            formaction="/admin/users/mark-paid/{{ user.id }}"
+                            type="submit"
+                            style="background:#0a7c2f;">
+                            {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
+                        </button>
                     {% endif %}
 
                     <!-- DELETE -->
                     <button
-                        formaction="/dashboard/users/delete/{{ user.id }}"
+                        formaction="/admin/users/delete/{{ user.id }}"
                         type="submit"
+                        onclick="return confirm('This action is permanent. Continue?')"
                         style="background:#a00000;">
                         Delete Permanently
                     </button>
+
                 </form>
             </div>
             {% endfor %}
@@ -67,48 +71,14 @@
         {% else %}
             <p>No users found.</p>
         {% endif %}
+
     </div>
 
-    <a href="/dashboard" class="back-login-btn">← Back to Dashboard</a>
-</section>
+    <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
 
+</section>
 <!-- Toast for admin actions -->
 <div id="admin-toast" class="toast"></div>
 
-<!-- JS -->
 <script src="/static/js/admin.js"></script>
-
-<!-- Styles -->
-<style>
-.users-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-.user-card {
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 10px;
-    width: 220px;
-    background: #fafafa;
-}
-.user-card button {
-    margin-top: 5px;
-    margin-right: 5px;
-    padding: 5px 10px;
-    border: none;
-    color: white;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.user-card button[type="submit"] {
-    background: #007bff;
-}
-.user-card button[style*="#0a7c2f"] {
-    background: #0a7c2f;
-}
-.user-card button[style*="#a00000"] {
-    background: #a00000;
-}
-</style>
 {% endblock %}

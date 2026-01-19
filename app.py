@@ -1,320 +1,345 @@
-print(">>> app.py imported")
-
 from flask import (
-    Flask, render_template, redirect, session, request, jsonify,
-    send_from_directory, abort, has_request_context
+    Flask, render_template, redirect, session,
+    request, jsonify, send_from_directory, abort
 )
 from flask_cors import CORS
 import os
-from datetime import datetime, timedelta
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
 from backend.payment import payment_bp
 from backend.webhook import webhook_bp
-import secrets
-import logging
 
-logging.basicConfig(
-    filename="app.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s:%(message)s"
-)
+import requests
+import hashlib
+import hmac
 
 app = Flask(__name__)
+
+# =====================
+# CONFIG
+# =====================
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
-app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
+app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
+app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
+app.config["UPLOAD_FOLDER"] = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "files"
+)
+
+if os.environ.get("ENV") == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True
+    app.debug = False
+
+    
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=timedelta(hours=1)
+    PERMANENT_SESSION_LIFETIME=3600  # 1 hour
 )
-app.debug = True
 
-CORS(app, origins=os.environ.get(
-    "FRONTEND_ORIGIN",
-    "https://wide-mind-tutorial-gptu.onrender.com"
-))
 
-app.jinja_env.globals["now"] = datetime.utcnow
-
-# Initialize database
-with app.app_context():
-    init_db()
-
-# Register blueprints
+# =====================
+# REGISTER BLUEPRINTS
+# =====================
 app.register_blueprint(admin_bp)
-app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
 
-# -------------------------
-# CSRF
-# -------------------------
-def generate_csrf_token():
-    if not has_request_context():
-        return ""
-    if "_csrf_token" not in session:
-        session["_csrf_token"] = secrets.token_hex(16)
-    return session["_csrf_token"]
+# =====================
+# INITIALIZE DB
+# =====================
+init_db()
 
-app.jinja_env.globals["csrf_token"] = generate_csrf_token
+# =====================
+# TEMPLATE CONTEXT
+# =====================
+@app.context_processor
+def inject_now():
+    return {"now": datetime.utcnow}
 
-@app.before_request
-def csrf_protect():
-    if not has_request_context():
-        return
-    if request.path.startswith("/webhook/"):
-        return
-    if request.method == "POST":
-        token = session.get("_csrf_token")
-        header_token = request.headers.get("X-CSRF-Token")
-        form_token = request.form.get("_csrf_token")
-        if not token or token not in (header_token, form_token):
-            abort(403)
-
-@app.before_request
-def block_suspended_users():
-    if "user_id" not in session:
-        return
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    conn.close()
-    if user and user["is_suspended"]:
-        session.clear()
-        return redirect("/")
-
-@app.after_request
-def add_security_headers(response):
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    return response
-
-# -------------------------
-# LOGOUT
-# -------------------------
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
-
-# -------------------------
-# FRONTEND ROUTES
-# -------------------------
+# =====================
+# PAGES
+# =====================
 @app.route("/")
-@app.route("/index")
-def index():
+def home():
     if "user_id" in session:
-        if is_admin(session["user_id"]):
-            return redirect("/dashboard")
-        return redirect("/account")
+        return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("index.html")
 
-@app.route("/login", methods=["GET"])
-def login_page():
-    if "user_id" in session:
-        if is_admin(session["user_id"]):
-            return redirect("/dashboard")
-        return redirect("/account")
-    return render_template("login.html")
-
-@app.route("/account")
-def account():
-    if "user_id" not in session:
-        return redirect("/login")
-    return render_template("account.html")
-
-@app.route("/register", methods=["POST"])
-def register_post():
-    name = request.form.get("name")
-    email = request.form.get("email")
-    password = request.form.get("password")
-
-    # Auto / default fields
-    department = request.form.get("department", "Psychology")
-    level = request.form.get("level", "400")
-
-    if not name or not email or not password:
-        return "Missing required fields", 400
-
-    hashed_pw = generate_password_hash(password)
-
-    conn = get_db()
-    c = conn.cursor()
-
-    try:
-        # Create user
-        c.execute(
-            """
-            INSERT INTO users (name, email, password, department, level)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (name, email, hashed_pw, department, level),
-        )
-        user_id = c.lastrowid
-
-        # Create payment record (IMPORTANT)
-        c.execute(
-            """
-            INSERT INTO payments (user_id, amount, status)
-            VALUES (?, ?, ?)
-            """,
-            (user_id, 20000, "unpaid"),
-        )
-
-        conn.commit()
-
-    except Exception:
-        conn.close()
-        return "Email already exists", 400
-
-    conn.close()
-    return redirect("/login")
+@app.route("/home")
+def home_redirect():
+    return redirect("/")
 
 @app.route("/about")
-def about():
+def about_page():
     return render_template("about.html")
 
 @app.route("/contact")
-def contact():
+def contact_page():
     return render_template("contact.html")
 
 @app.route("/privacy")
-def privacy():
+def privacy_page():
     return render_template("privacy.html")
 
-# -------------------------
-# USER COURSES
-# -------------------------
-@app.route("/course")
-def course_list():
-    if "user_id" not in session:
-        return redirect("/login")
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT * FROM courses ORDER BY id DESC")
-    courses = c.fetchall()
-    courses_with_materials = []
-    for course in courses:
-        c.execute(
-            "SELECT id, filename, file_type, title FROM materials WHERE course_id=?",
-            (course["id"],)
-        )
-        materials = c.fetchall()
-        courses_with_materials.append({
-            "course": dict(course),
-            "materials": [dict(m) for m in materials]
-        })
-    conn.close()
-    return render_template("course.html", courses=courses_with_materials)
+@app.route("/login-page")
+def login_page():
+    return render_template("login.html")
 
-@app.route("/course/<int:course_id>")
-def course_detail(course_id):
+@app.route("/register-page")
+def register_page():
+    return render_template("register.html")
+
+@app.route("/account")
+def account_page():
     if "user_id" not in session:
-        return redirect("/login")
+        return redirect("/login-page")
+    if is_admin(session["user_id"]):
+        return redirect("/admin")
+    return render_template("account.html")
+
+
+@app.before_request
+def block_suspended_users():
+    if "user_id" in session:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
+        user = c.fetchone()
+        conn.close()
+        if user and user["is_suspended"]:
+            session.clear()
+            return redirect("/login-page")
+            
+# =====================
+# REGISTER
+# =====================
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+    name = data.get("name")
+    email = data.get("email")
+    password = data.get("password")
+    department = data.get("department")
+    level = data.get("level")
+
+    if not all([name, email, password, department, level]):
+        return jsonify({"error": "All fields are required"}), 400
+
+    hashed_pw = generate_password_hash(password)
     conn = get_db()
     c = conn.cursor()
+
+    c.execute("SELECT id FROM users WHERE email=?", (email,))
+    if c.fetchone():
+        conn.close()
+        return jsonify({"error": "Email already exists"}), 400
+
+    c.execute(
+        "INSERT INTO users (name, email, password, department, level) VALUES (?, ?, ?, ?, ?)",
+        (name, email, hashed_pw, department, level)
+    )
+    user_id = c.lastrowid
+
+    c.execute(
+        "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
+        (user_id, 20000, "unpaid")
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
+
+# =====================
+# COURSES FOR USERS
+# =====================
+@app.route("/api/courses/my")
+def my_courses():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, course_code, course_title FROM courses ORDER BY id DESC")
+    courses = [
+        {"id": r["id"], "code": r["course_code"], "title": r["course_title"]}
+        for r in c.fetchall()
+    ]
+    conn.close()
+
+    return jsonify({"courses": courses})
+
+# =====================
+# COURSE PAGE
+# =====================
+@app.route("/course/<int:course_id>")
+def course_page(course_id):
+    if "user_id" not in session:
+        return redirect("/login-page")
+
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        return "<h3>Payment required to access courses</h3>", 403
+
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
-    c.execute("SELECT * FROM materials WHERE course_id=?", (course_id,))
-    materials = c.fetchall()
-    conn.close()
-    return render_template(
-        "course.html",
-        course=dict(course),
-        materials=[dict(m) for m in materials]
-    )
 
-# -------------------------
-# API
-# -------------------------
-@app.route("/api/courses")
-def api_courses():
+    c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='audio'", (course_id,))
+    audios = c.fetchall()
+
+    c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
+    pdfs = c.fetchall()
+
+    conn.close()
+
+    return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
+
+# =====================
+# PDF VIEWER
+# =====================
+@app.route("/course/<int:course_id>/pdf")
+def pdf_viewer(course_id):
     if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
+        return redirect("/login-page")
+
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM courses ORDER BY id DESC")
-    courses = c.fetchall()
-    courses_with_materials = []
-    for course in courses:
-        c.execute(
-            "SELECT id, filename, file_type, title FROM materials WHERE course_id=?",
-            (course["id"],)
-        )
-        materials = c.fetchall()
-        courses_with_materials.append({
-            "course": dict(course),
-            "materials": [dict(m) for m in materials]
-        })
-    conn.close()
-    return jsonify(courses_with_materials)
 
-@app.route("/api/payment/status")
-def payment_status():
-    if "user_id" not in session:
-        return jsonify({"error": "Not authenticated"}), 401
-    if is_admin(session["user_id"]):
-        return jsonify({"status": "admin"})
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        return "<h3>Payment required to access PDF</h3>", 403
+
+    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
+    course = c.fetchone()
+    if not course:
+        conn.close()
+        abort(404)
+
+    c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
+    pdf = c.fetchone()
     conn.close()
-    if not payment:
-        return jsonify({"amount": 20000, "status": "unpaid"})
-    return jsonify({"amount": payment["amount"], "status": payment["status"]})
 
-# -------------------------
+    if not pdf:
+        abort(404)
+
+    return render_template("pdf_viewer.html", course=course, pdf_id=pdf["id"])
+
+# =====================
 # STREAM FILES
-# -------------------------
-ALLOWED_FILE_TYPES = {"pdf", "audio"}
-
-def stream_file(material_id, file_type):
-    if "user_id" not in session or file_type not in ALLOWED_FILE_TYPES:
+# =====================
+@app.route("/stream/audio/<int:material_id>")
+def stream_audio(material_id):
+    if "user_id" not in session:
         abort(403)
+
     conn = get_db()
     c = conn.cursor()
+
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
     if not payment or payment["status"] != "paid":
         conn.close()
         abort(403)
-    c.execute("SELECT filename, file_type FROM materials WHERE id=?", (material_id,))
+
+    c.execute("""
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
+        WHERE m.id=? AND m.file_type='audio'
+    """, (material_id,))
     material = c.fetchone()
     conn.close()
-    if not material or material["file_type"] != file_type:
-        abort(404)
-    resp = send_from_directory(app.config["UPLOAD_FOLDER"], secure_filename(material["filename"]))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
 
-@app.route("/stream/audio/<int:material_id>")
-def stream_audio(material_id):
-    return stream_file(material_id, "audio")
+    if not material:
+        abort(404)
+
+    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+
+
 
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
-    return stream_file(material_id, "pdf")
+    if "user_id" not in session:
+        abort(403)
 
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    if not payment or payment["status"] != "paid":
+        conn.close()
+        abort(403)
+
+    c.execute("""
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
+        WHERE m.id=? AND m.file_type='pdf'
+    """, (material_id,))
+    material = c.fetchone()
+    conn.close()
+
+    if not material:
+        abort(404)
+
+    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+
+
+
+# =====================
+# PAYMENT STATUS
+# =====================
+@app.route("/api/payment/status")
+def payment_status():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    if is_admin(session["user_id"]):
+        return jsonify({"status": "admin"})
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
+    payment = c.fetchone()
+    conn.close()
+
+    if not payment:
+        return jsonify({"amount": 20000, "status": "unpaid"})
+
+    return jsonify({"amount": payment["amount"], "status": payment["status"]})
+    
 @app.route("/payment-success")
 def payment_success():
     return render_template("payment_success.html")
 
-# -------------------------
+# =====================
+# LOGOUT
+# =====================
+@app.route("/logout")
+def logout():
+    session.clear()  # clears all session data
+    return redirect("/login-page")  # redirect to login page
+    
+# =====================
 # RUN
-# -------------------------
+# =====================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5002))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
+

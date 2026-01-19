@@ -1,19 +1,11 @@
-print(">>> payment.py imported")
-
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session
 import requests
 import os
 from backend.db import get_db
 
-# ---------------------
-# BLUEPRINT
-# ---------------------
-payment_bp = Blueprint("payment_bp", __name__, url_prefix="/api/payment")
+payment_bp = Blueprint("payment_bp", __name__)
 
-# ---------------------
-# INITIALIZE PAYMENT
-# ---------------------
-@payment_bp.route("/init", methods=["POST"])
+@payment_bp.route("/api/payment/init", methods=["POST"])
 def init_payment():
     """
     Initialize Paystack payment for the logged-in user.
@@ -47,22 +39,13 @@ def init_payment():
     }
 
     try:
-        resp = requests.post(
-            "https://api.paystack.co/transaction/initialize",
-            json=payload,
-            headers=headers,
-            timeout=10
-        )
+        resp = requests.post("https://api.paystack.co/transaction/initialize", json=payload, headers=headers)
         resp.raise_for_status()
         resp_json = resp.json()
     except requests.RequestException as e:
-        print(f"Paystack request error: {e}")
         return jsonify({"status": False, "message": "Failed to initialize payment"}), 500
 
     if resp_json.get("status"):
         return jsonify({"status": True, "data": resp_json["data"]})
     else:
-        return jsonify({
-            "status": False,
-            "message": resp_json.get("message", "Failed to initialize payment")
-        })
+        return jsonify({"status": False, "message": resp_json.get("message", "Failed to initialize payment")})

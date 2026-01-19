@@ -1,44 +1,76 @@
 {% extends "base.html" %}
+
 {% block title %}Admin – Courses{% endblock %}
 
 {% block content %}
+
 <section class="admin-dashboard">
+
     <h1 class="dashboard-title">Course Management</h1>
-    <p class="dashboard-subtitle">Add, edit, or delete courses.</p>
+    <p class="dashboard-subtitle">
+        Add, edit, or delete courses.
+    </p>
 
     <div class="courses-list">
 
-        <!-- ADD COURSE -->
+        <!-- ADD COURSE BOX -->
         <div class="course-box add-course-box">
             <h3>Add New Course</h3>
-            <form method="POST" action="/dashboard/courses/add">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="text" name="course_code" placeholder="Course Code" required>
-                <input type="text" name="course_title" placeholder="Course Title" required>
-                <textarea name="description" rows="3" placeholder="Course Description (optional)"></textarea>
+
+            <form method="POST" action="/admin/courses/add">
+                <input
+                    type="text"
+                    name="course_code"
+                    placeholder="Course Code"
+                    required>
+
+                <input
+                    type="text"
+                    name="course_title"
+                    placeholder="Course Title"
+                    required>
+
+                <textarea
+                    name="description"
+                    rows="3"
+                    placeholder="Course Description (optional)"></textarea>
+
                 <button type="submit">Add Course</button>
             </form>
         </div>
 
         {% if courses %}
         <div class="course-grid">
+
             {% for course in courses %}
             <div class="course-box">
+
                 <h3>{{ course.course_title }}</h3>
                 <p><strong>Code:</strong> {{ course.course_code }}</p>
                 <p>{{ course.description or "No description" }}</p>
+
                 <div class="course-actions">
+
                     <!-- EDIT -->
-                    <a href="/dashboard/courses/edit/{{ course.id }}" class="btn">Edit</a>
+                    <a href="/admin/courses/edit/{{ course.id }}" class="btn">
+                        Edit
+                    </a>
 
                     <!-- DELETE -->
-                    <form method="POST" action="/dashboard/courses/delete/{{ course.id }}">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn danger">Delete</button>
+                    <form method="POST" action="/admin/courses/delete/{{ course.id }}">
+                        <button
+                            type="submit"
+                            class="btn danger"
+                            onclick="return confirm('Delete this course permanently?')">
+                            Delete
+                        </button>
                     </form>
+
                 </div>
+
             </div>
             {% endfor %}
+
         </div>
         {% else %}
             <p>No courses available.</p>
@@ -46,41 +78,12 @@
 
     </div>
 
-    <a href="/dashboard" class="back-login-btn">← Back to Dashboard</a>
-</section>
+    <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
 
+</section>
 <!-- Toast for admin actions -->
 <div id="admin-toast" class="toast"></div>
+
 <script src="/static/js/admin.js"></script>
 
-<style>
-.course-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-.course-box {
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 10px;
-    width: 250px;
-    background: #fafafa;
-}
-.course-box .btn {
-    margin-right: 5px;
-    padding: 5px 10px;
-    border: none;
-    color: white;
-    border-radius: 5px;
-    cursor: pointer;
-    background: #007bff;
-    text-decoration: none;
-}
-.course-box .btn.danger {
-    background: #a00000;
-}
-.course-box .btn:hover {
-    opacity: 0.85;
-}
-</style>
 {% endblock %}

@@ -6,34 +6,18 @@
 
     <!-- USER INFO -->
     <div class="account-box">
-        <img
-            src="/static/images/avatar.png"
-            alt="Profile Avatar"
-            class="profile-avatar"
-        >
+        <img src="/static/images/avatar.png" alt="Profile Avatar" class="profile-avatar">
 
         <h2 id="username">Loading...</h2>
-
-        <p>
-            Department:
-            <span id="department">Loading...</span>
-        </p>
-
-        <p>
-            Level:
-            <span id="level">Loading...</span>
-        </p>
+        <p>Department: <span id="department">Loading...</span></p>
+        <p>Level: <span id="level">Loading...</span></p>
 
         <p>
             Payment Status:
             <strong id="payment-status">Checking...</strong>
         </p>
 
-        <button
-            id="pay-btn"
-            class="btn"
-            style="display: none;"
-        >
+        <button id="pay-btn" class="btn" style="display:none;">
             Pay Now
         </button>
     </div>
@@ -46,38 +30,14 @@
         </ul>
     </div>
 
-    <!-- LOGOUT -->
-    <button id="logout-btn" class="btn btn-secondary">
-        Logout
-    </button>
+    <button id="logout-btn" class="btn">Logout</button>
 
 </section>
 
-<!-- PAYMENT TOAST -->
-<div id="toast" class="toast">
-    Payment Verified ✅
-</div>
+<!-- TOAST -->
+<div id="toast" class="toast">Payment Verified ✅</div>
 
-<!-- PAGE STYLES -->
 <style>
-.account-section {
-    max-width: 900px;
-    margin: auto;
-}
-
-.account-box,
-.courses-box {
-    background: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-
-.profile-avatar {
-    width: 80px;
-    border-radius: 50%;
-}
-
 /* Paid animation */
 .paid-animate {
     animation: pop 0.6s ease-out;
@@ -113,6 +73,5 @@
 }
 </style>
 
-<!-- PAGE SCRIPT -->
 <script src="/static/js/account.js"></script>
 {% endblock %}

@@ -1,93 +1,31 @@
 {% extends "base.html" %}
-{% block title %}{{ course.course_code }} | Wide Mind Tutorials{% endblock %}
+
+{% block title %}{{ course.course_code }} - {{ course.course_title }}{% endblock %}
 
 {% block content %}
-<section class="course-detail">
 
-    <h2>{{ course.course_code }} – {{ course.course_title }}</h2>
+## {{ course.course_code }} - {{ course.course_title }}
 
-    {% if course.description %}
-        <p>{{ course.description }}</p>
-    {% endif %}
+{% if audios %}
+  <h3>Audio Lessons 🎧</h3>
+  <ul>
+    {% for audio in audios %}
+      <li>
+        <a href="/stream/audio/{{ audio.id }}">{{ audio.title or audio.filename }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
 
-    <div class="materials-section">
+{% if pdfs %}
+  <h3>PDF Lessons 📝</h3>
+  <ul>
+    {% for pdf in pdfs %}
+      <li>
+        <a href="/course/{{ course.id }}/pdf">Open PDF: {{ pdf.title or pdf.filename }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
 
-        {% if audios %}
-        <div class="materials-box">
-            <h3>🎧 Audio Sessions</h3>
-            <ul>
-                {% for audio in audios %}
-                <li>
-                    <strong>{{ audio.title }}</strong>
-                    <audio
-                        controls
-                        controlsList="nodownload"
-                        src="/stream/audio/{{ audio.id }}">
-                        Your browser does not support the audio element.
-                    </audio>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        {% if pdfs %}
-        <div class="materials-box">
-            <h3>📄 PDF Materials</h3>
-            <ul>
-                {% for pdf in pdfs %}
-                <li>
-                    <strong>{{ pdf.title }}</strong><br>
-                    <a class="btn" href="/stream/pdf/{{ pdf.id }}" target="_blank">
-                        Open PDF 📝
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        {% if not audios and not pdfs %}
-            <p>No materials available for this course yet.</p>
-        {% endif %}
-
-    </div>
-
-    <a href="/account" class="btn secondary">← Back to Account</a>
-
-</section>
-
-<style>
-.course-detail {
-    max-width: 900px;
-    margin: auto;
-}
-
-.materials-section {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-top: 25px;
-}
-
-.materials-box {
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 8px;
-    background: #f9f9f9;
-}
-
-.materials-box h3 {
-    margin-top: 0;
-}
-
-.materials-box ul {
-    list-style: none;
-    padding-left: 0;
-}
-
-.materials-box li {
-    margin-bottom: 15px;
-}
-</style>
 {% endblock %}
