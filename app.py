@@ -88,11 +88,17 @@ def privacy_page():
 
 @app.route("/login-page")
 def login_page():
+    if "user_id" in session:
+        return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("login.html")
+
 
 @app.route("/register-page")
 def register_page():
+    if "user_id" in session:
+        return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("register.html")
+
 
 @app.route("/account")
 def account_page():
