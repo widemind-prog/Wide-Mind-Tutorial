@@ -53,6 +53,7 @@ app.register_blueprint(webhook_bp)
 # INITIALIZE DB
 # =====================
 init_db()
+migrate_db()
 
 # =====================
 # TEMPLATE CONTEXT
