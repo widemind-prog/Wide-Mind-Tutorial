@@ -69,7 +69,20 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-
+def migrate_db():
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("ALTER TABLE materials ADD COLUMN title TEXT")
+        print("✅ Column 'title' added to materials table")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            print("⚠️ Column 'title' already exists, skipping migration")
+        else:
+            raise
+    conn.commit()
+    conn.close()
+    
     # -------------------------
     # SEED COURSES & MATERIALS
     # -------------------------
@@ -150,4 +163,5 @@ def hash_password(password):
 # -------------------------
 if __name__ == "__main__":
     init_db()
+    migrate_db()
 

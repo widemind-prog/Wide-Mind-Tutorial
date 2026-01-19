@@ -129,22 +129,41 @@ def courses():
     conn.close()
     return render_template("admin/courses.html", courses=courses)
 
+
 @admin_bp.route("/courses/add", methods=["POST"])
 @admin_required
 def add_course():
+    course_code = request.form.get("course_code", "").strip()
+    course_title = request.form.get("course_title", "").strip()
+    description = request.form.get("description", "").strip()
+
+    # Validate required fields
+    if not course_code or not course_title:
+        flash("Course code and title are required.", "error")
+        return redirect("/admin/courses")
+
     conn = get_db()
     c = conn.cursor()
+
+    # Check for duplicate course_code
+    c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
+    if c.fetchone():
+        flash(f"Course code '{course_code}' already exists.", "error")
+        conn.close()
+        return redirect("/admin/courses")
+
+    # Insert new course
     c.execute("""
         INSERT INTO courses (course_code, course_title, description)
         VALUES (?, ?, ?)
-    """, (
-        request.form.get("course_code"),
-        request.form.get("course_title"),
-        request.form.get("description")
-    ))
+    """, (course_code, course_title, description))
+    
     conn.commit()
     conn.close()
+
+    flash(f"Course '{course_code} - {course_title}' added successfully!", "success")
     return redirect("/admin/courses")
+
 
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
@@ -153,17 +172,29 @@ def edit_course(course_id):
     c = conn.cursor()
 
     if request.method == "POST":
+        course_code = request.form.get("course_code", "").strip()
+        course_title = request.form.get("course_title", "").strip()
+        description = request.form.get("description", "").strip()
+
+        # Validate required fields
+        if not course_code or not course_title:
+            flash("Course code and title are required.", "error")
+            return redirect(f"/admin/courses/edit/{course_id}")
+
+        # Check for duplicate course_code (excluding this course)
+        c.execute("SELECT id FROM courses WHERE course_code=? AND id != ?", (course_code, course_id))
+        if c.fetchone():
+            flash(f"Course code '{course_code}' already exists.", "error")
+            return redirect(f"/admin/courses/edit/{course_id}")
+
+        # Update course
         c.execute("""
             UPDATE courses
             SET course_code=?, course_title=?, description=?
             WHERE id=?
-        """, (
-            request.form.get("course_code"),
-            request.form.get("course_title"),
-            request.form.get("description"),
-            course_id
-        ))
+        """, (course_code, course_title, description, course_id))
         conn.commit()
+        flash("Course updated successfully!", "success")
 
     # Fetch course details
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
@@ -201,22 +232,47 @@ def delete_course(course_id):
 @admin_required
 def add_material(file_type, course_id):
     file = request.files.get(file_type)
-    title = request.form.get("title")  # <-- fetch custom title
-    if not file or not title:
-        abort(400)
+    title = request.form.get("title")
+
+    # -------------------------
+    # REQUIRED FIELDS CHECK
+    # -------------------------
+    if not file or not title or title.strip() == "":
+        return "Error: File and title are required.", 400
 
     filename = secure_filename(file.filename)
+    if filename == "":
+        return "Error: Invalid file name.", 400
+
+    # -------------------------
+    # CHECK FOR DUPLICATE
+    # -------------------------
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id FROM materials
+        WHERE course_id=? AND filename=?
+    """, (course_id, filename))
+    if c.fetchone():
+        conn.close()
+        return f"Error: Material '{filename}' already exists for this course.", 400
+
+    # -------------------------
+    # SAVE FILE
+    # -------------------------
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
 
-    conn = get_db()
-    c = conn.cursor()
+    # -------------------------
+    # INSERT INTO DB
+    # -------------------------
     c.execute("""
         INSERT INTO materials (course_id, filename, file_type, title)
         VALUES (?, ?, ?, ?)
     """, (course_id, filename, file_type, title))
     conn.commit()
     conn.close()
+
     return redirect(f"/admin/courses/edit/{course_id}")
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
