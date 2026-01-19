@@ -4,14 +4,18 @@
 
 {% block content %}
 
-## {{ course.course_code }} - {{ course.course_title }}
+<h2>{{ course.course_code }} - {{ course.course_title }}</h2>
 
 {% if audios %}
   <h3>Audio Lessons 🎧</h3>
   <ul>
     {% for audio in audios %}
       <li>
-        <a href="/stream/audio/{{ audio.id }}">{{ audio.title or audio.filename }}</a>
+        <p>{{ audio.title or audio.filename }}</p>
+        <audio id="audio-{{ audio.id }}" controls controlsList="nodownload">
+          <source src="/stream/audio/{{ audio.id }}" type="audio/mpeg">
+          Your browser does not support the audio element.
+        </audio>
       </li>
     {% endfor %}
   </ul>
@@ -22,10 +26,25 @@
   <ul>
     {% for pdf in pdfs %}
       <li>
-        <a href="/course/{{ course.id }}/pdf">Open PDF: {{ pdf.title or pdf.filename }}</a>
+        <a href="/course/{{ course.id }}/pdf" target="_blank">
+          {{ pdf.title or pdf.filename }}
+        </a>
       </li>
     {% endfor %}
   </ul>
 {% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("audio").forEach(audio => {
+        // Disable right-click
+        audio.addEventListener("contextmenu", e => e.preventDefault());
+        // Disable dragging
+        audio.addEventListener("dragstart", e => e.preventDefault());
+        // Hide download button (modern browsers)
+        audio.controlsList = "nodownload";
+    });
+});
+</script>
 
 {% endblock %}
