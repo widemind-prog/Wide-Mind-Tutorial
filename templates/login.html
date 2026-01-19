@@ -1,20 +1,43 @@
 {% extends "base.html" %}
 {% block title %}Login{% endblock %}
+
 {% block content %}
+<section class="login-section">
+    <h2>Login to Your Account</h2>
 
-<h2>Login to Your Account</h2>  
+    <form id="login-form" method="post" autocomplete="on">
+        <!-- CSRF token -->
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-<form id="login-form">
-    <!-- Hidden CSRF token -->
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    
-    <input type="email" name="email" placeholder="Email" required>  
-    <input type="password" name="password" placeholder="Password" required>  
-    <button type="submit">Login</button>  
-</form>  
+        <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            autocomplete="email"
+            required
+        >
 
-<p id="login-msg" style="color:red;"></p>  
-<a href="/register">Register Now!</a>  
+        <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            autocomplete="current-password"
+            required
+        >
 
-<script src="/static/js/auth.js"></script>  
+        <button type="submit" class="btn">
+            Login
+        </button>
+    </form>
+
+    <!-- Login feedback -->
+    <p id="login-msg" class="form-msg"></p>
+
+    <p>
+        Don’t have an account?
+        <a href="/register">Register Now!</a>
+    </p>
+</section>
+
+<script src="/static/js/auth.js"></script>
 {% endblock %}

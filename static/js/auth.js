@@ -5,38 +5,46 @@ document.addEventListener("DOMContentLoaded", () => {
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        // Read CSRF token directly from hidden input
-        const csrfToken = loginForm.querySelector('input[name="_csrf_token"]').value;
+        const msgEl = document.getElementById("login-msg");
+        msgEl.textContent = "";
+
+        const email = loginForm.email.value.trim();
+        const password = loginForm.password.value.trim();
+
+        if (!email || !password) {
+            msgEl.style.color = "red";
+            msgEl.textContent = "Please fill in all fields.";
+            return;
+        }
 
         try {
-            const res = await fetch("/auth/login", {  // POST to /auth/login
+            const csrfTokenInput = loginForm.querySelector('input[name="_csrf_token"]');
+            const csrfToken = csrfTokenInput ? csrfTokenInput.value : "";
+
+            const res = await fetch("/auth/login", {
                 method: "POST",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
-                    "X-CSRF-Token": csrfToken  // send CSRF token
+                    "X-CSRF-Token": csrfToken // optional, backend ignores JSON CSRF
                 },
-                credentials: "include",   // keeps session cookie
-                body: JSON.stringify({
-                    email: loginForm.email.value,
-                    password: loginForm.password.value
-                })
+                credentials: "same-origin",
+                body: JSON.stringify({ email, password })
             });
 
             const data = await res.json();
 
-            const msgEl = document.getElementById("login-msg");
-
             if (res.ok) {
                 msgEl.style.color = "green";
                 msgEl.textContent = "Login successful! Redirecting...";
-                setTimeout(() => window.location.href = data.redirect || "/dashboard", 1000);
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/dashboard";
+                }, 1000);
             } else {
                 msgEl.style.color = "red";
                 msgEl.textContent = data.error || "Login failed";
             }
         } catch (err) {
             console.error("Login error:", err);
-            const msgEl = document.getElementById("login-msg");
             msgEl.style.color = "red";
             msgEl.textContent = "Network error. Try again.";
         }

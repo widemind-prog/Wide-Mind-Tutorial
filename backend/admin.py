@@ -22,7 +22,7 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../fil
 ALLOWED_EXTENSIONS = {"pdf", "mp3", "wav"}
 
 # ---------------------
-# LOGGER CONFIG (safe)
+# LOGGER CONFIG
 # ---------------------
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -86,7 +86,7 @@ def users():
         LEFT JOIN payments p ON u.id = p.user_id
         ORDER BY u.id DESC
     """)
-    users = c.fetchall()
+    users = [dict(u) for u in c.fetchall()]
     conn.close()
     return render_template("admin/users.html", users=users)
 
@@ -146,7 +146,6 @@ def toggle_payment(user_id):
 
     new_status = "unpaid" if payment["status"] == "paid" else "paid"
     now = datetime.utcnow().isoformat()
-
     try:
         execute_with_fk_logging(c, """
             UPDATE payments
@@ -171,7 +170,7 @@ def courses():
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM courses ORDER BY id DESC")
-    courses = c.fetchall()
+    courses = [dict(c_) for c_ in c.fetchall()]
     conn.close()
     return render_template("admin/courses.html", courses=courses)
 
@@ -196,14 +195,14 @@ def add_course():
         conn.close()
         return jsonify({"error": "Cannot add course, check uniqueness and integrity"}), 400
     conn.close()
-    return redirect("/courses")
+    return redirect("/dashboard/courses")
 
+# Courses
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
 def edit_course(course_id):
     conn = get_db()
     c = conn.cursor()
-
     if request.method == "POST":
         csrf_protect()
         try:
@@ -226,9 +225,10 @@ def edit_course(course_id):
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course_id,))
-    materials = c.fetchall()
+    materials = [dict(m) for m in c.fetchall()]
     conn.close()
-    return render_template("admin/edit_course.html", course=course, materials=materials)
+    return render_template("admin/edit_course.html", course=dict(course), materials=materials)
+
 
 @admin_bp.route("/courses/delete/<int:course_id>", methods=["POST"])
 @admin_required
@@ -246,9 +246,8 @@ def delete_course(course_id):
     conn.close()
     return jsonify({"message": "Course deleted"}), 200
 
-# ---------------------
-# MATERIALS
-# ---------------------
+
+# Materials
 @admin_bp.route("/courses/material/add/<file_type>/<int:course_id>", methods=["POST"])
 @admin_required
 def add_material(file_type, course_id):
@@ -257,7 +256,6 @@ def add_material(file_type, course_id):
     title = request.form.get("title")
     if not file or not title or not allowed_file(file.filename):
         abort(400)
-
     filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
@@ -277,6 +275,7 @@ def add_material(file_type, course_id):
     conn.close()
     return redirect(f"/dashboard/courses/edit/{course_id}")
 
+
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
 @admin_required
 def delete_material(material_id):
@@ -290,17 +289,13 @@ def delete_material(material_id):
         abort(404)
 
     filepath = os.path.join(UPLOAD_FOLDER, material["filename"])
-    
-    # -----------------------------
-    # Properly handle missing file
-    # -----------------------------
-    if not os.path.exists(filepath):
-        logger.warning(f"File {filepath} not found when deleting material id {material_id}")
-    else:
+    if os.path.exists(filepath):
         try:
             os.remove(filepath)
         except Exception as e:
             logger.warning(f"Failed to delete file {filepath}: {e}")
+    else:
+        logger.warning(f"File {filepath} not found when deleting material id {material_id}")
 
     try:
         execute_with_fk_logging(c, "DELETE FROM materials WHERE id=?", (material_id,))

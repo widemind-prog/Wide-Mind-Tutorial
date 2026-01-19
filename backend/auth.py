@@ -5,7 +5,10 @@ from werkzeug.security import check_password_hash
 from backend.db import get_db, is_admin
 from time import time
 
-auth_bp = Blueprint("auth_bp", __name__)
+# ---------------------
+# BLUEPRINT
+# ---------------------
+auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
 
 # ---------------------
 # RATE LIMITING
@@ -47,8 +50,8 @@ def me():
         "department": user["department"],
         "level": user["level"]
     }), 200
-    
-  # ---------------------
+
+# ---------------------
 # LOGIN
 # ---------------------
 @auth_bp.route("/login", methods=["POST"])
@@ -57,9 +60,7 @@ def login():
 
     # 🔐 Rate limit check
     if is_rate_limited(ip):
-        return jsonify({
-            "error": "Too many login attempts. Try again later."
-        }), 429
+        return jsonify({"error": "Too many login attempts. Try again later."}), 429
 
     LOGIN_ATTEMPTS.setdefault(ip, []).append(time())
 
@@ -91,18 +92,13 @@ def login():
         return jsonify({"error": "Account suspended"}), 403
 
     # ✅ Login success
-    LOGIN_ATTEMPTS.pop(ip, None)
-
-    # Prevent session fixation
-    session.clear()
+    LOGIN_ATTEMPTS.pop(ip, None)  # Reset rate limit for IP
+    session.clear()  # Prevent session fixation
     session.permanent = True
     session["user_id"] = user["id"]
 
     # Role-based redirect
-    if is_admin(user["id"]):
-        redirect_url = "/dashboard"
-    else:
-        redirect_url = "/account"
+    redirect_url = "/dashboard" if is_admin(user["id"]) else "/account"
 
     return jsonify({
         "message": "Login successful",

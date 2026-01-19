@@ -3,20 +3,30 @@ print(">>> webhook.py imported")
 from flask import Blueprint, request, jsonify
 import hmac
 import hashlib
-from backend.db import get_db
 import os
 from datetime import datetime
+from backend.db import get_db
 
-webhook_bp = Blueprint("webhook_bp", __name__)
+# ---------------------
+# BLUEPRINT
+# ---------------------
+webhook_bp = Blueprint("webhook_bp", __name__, url_prefix="/webhook")
 
-@webhook_bp.route("/webhook/paystack", methods=["POST"])
+# ---------------------
+# PAYSTACK WEBHOOK
+# ---------------------
+@webhook_bp.route("/paystack", methods=["POST"])
 def paystack_webhook():
+    """
+    Handle Paystack webhook for successful payments.
+    Updates user's payment status in DB and prevents replay attacks.
+    """
     # ✅ Ensure secret is configured
     paystack_secret = os.environ.get("PAYSTACK_SECRET_KEY")
     if not paystack_secret:
         return "Server misconfigured", 500
 
-    # ✅ Get signature and payload
+    # ✅ Get signature and raw payload
     received_signature = request.headers.get("X-Paystack-Signature")
     payload = request.get_data()
 
@@ -41,6 +51,7 @@ def paystack_webhook():
     except Exception:
         return "Malformed payload", 400
 
+    # ✅ Handle successful charge
     if event_type == "charge.success" and email and reference:
         now = datetime.utcnow().isoformat()
         conn = get_db()
@@ -52,7 +63,7 @@ def paystack_webhook():
             conn.close()
             return jsonify({"status": "duplicate"}), 200
 
-        # Mark user's payment as paid
+        # Update payment status to paid
         c.execute("""
             UPDATE payments
             SET status='paid', reference=?, paid_at=?
@@ -60,5 +71,6 @@ def paystack_webhook():
         """, (reference, now, email))
         conn.commit()
         conn.close()
+        return jsonify({"status": "ok"}), 200
 
-    return jsonify({"status": "ok"}), 200
+    return jsonify({"status": "ignored"}), 200

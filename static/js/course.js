@@ -4,10 +4,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // -------------------------
   let hasAccess = false;
   try {
-    const res = await fetch("api/payment/status");
+    const res = await fetch("/api/payment/status", { credentials: "same-origin" });
     const data = await res.json();
-
-    if (res.ok && data.status !== "unpaid") {
+    if (res.ok && data.status === "paid") {
       hasAccess = true;
     }
   } catch (err) {
@@ -15,38 +14,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // -------------------------
-  // 2. Handle audio elements
+  // 2. Populate course boxes
+  // -------------------------
+  const courseContainer = document.getElementById("course-list") || document.getElementById("courses");
+  if (courseContainer) {
+    try {
+      const res = await fetch("/api/courses", { credentials: "same-origin" });
+      if (!res.ok) {
+        courseContainer.innerHTML = "<p style='color:red;'>Failed to load courses.</p>";
+        return;
+      }
+      const data = await res.json();
+      if (!data.length) {
+        courseContainer.innerHTML = "<p>No courses available.</p>";
+        return;
+      }
+      courseContainer.innerHTML = "";
+      data.forEach(entry => {
+        const course = entry.course;
+        const materials = entry.materials;
+
+        const courseDiv = document.createElement("div");
+        courseDiv.className = "course-box";
+        courseDiv.innerHTML = `
+          <h3>${course.course_title} (${course.course_code})</h3>
+          <p>${course.description || ""}</p>
+          <ul>
+            ${materials.map(m => {
+              const url = `/stream/${m.file_type}/${m.id}`;
+              const title = m.title || "Material";
+              if (!hasAccess) {
+                return `<li>${title} 🔒 Payment required</li>`;
+              }
+              return `<li><a href="${url}" target="_blank">${title}</a></li>`;
+            }).join("")}
+          </ul>
+        `;
+        courseContainer.appendChild(courseDiv);
+      });
+    } catch (err) {
+      console.error("Failed to load courses:", err);
+      if (courseContainer) {
+        courseContainer.innerHTML = "<p style='color:red;'>Error loading courses</p>";
+      }
+    }
+  }
+
+  // -------------------------
+  // 3. Handle audio elements (disable if unpaid)
   // -------------------------
   const audios = document.querySelectorAll("audio");
   audios.forEach(audio => {
-    // Prevent right-click and dragging
     audio.addEventListener("contextmenu", e => e.preventDefault());
     audio.addEventListener("dragstart", e => e.preventDefault());
-
-    // Disable audio if user hasn't paid
     if (!hasAccess) {
       audio.pause();
       audio.controls = false;
-      audio.parentElement.insertAdjacentHTML(
-        "beforeend",
-        `<p style="color:red; font-weight:bold;">🔒 Payment required to play this audio.</p>`
-      );
+      if (!audio.nextElementSibling || !audio.nextElementSibling.classList.contains("locked-msg")) {
+        const msg = document.createElement("p");
+        msg.className = "locked-msg";
+        msg.style.color = "red";
+        msg.style.fontWeight = "bold";
+        msg.textContent = "🔒 Payment required to play this audio.";
+        audio.parentElement.appendChild(msg);
+      }
     }
   });
 
   // -------------------------
-  // 3. Handle PDF links
+  // 4. Handle PDF links (disable if unpaid)
   // -------------------------
-  const pdfLinks = document.querySelectorAll(".materials-box a.btn");
+  const pdfLinks = document.querySelectorAll("a.pdf-link");
   pdfLinks.forEach(link => {
     if (!hasAccess) {
-      link.addEventListener("click", e => {
-        e.preventDefault();
-        alert("Payment required to access this PDF.");
-      });
-      link.style.pointerEvents = "auto"; // just in case
-      link.style.opacity = "0.5";
-      link.style.textDecoration = "line-through";
+      link.removeAttribute("href");
+      link.style.color = "gray";
+      link.textContent += " 🔒 Payment required";
     }
   });
 });

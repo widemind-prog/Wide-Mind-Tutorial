@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="admin-dashboard">
+
     <h1 class="dashboard-title">Admin Dashboard</h1>
     <p class="dashboard-subtitle">Manage users and courses</p>
 
@@ -28,18 +29,66 @@
             </ul>
         </a>
 
-<!-- Anywhere you want a logout button -->
-<form action="/logout" method="get">
-    <button type="submit">Logout</button>
-</form>
+        <!-- LOGOUT -->
+        <button id="logout-btn" class="btn btn-secondary">
+            Logout
+        </button>
 
+    </div>
+
+</div>
+
+<!-- DASHBOARD STYLES -->
+<style>
+.admin-dashboard {
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+}
+.dashboard-title {
+    font-size: 2em;
+    margin-bottom: 5px;
+}
+.dashboard-subtitle {
+    color: #555;
+    margin-bottom: 20px;
+}
+.dashboard-boxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.dashboard-box {
+    flex: 1 1 200px;
+    border: 1px solid #ccc;
+    padding: 20px;
+    border-radius: 10px;
+    background: #fafafa;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+}
+.dashboard-box:hover {
+    background: #f0f0f0;
+    transform: translateY(-2px);
+}
+.dashboard-box ul {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 10px;
+}
+.dashboard-box li {
+    margin-bottom: 5px;
+}
+#logout-btn {
+    margin-top: 20px;
+}
+</style>
+
+<!-- ADMIN JS -->
 <script>
-document.getElementById("logout-btn").addEventListener("click", function() {
-    // Redirect to the logout route
+document.getElementById("logout-btn")?.addEventListener("click", () => {
     window.location.href = "/logout";
 });
 </script>
-
-    </div>
-</div>
 {% endblock %}

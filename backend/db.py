@@ -1,3 +1,5 @@
+print(">>> db.py imported")
+
 import sqlite3
 import os
 from werkzeug.security import generate_password_hash
@@ -25,10 +27,11 @@ logging.basicConfig(
 def get_db():
     """
     Returns a sqlite3 connection with foreign keys enforced.
+    Rows act like dicts.
     """
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # rows act like dicts
-    conn.execute("PRAGMA foreign_keys = ON")  # enforce FK constraints
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 # -------------------------
@@ -51,7 +54,9 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
 
-    # Users table
+    # -------------------------
+    # USERS TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +71,9 @@ def init_db():
         )
     """)
 
-    # Courses table
+    # -------------------------
+    # COURSES TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +84,9 @@ def init_db():
         )
     """)
 
-    # Materials table (added `title` column)
+    # -------------------------
+    # MATERIALS TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,13 +99,16 @@ def init_db():
         )
     """)
 
-    # Payments table
+    # -------------------------
+    # PAYMENTS TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER UNIQUE NOT NULL,
             amount INTEGER NOT NULL,
             status TEXT DEFAULT 'unpaid',
+            reference TEXT,
             paid_at TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -115,30 +127,24 @@ def init_db():
     # SEED COURSES & MATERIALS
     # -------------------------
     courses = [
-        ("Psy432", "Adolescent Psychology", "Adolescent development",
-         [("lesson1.mp3", "Adolescent Audio Lesson 1"), ("lesson1.pdf", "Adolescent PDF Lesson 1")]),
-        ("Psy409", "Biological Psychology", "Neural processes",
-         [("lesson2.mp3", "Biology Audio Lesson 2"), ("lesson2.pdf", "Biology PDF Lesson 2")])
+        ("Psy432", "Adolescent Psychology", "Adolescent development", [("lesson1.mp3", "Adolescent Audio Lesson 1"), ("lesson1.pdf", "Adolescent PDF Lesson 1")]),
+        ("Psy409", "Biological Psychology", "Neural processes", [("lesson2.mp3", "Biology Audio Lesson 2"), ("lesson2.pdf", "Biology PDF Lesson 2")])
     ]
 
     for code, title, desc, files in courses:
         c.execute("SELECT id FROM courses WHERE course_code=?", (code,))
         if not c.fetchone():
-            execute_with_fk_logging(c, "INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)",
-                                    (code, title, desc))
+            execute_with_fk_logging(c, "INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)", (code, title, desc))
             course_id = c.lastrowid
             for f, f_title in files:
                 file_type = "audio" if f.endswith(".mp3") else "pdf"
-                execute_with_fk_logging(c, """
-                    INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)
-                """, (course_id, f, file_type, f_title))
+                execute_with_fk_logging(c, "INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", (course_id, f, file_type, f_title))
 
     # -------------------------
     # CREATE DEMO STUDENT USER
     # -------------------------
     demo_email = "demo@widemind.test"
     demo_password = "demopassword"
-
     c.execute("SELECT id FROM users WHERE email=?", (demo_email,))
     if not c.fetchone():
         hashed_pw = generate_password_hash(demo_password)
@@ -147,15 +153,13 @@ def init_db():
             VALUES (?, ?, ?, ?, ?, 'student', 0)
         """, ("Demo User", demo_email, hashed_pw, "Psychology", "400"))
         demo_user_id = c.lastrowid
-        execute_with_fk_logging(c, "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-                                (demo_user_id, 20000, "paid"))
+        execute_with_fk_logging(c, "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)", (demo_user_id, 20000, "paid"))
 
     # -------------------------
     # CREATE ADMIN USER
     # -------------------------
     admin_email = "wideminddevs@gmail.com"
     admin_hashed_password = "scrypt:32768:8:1$AMDSiSevHwChJp23$083a029ff1370771a4afd5e72bcb3803bafccdac058f559a997d6641084e6b955489fc4df1678bb19d857516c7c22844601494c0c50e75a56ab90e1c25b46e8e"
-
     c.execute("SELECT id FROM users WHERE email=?", (admin_email,))
     if not c.fetchone():
         execute_with_fk_logging(c, """
