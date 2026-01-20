@@ -9,6 +9,32 @@ html, body {
 }
 
 /* ==========================
+   GLOBAL BUTTONS (except CTA)
+========================== */
+button, .btn {
+    background: linear-gradient(135deg, #D4AF37,#8B7500 ); /* golden gradient */
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
+    background-size: 200% 200%; /* for gradient hover animation */
+}
+
+/* Hover: subtle shift + pop */
+button:hover, .btn:hover {
+    transform: scale(1.04);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    background-position: 100% 0; /* shift gradient for dynamic effect */
+}
+
+/* Optional: click/tap effect */
+button:active, .btn:active {
+    transform: scale(0.98);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+/* ==========================
    HEADERS STYLING
 ========================== */
 h1, h2, h3, h4, h5, h6 {
@@ -197,6 +223,49 @@ main.content {
         padding: 14px 28px;
         font-size: 1.1em;
     }
+}
+
+/* ==========================
+   CTA BUTTON GRADIENT & ANIMATIONS
+========================== */
+
+/* Base gradient for primary buttons */
+.cta-buttons .btn {
+    background: linear-gradient(135deg, #8B7500, #D4AF37); /* warm gold gradient */
+    color: #fff;
+    font-weight: 600;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    border-radius: 8px;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+    animation: pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    transition: transform 0.3s ease, box-shadow 0.6s ease, background-position 0.5s ease;
+    background-size: 200% 200%; /* for gradient shift on hover */
+}
+
+/* Staggered pop-in */
+.cta-buttons .btn:first-child { animation-delay: 0s; }
+.cta-buttons .btn:nth-child(2) { animation-delay: 0.25s; }
+
+/* Hover: shadow pulse + gradient shift + subtle scale */
+.cta-buttons .btn:hover {
+    transform: scale(1.06);
+    animation: shadow-breathe 2s ease-in-out infinite;
+    background-position: 100% 0; /* subtle gradient shift */
+}
+
+/* Keyframes remain the same */
+@keyframes pop-in {
+    0% { transform: scale(0.85); opacity: 0; }
+    60% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+@keyframes shadow-breathe {
+    0%, 100% { box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+    50% { box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
 }
 /* ==========================
    HERO CTA BUTTONS POP (Unified hover/interaction)
