@@ -70,6 +70,19 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
+    
+    c.execute("""
+       CREATE TABLE IF NOT EXISTS contact_messages (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       name TEXT NOT NULL,
+       email TEXT NOT NULL,
+       subject TEXT,
+       message TEXT NOT NULL,
+       is_read INTEGER DEFAULT 0,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       )
+    """)
+    
     # -------------------------
     # SEED COURSES & MATERIALS
     # -------------------------

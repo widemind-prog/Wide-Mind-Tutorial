@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Admin – Messages{% endblock %}
+
+{% block content %}
+
+<section class="admin-dashboard">
+
+    <h1 class="dashboard-title">Contact Messages</h1>  
+
+    {% if messages %}
+
+    <form method="POST"
+          action="/admin/messages/delete-bulk"
+          onsubmit="return confirm('Delete selected messages?');">
+
+        <div style="margin-bottom: 15px;">
+            <button type="submit" class="btn danger-btn">
+                🗑 Delete Selected
+            </button>
+        </div>
+
+        <div class="messages-list">  
+            {% for msg in messages %}  
+                <div class="message-box {% if not msg.is_read %}unread{% else %}read{% endif %}" style="position:relative;">  
+
+                    <!-- Bulk checkbox -->
+                    <input type="checkbox"
+                           name="message_ids"
+                           value="{{ msg.id }}"
+                           class="bulk-checkbox">
+
+                    <!-- Single delete icon (top-right corner) -->
+                    <form method="POST"
+                          action="/admin/messages/delete/{{ msg.id }}"
+                          style="position:absolute; top:8px; right:8px;"
+                          onsubmit="return confirm('Delete this message?');">
+                        <button type="submit"
+                                class="delete-icon"
+                                style="background:none; border:none; cursor:pointer; font-size:16px; line-height:1;"
+                                title="Delete message">
+                            🗑
+                        </button>
+                    </form>
+                      
+                    <h3>{{ msg.subject or "No Subject" }}</h3>  
+                    <p><strong>{{ msg.name }}</strong> — {{ msg.email }}</p>  
+                    <p>{{ msg.message }}</p>  
+                    <small>{{ msg.created_at }}</small>  
+
+                    {% if not msg.is_read %}
+                        <form method="POST" action="/admin/messages/read/{{ msg.id }}">
+                            <button type="submit" class="btn btn-mark-read">
+                                Mark as read
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="/admin/messages/unread/{{ msg.id }}">
+                            <button type="submit" class="btn btn-mark-unread">
+                                Mark as unread
+                            </button>
+                        </form>
+                        <span class="read-label">✔ Read</span>
+                    {% endif %}
+
+                </div>  
+            {% endfor %}  
+        </div>
+
+    </form>
+
+    {% else %}  
+        <p>No messages yet.</p>  
+    {% endif %}  
+
+    <a href="/admin" class="back-login-btn">← Back to Dashboard</a>
+
+</section>  
+
+{% endblock %}

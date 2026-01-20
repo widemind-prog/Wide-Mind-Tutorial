@@ -14,7 +14,6 @@ UPLOAD_FOLDER = os.path.join(
 # ---------------------
 # ADMIN GUARD
 # ---------------------
-
 def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -26,16 +25,114 @@ def admin_required(func):
 # ---------------------
 # DASHBOARD
 # ---------------------
-
 @admin_bp.route("/")
 @admin_required
 def dashboard():
-    return render_template("admin/dashboard.html")
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) AS unread FROM contact_messages WHERE is_read = 0")
+    unread = c.fetchone()["unread"]
+    conn.close()
+    return render_template("admin/dashboard.html", unread=unread)
 
+# ---------------------
+# MESSAGES
+# ---------------------
+@admin_bp.route("/messages")
+@admin_required
+def messages():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, email, subject, message, created_at, is_read
+        FROM contact_messages
+        ORDER BY created_at DESC
+    """)
+    messages = c.fetchall()
+    conn.close()
+    return render_template("admin/messages.html", messages=messages)
+
+@admin_bp.route("/messages/unread-count")
+@admin_required
+def unread_messages_count():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) AS unread FROM contact_messages WHERE is_read=0")
+    unread = c.fetchone()["unread"]
+    conn.close()
+    return jsonify({"unread": unread})
+    
+@admin_bp.route("/messages/read/<int:msg_id>", methods=["POST"])
+@admin_required
+def mark_message_read(msg_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE contact_messages SET is_read = 1 WHERE id = ?", (msg_id,))
+    conn.commit()
+    conn.close()
+    
+    # Use flash to send message to the template
+    flash("Message marked as read", "success")
+    
+    # Redirect back to messages page
+    return redirect("/admin/messages")
+    
+# ---------------------
+# MARK AS UNREAD
+# ---------------------
+@admin_bp.route("/messages/unread/<int:msg_id>", methods=["POST"])
+@admin_required
+def mark_message_unread(msg_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE contact_messages SET is_read = 0 WHERE id = ?", (msg_id,))
+    conn.commit()
+    conn.close()
+    # You can still use flash if you want toast after reload
+    flash("Message marked as unread", "success")
+    return redirect("/admin/messages")
+    
+# ---------------------
+# DELETE SINGLE MESSAGE
+# ---------------------
+@admin_bp.route("/messages/delete/<int:msg_id>", methods=["POST"])
+@admin_required
+def delete_message(msg_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM contact_messages WHERE id = ?", (msg_id,))
+    conn.commit()
+    conn.close()
+    flash("Message deleted", "success")
+    return redirect("/admin/messages")
+
+
+# ---------------------
+# BULK DELETE MESSAGES
+# ---------------------
+@admin_bp.route("/messages/delete-bulk", methods=["POST"])
+@admin_required
+def bulk_delete_messages():
+    ids = request.form.getlist("message_ids")
+
+    if not ids:
+        flash("No messages selected", "error")
+        return redirect("/admin/messages")
+
+    conn = get_db()
+    c = conn.cursor()
+
+    placeholders = ",".join("?" for _ in ids)
+    c.execute(f"DELETE FROM contact_messages WHERE id IN ({placeholders})", ids)
+
+    conn.commit()
+    conn.close()
+
+    flash(f"{len(ids)} message(s) deleted", "success")
+    return redirect("/admin/messages")
 # ---------------------
 # USERS
 # ---------------------
-
 @admin_bp.route("/users")
 @admin_required
 def users():
@@ -58,7 +155,6 @@ def users():
     conn.close()
     return render_template("admin/users.html", users=users)
 
-# Toggle suspend/unsuspend with same button
 @admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
 @admin_required
 def toggle_suspend_user(user_id):
@@ -73,7 +169,6 @@ def toggle_suspend_user(user_id):
     conn.close()
     return jsonify({"message": "User suspension updated"}), 200
 
-# Delete user
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
 @admin_required
 def delete_user(user_id):
@@ -84,21 +179,17 @@ def delete_user(user_id):
     conn.close()
     return jsonify({"message": "User deleted"}), 200
 
-# Toggle mark paid / unpaid
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
 @admin_required
 def toggle_payment(user_id):
     conn = get_db()
     c = conn.cursor()
-
-    # Do not allow admin accounts
     c.execute("SELECT role FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
     if not user or user["role"] == "admin":
         conn.close()
         abort(400)
 
-    # Check current status
     c.execute("SELECT status FROM payments WHERE user_id=?", (user_id,))
     payment = c.fetchone()
     if not payment:
@@ -106,11 +197,7 @@ def toggle_payment(user_id):
         abort(404)
 
     new_status = "unpaid" if payment["status"] == "paid" else "paid"
-    c.execute("""
-        UPDATE payments
-        SET status=?, paid_at=datetime('now')
-        WHERE user_id=?
-    """, (new_status, user_id))
+    c.execute("UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?", (new_status, user_id))
     conn.commit()
     conn.close()
     return jsonify({"message": f"Payment status set to {new_status}"}), 200
@@ -118,7 +205,6 @@ def toggle_payment(user_id):
 # ---------------------
 # COURSES
 # ---------------------
-
 @admin_bp.route("/courses")
 @admin_required
 def courses():
@@ -129,11 +215,9 @@ def courses():
     conn.close()
     return render_template("admin/courses.html", courses=courses)
 
-
 @admin_bp.route("/courses/add", methods=["GET", "POST"])
 @admin_required
 def add_course():
-    # If accessed via GET, just go back
     if request.method == "GET":
         return redirect("/admin/courses")
 
@@ -147,74 +231,47 @@ def add_course():
 
     conn = get_db()
     c = conn.cursor()
-
     c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
     if c.fetchone():
         conn.close()
         flash(f"Course code '{course_code}' already exists.", "error")
         return redirect("/admin/courses")
 
-    c.execute("""
-        INSERT INTO courses (course_code, course_title, description)
-        VALUES (?, ?, ?)
-    """, (course_code, course_title, description))
-
+    c.execute("INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)", (course_code, course_title, description))
     conn.commit()
     conn.close()
-
     flash("Course added successfully!", "success")
     return redirect("/admin/courses")
-    
 
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
 def edit_course(course_id):
     conn = get_db()
     c = conn.cursor()
-
     if request.method == "POST":
         course_code = request.form.get("course_code", "").strip()
         course_title = request.form.get("course_title", "").strip()
         description = request.form.get("description", "").strip()
 
-        # Validate required fields
         if not course_code or not course_title:
             flash("Course code and title are required.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
 
-        # Check for duplicate course_code (excluding this course)
         c.execute("SELECT id FROM courses WHERE course_code=? AND id != ?", (course_code, course_id))
         if c.fetchone():
             flash(f"Course code '{course_code}' already exists.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
 
-        # Update course
-        c.execute("""
-            UPDATE courses
-            SET course_code=?, course_title=?, description=?
-            WHERE id=?
-        """, (course_code, course_title, description, course_id))
+        c.execute("UPDATE courses SET course_code=?, course_title=?, description=? WHERE id=?", (course_code, course_title, description, course_id))
         conn.commit()
         flash("Course updated successfully!", "success")
 
-    # Fetch course details
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
-
-    # Fetch materials
-    c.execute("""
-        SELECT id, filename, file_type
-        FROM materials
-        WHERE course_id=?
-    """, (course_id,))
+    c.execute("SELECT id, filename, file_type FROM materials WHERE course_id=?", (course_id,))
     materials = c.fetchall()
-
     conn.close()
-    return render_template(
-        "admin/edit_course.html",
-        course=course,
-        materials=materials
-    )
+    return render_template("admin/edit_course.html", course=course, materials=materials)
 
 @admin_bp.route("/courses/delete/<int:course_id>", methods=["POST"])
 @admin_required
@@ -234,10 +291,6 @@ def delete_course(course_id):
 def add_material(file_type, course_id):
     file = request.files.get(file_type)
     title = request.form.get("title")
-
-    # -------------------------
-    # REQUIRED FIELDS CHECK
-    # -------------------------
     if not file or not title or title.strip() == "":
         return "Error: File and title are required.", 400
 
@@ -245,35 +298,19 @@ def add_material(file_type, course_id):
     if filename == "":
         return "Error: Invalid file name.", 400
 
-    # -------------------------
-    # CHECK FOR DUPLICATE
-    # -------------------------
     conn = get_db()
     c = conn.cursor()
-    c.execute("""
-        SELECT id FROM materials
-        WHERE course_id=? AND filename=?
-    """, (course_id, filename))
+    c.execute("SELECT id FROM materials WHERE course_id=? AND filename=?", (course_id, filename))
     if c.fetchone():
         conn.close()
         return f"Error: Material '{filename}' already exists for this course.", 400
 
-    # -------------------------
-    # SAVE FILE
-    # -------------------------
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
 
-    # -------------------------
-    # INSERT INTO DB
-    # -------------------------
-    c.execute("""
-        INSERT INTO materials (course_id, filename, file_type, title)
-        VALUES (?, ?, ?, ?)
-    """, (course_id, filename, file_type, title))
+    c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", (course_id, filename, file_type, title))
     conn.commit()
     conn.close()
-
     return redirect(f"/admin/courses/edit/{course_id}")
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])

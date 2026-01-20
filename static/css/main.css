@@ -9,26 +9,96 @@ html, body {
 }
 
 /* ==========================
-   HEADER
+   HEADERS STYLING
 ========================== */
-.site-header {
-    text-align: center;
-    padding: 1rem 0;
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;              /* bold */
+    text-transform: uppercase;     /* all caps */
+    letter-spacing: 1px;           /* subtle spacing */
+    color: #222;                   /* darker color for emphasis */
+    line-height: 1.2;
+    margin-bottom: 0.5em;
+    font-family: 'Poppins', sans-serif; /* inherit global font */
 }
 
-.site-header .header-logo {
-    height: auto;
-    width: 90%; /* scale smaller for mobile */
-    max-width: 350px;
-    cursor: pointer;
-    transition: transform 0.3s, background 0.3s;
+/* Optional: size tweaks for headers */
+h1 { font-size: 2.2em; }
+h2 { font-size: 1.9em; }
+h3 { font-size: 1.6em; }
+h4 { font-size: 1.3em; }
+h5 { font-size: 1.1em; }
+h6 { font-size: 1em; }
+/* ==========================
+   HERO / HEADER POP & PRESENCE
+========================== */
+
+/* Dashboard & messages main header */
+.admin-dashboard .dashboard-title,
+.admin-dashboard h1 {
+    font-size: 2.2em;              /* slightly bigger */
+    font-weight: 900;              /* extra bold for impact */
+    text-transform: uppercase;     
+    letter-spacing: 2px;
+    color: #fff;                   /* stand out on darker hero image */
+    margin-bottom: 15px;
+
+    /* POP EFFECT */
+    text-shadow:
+        2px 2px 4px rgba(0,0,0,0.5),  /* strong shadow for depth */
+        0 0 15px rgba(255, 235, 180, 0.4); /* soft glow for light pop */
 }
 
-.site-header .header-logo:hover {
-    background: #8B7500;
-    transform: scale(1.05);
+/* Optional: subtle animated shine over header */
+@keyframes header-glow {
+    0%, 100% { text-shadow:
+        2px 2px 4px rgba(0,0,0,0.5),
+        0 0 10px rgba(255, 235, 180, 0.3); }
+    50% { text-shadow:
+        2px 2px 4px rgba(0,0,0,0.5),
+        0 0 25px rgba(255, 235, 180, 0.6); }
 }
 
+.admin-dashboard .dashboard-title,
+.admin-dashboard h1 {
+    animation: header-glow 3s ease-in-out infinite;
+}
+
+/* Subheaders under main title */
+.admin-dashboard .dashboard-subtitle {
+    font-size: 1.2em;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0.9;
+    margin-bottom: 25px;
+    letter-spacing: 1px;
+}
+
+/* Card headers (messages & dashboard boxes) */
+.message-box h3,
+.dashboard-box h3 {
+    font-size: 1.5em;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #333;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 2;
+
+    /* subtle gradient text for pop */
+    background: linear-gradient(45deg, #f0e6d2, #8B7500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Card header hover for extra pop */
+.message-box h3:hover,
+.dashboard-box h3:hover {
+    color: #8B7500;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+    transform: scale(1.02);
+    transition: all 0.25s ease-in-out;
+}
 /* ==========================
    MAIN CONTENT
 ========================== */
@@ -76,7 +146,7 @@ main.content {
 .cta-buttons .btn {
     display: inline-block;
     padding: 10px 20px;
-    background: green;
+    background: darkgreen;
     color: #f0e6d2;
     text-decoration: none;
     margin: 5px;
@@ -89,6 +159,83 @@ main.content {
     transform: scale(1.05);
 }
 
+.cta-buttons .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;                /* space between text and icon */
+    padding: 18px 36px;
+    font-size: 1.3em;
+    font-weight: 700;
+    border-radius: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    background: darkgreen;
+    color: #f0e6d2;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-buttons .btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
+/* Icon animation */
+.btn-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.cta-buttons .btn:hover .btn-icon {
+    transform: translateX(6px) rotate(10deg);
+}
+
+@media (max-width: 480px) {
+    .cta-buttons .btn {
+        padding: 14px 28px;
+        font-size: 1.1em;
+    }
+}
+/* ==========================
+   HERO CTA BUTTONS POP (Unified hover/interaction)
+========================== */
+.cta-buttons .btn {
+    display: inline-block;
+    padding: 18px 36px;       
+    font-size: 1.3em;         
+    font-weight: 700;         
+    border-radius: 12px;       
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-decoration: none;
+    cursor: pointer;          /* make sure pointer appears */
+}
+
+/* Hover effects for all CTA buttons */
+.cta-buttons .btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
+/* Specific colors */
+.cta-buttons .btn { /* Primary */
+    background: darkgreen;
+    color: #f0e6d2;
+}
+
+.cta-buttons .btn.secondary { /* Secondary (Login) */
+    background: #444;  /* darker button */
+    color: #f0e6d2;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    .cta-buttons .btn {
+        padding: 14px 28px;
+        font-size: 1.1em;
+    }
+}
 /* ==========================
    FORMS
 ========================== */
@@ -389,4 +536,69 @@ button:hover {
 }
 .toast, .admin-toast {
     pointer-events: none;
+}
+
+.message-box {
+    background: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.message-box.unread {
+    border-left: 5px solid crimson;
+    background: #fff6f6;
+}
+
+.badge {
+    background: crimson;
+    color: white;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: 6px;
+}
+
+/* ==========================
+   ADMIN DASHBOARD & MESSAGES HEADER ENHANCEMENTS
+========================== */
+
+/* Dashboard & message section headers */
+.admin-dashboard .dashboard-title,
+.admin-dashboard h1 {
+    font-size: 2em;              /* larger */
+    font-weight: 800;            /* extra bold */
+    text-transform: uppercase;   /* all caps */
+    letter-spacing: 1.5px;       /* subtle spacing for readability */
+    color: #333;                 /* dark neutral color */
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* subtle lift */
+}
+
+/* Subtitles for context or stats under dashboard title */
+.admin-dashboard .dashboard-subtitle {
+    font-size: 1.1em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #555;
+    opacity: 0.85;
+    margin-bottom: 25px;
+}
+
+/* Section headers inside cards, e.g., messages list or boxes */
+.message-box h3,
+.dashboard-box h3 {
+    font-size: 1.4em;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #222;
+    margin-bottom: 10px;
+}
+
+/* Optional: hover effect to give headers subtle depth */
+.message-box h3:hover,
+.dashboard-box h3:hover {
+    color: #8B7500;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+    transition: color 0.2s, text-shadow 0.2s;
 }

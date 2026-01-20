@@ -333,6 +333,37 @@ def payment_status():
 @app.route("/payment-success")
 def payment_success():
     return render_template("payment_success.html")
+    
+@app.route("/api/contact", methods=["POST"])
+def submit_contact():
+    user_id = session.get("user_id")
+    if not user_id:
+        # User logged out → redirect
+        return jsonify({"redirect": "/login-page"}), 200
+
+    if is_admin(user_id):
+        # Admin logged in → send a toast error
+        return jsonify({"error": "Admins cannot send contact messages"}), 200
+
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+    subject = data.get("subject", "").strip()
+    message = data.get("message", "").strip()
+
+    if not name or not email or not message:
+        return jsonify({"error": "All required fields must be filled"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO contact_messages (name, email, subject, message)
+        VALUES (?, ?, ?, ?)
+    """, (name, email, subject, message))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Message sent successfully"}), 201
 
 # =====================
 # LOGOUT

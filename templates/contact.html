@@ -3,10 +3,28 @@
 
 {% block content %}
 <h1>Contact Us</h1>
+
 <form id="contact-form">
     <input type="text" name="name" placeholder="Your Name" required>
     <input type="email" name="email" placeholder="Your Email" required>
-    <textarea name="message" placeholder="Message" required></textarea>
-    <button type="submit">Send</button>
+    <input type="text" name="subject" placeholder="Subject (optional)">
+    <textarea name="message" placeholder="Your Message" required></textarea>
+    <button type="submit">Send Message</button>
 </form>
+
+<!-- Toast container for messages -->
+<div id="toast" class="toast"></div>
+
+<script>
+const toast = document.getElementById("toast");
+function showToast(message, isError = false) {
+    if (!toast) return;
+    toast.textContent = message;
+    toast.style.background = isError ? "#a00000" : "#333";
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3000);
+}
+</script>
+
+<script src="/static/js/contact.js"></script>
 {% endblock %}
