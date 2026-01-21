@@ -1,11 +1,27 @@
 {% extends "base.html" %}
+
 {% block title %}Welcome | Wide Mind Tutorials{% endblock %}
+
 {% block content %}
-    <h1>Learn Smarter 🧠</h1>
-    <h2>Learn Deeper</h2>
+
+<!-- Hero Section -->
+<section class="hero-section">
+
+    <!-- Hero Image -->
+    <img src="{{ url_for('static', filename='images/hero-picture.png') }}" 
+         alt="Hero Image" class="hero-image">
+
+    <!-- Hero Headings -->
+    <h1>Learn Smarter</h1>
+    <h2>🧠</h2>
+    <h1>Learn Deeper</h1>
+
+    <!-- Hero Description Card -->
     <p class="hero-description">
-      Wide Mind Tutorials provides structured, psychology-focused learning materials.
+        Wide Mind Tutorials provides structured, psychology-focused learning materials.
     </p>
+
+    <!-- Call-to-Action Buttons -->
     <div class="cta-buttons">
         <a href="/register-page" class="btn primary">
             Get Started <span class="btn-icon">🚀</span>
@@ -14,5 +30,7 @@
             Login <span class="btn-icon">➡️</span>
         </a>
     </div>
+
 </section>
+
 {% endblock %}
