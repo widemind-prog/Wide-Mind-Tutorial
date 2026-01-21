@@ -137,6 +137,7 @@ main.content {
 .hero h1 { font-size: 3em; margin-bottom: 10px; }
 .hero p { font-size: 2em; margin-bottom: 15px; }
 
+/* ========================== CTA BUTTONS ========================== */
 .cta-buttons { 
     margin-top: 15px; 
     display: flex; 
@@ -159,12 +160,12 @@ main.content {
     position: relative;
     overflow: hidden;
 
-    /* Gradient background animation */
+    /* Gradient background animation (slower & calming) */
     background-size: 300% 300%;
-    animation: gradient-flow 3s linear infinite, pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    animation: gradient-flow 10s linear infinite, pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 
-    /* Transition for hover scaling and shadow */
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    /* Smooth transition for hover pop & shadow */
+    transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
 }
 
 /* Primary CTA (Get Started) */
@@ -179,17 +180,23 @@ main.content {
     color: #fff;
 }
 
-/* Hover pop & shadow */
+/* Hover pop & shadow like global buttons */
 .cta-buttons .btn:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    transform: scale(1.04);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    background-position: 100% 0; /* keeps gradient moving on hover */
 }
 
 /* Icon animation */
-.btn-icon { display: inline-block; transition: transform 0.3s ease; }
-.cta-buttons .btn:hover .btn-icon { transform: translateX(6px) rotate(10deg); }
+.btn-icon { 
+    display: inline-block; 
+    transition: transform 0.3s ease; 
+}
+.cta-buttons .btn:hover .btn-icon { 
+    transform: translateX(6px) rotate(10deg); 
+}
 
-/* ========================== Pseudo-element for light sweep on click ========================== */
+/* ========================== Light sweep on click ========================== */
 .cta-buttons .btn::after {
     content: '';
     position: absolute;
@@ -199,7 +206,7 @@ main.content {
     height: 100%;
     background: rgba(255,255,255,0.25);
     transform: skewX(-20deg);
-    transition: left 0.5s;
+    transition: left 0.7s ease; /* slower for calming effect */
 }
 
 .cta-buttons .btn:active::after {
@@ -213,17 +220,46 @@ main.content {
     100% { transform: scale(1); }
 }
 
-/* Animate gradient background continuously */
 @keyframes gradient-flow {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
 
+/* ========================== RESPONSIVE ========================== */
 @media (max-width: 480px) {
     .cta-buttons .btn { padding: 14px 28px; font-size: 1.1em; }
 }
 
+/* ========================== PAY NOW BUTTON ========================== */
+.btn-pay-now {
+    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+    color: #2b1e00;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(212,175,55,0.35);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+    animation: payNowPop 0.6s ease-out both;
+}
+
+.btn-pay-now:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 10px 28px rgba(212,175,55,0.45);
+    filter: brightness(1.05);
+}
+
+.btn-pay-now:active {
+    transform: scale(0.98);
+    box-shadow: 0 4px 12px rgba(212,175,55,0.3);
+}
+
+.unpaid .btn-pay-now { animation-delay: 0.15s; }
+
+@keyframes payNowPop { 
+    from { opacity: 0; transform: scale(0.92); } 
+    to { opacity: 1; transform: scale(1); } 
+}
 /* ========================== FORMS ========================== */
 form {
     max-width: 340px;
@@ -326,22 +362,6 @@ input, textarea, button, select {
 .add-course form textarea { resize: vertical; }
 #form-feedback { margin-top: 10px; font-weight: bold; }
 
-/* ========================== PAY NOW ========================== */
-.btn-pay-now {
-    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-    color: #2b1e00;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(212,175,55,0.35);
-    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
-    animation: payNowPop 0.6s ease-out both;
-}
-.btn-pay-now:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 10px 28px rgba(212,175,55,0.45); filter: brightness(1.05); }
-.btn-pay-now:active { transform: scale(0.98); box-shadow: 0 4px 12px rgba(212,175,55,0.3); }
-.unpaid .btn-pay-now { animation-delay: 0.15s; }
-
-@keyframes payNowPop { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 
 /* ========================== FOOTER ========================== */
 .site-footer {
