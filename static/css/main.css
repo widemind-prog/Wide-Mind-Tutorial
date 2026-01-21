@@ -1,58 +1,58 @@
 /* ========================== GLOBAL STYLES ========================== */
 html, body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Poppins', sans-serif;
-    text-align: center;
+margin: 0;
+padding: 0;
+font-family: 'Poppins', sans-serif;
+text-align: center;
 }
 
 .badge {
-    background: crimson;
-    color: #fff;
-    font-weight: 600;
-    font-size: 12px;
-    min-width: 20px;
-    height: 20px;
-    line-height: 20px;
-    text-align: center;
-    padding: 0 6px;
-    border-radius: 999px;
-    display: inline-block;
+background: crimson;
+color: #fff;
+font-weight: 600;
+font-size: 12px;
+min-width: 20px;
+height: 20px;
+line-height: 20px;
+text-align: center;
+padding: 0 6px;
+border-radius: 999px;
+display: inline-block;
 }
 
 /* ========================== GLOBAL BUTTONS (except CTA) ========================== */
 button, .btn {
-    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 20px;
-    transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
-    background-size: 200% 200%;
-    cursor: pointer;
+background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+color: #fff;
+font-weight: 600;
+border: none;
+border-radius: 6px;
+padding: 10px 20px;
+transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
+background-size: 200% 200%;
+cursor: pointer;
 }
 
 button:hover, .btn:hover {
-    transform: scale(1.04);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-    background-position: 100% 0;
+transform: scale(1.04);
+box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+background-position: 100% 0;
 }
 
 button:active, .btn:active {
-    transform: scale(0.98);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+transform: scale(0.98);
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* ========================== HEADERS STYLING ========================== */
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #222;
-    line-height: 1.2;
-    margin-bottom: 0.5em;
-    font-family: 'Poppins', sans-serif;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 1px;
+color: #222;
+line-height: 1.2;
+margin-bottom: 0.5em;
+font-family: 'Poppins', sans-serif;
 }
 
 h1 { font-size: 2.2em; }
@@ -64,303 +64,391 @@ h6 { font-size: 1em; }
 
 /* ========================== HERO / HEADER POP & PRESENCE ========================== */
 .admin-dashboard .dashboard-title, .admin-dashboard h1 {
-    font-size: 2.2em;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #fff;
-    margin-bottom: 15px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(255, 235, 180, 0.4);
-    animation: header-glow 3s ease-in-out infinite;
+font-size: 2.2em;
+font-weight: 900;
+text-transform: uppercase;
+letter-spacing: 2px;
+color: #fff;
+margin-bottom: 15px;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(255, 235, 180, 0.4);
+animation: header-glow 3s ease-in-out infinite;
 }
 
 @keyframes header-glow {
-    0%, 100% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255, 235, 180, 0.3); }
-    50% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 25px rgba(255, 235, 180, 0.6); }
+0%, 100% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255, 235, 180, 0.3); }
+50% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 25px rgba(255, 235, 180, 0.6); }
 }
 
 .admin-dashboard .dashboard-subtitle {
-    font-size: 1.2em;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #fff;
-    opacity: 0.9;
-    margin-bottom: 25px;
-    letter-spacing: 1px;
+font-size: 1.2em;
+font-weight: 700;
+text-transform: uppercase;
+color: #fff;
+opacity: 0.9;
+margin-bottom: 25px;
+letter-spacing: 1px;
 }
 
 .message-box h3, .dashboard-box h3 {
-    font-size: 1.5em;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #333;
-    margin-bottom: 10px;
-    position: relative;
-    z-index: 2;
-    background: linear-gradient(45deg, #f0e6d2, #8B7500);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+font-size: 1.5em;
+font-weight: 800;
+text-transform: uppercase;
+color: #333;
+margin-bottom: 10px;
+position: relative;
+z-index: 2;
+background: linear-gradient(45deg, #f0e6d2, #8B7500);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
 }
 
 .message-box h3:hover, .dashboard-box h3:hover {
-    color: #8B7500;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-    transform: scale(1.02);
-    transition: all 0.25s ease-in-out;
+color: #8B7500;
+text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+transform: scale(1.02);
+transition: all 0.25s ease-in-out;
 }
 
 /* ========================== MAIN CONTENT ========================== */
 main.content {
-    padding: 15px;
-    max-width: 360px;
-    width: 95%;
-    margin: 0 auto;
-    box-sizing: border-box;
+padding: 24px 18px;
+max-width: 420px;
+width: 95%;
+margin: 0 auto;
+box-sizing: border-box;
+
+/* Calm grounding */  
+background: linear-gradient(  
+    180deg,  
+    rgba(255, 248, 220, 0.35),  
+    rgba(255, 255, 255, 0.85)  
+);  
+border-radius: 18px;  
+
+/* Soft elevation */  
+box-shadow:  
+    0 10px 30px rgba(0, 0, 0, 0.08),  
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);  
+
+animation: content-fade-in 0.9s ease-out both;
+
+}
+
+/* Gentle arrival animation */
+@keyframes content-fade-in {
+from {
+opacity: 0;
+transform: translateY(14px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
 }
 
 /* ========================== HERO ========================== */
-.hero { text-align: center; }
-
-.hero-description {
-    background: #fff8dc;
-    padding: 20px 25px;
-    max-width: 480px;
-    margin: 0 auto;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    font-size: 1.1em;
-    line-height: 1.6;
-    color: #3c2f1f;
-    transition: transform 0.3s, box-shadow 0.3s;
+.hero {
+text-align: center;
+padding: 20px 10px 10px;
+margin-bottom: 20px;
 }
 
-.hero h1 { font-size: 3em; margin-bottom: 10px; }
-.hero p { font-size: 2em; margin-bottom: 15px; }
+/* HERO TITLE */
+.hero h1 {
+font-size: 2.6em;
+margin-bottom: 12px;
+font-weight: 900;
+letter-spacing: 1.5px;
+
+background: linear-gradient(  
+    135deg,  
+    #3c2f1f,  
+    #8B7500,  
+    #3c2f1f  
+);  
+-webkit-background-clip: text;  
+-webkit-text-fill-color: transparent;  
+
+animation: hero-glow 6s ease-in-out infinite;
+
+}
+
+/* Subtle glow, not flashy */
+@keyframes hero-glow {
+0%, 100% {
+filter: drop-shadow(0 0 2px rgba(139, 117, 0, 0.25));
+}
+50% {
+filter: drop-shadow(0 0 6px rgba(139, 117, 0, 0.45));
+}
+}
+
+/* HERO DESCRIPTION CARD */
+.hero-description {
+background: linear-gradient(
+145deg,
+#fffaf0,
+#f0e6d2
+);
+padding: 26px 28px;
+max-width: 480px;
+margin: 0 auto;
+border-radius: 18px;
+
+/* Soft academic depth */  
+box-shadow:  
+    0 14px 35px rgba(0, 0, 0, 0.12),  
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);  
+
+font-size: 1.05em;  
+line-height: 1.75;  
+color: #3c2f1f;  
+
+transition: transform 0.4s ease, box-shadow 0.4s ease;
+
+}
+
+/* Calm hover lift */
+.hero-description:hover {
+transform: translateY(-4px);
+box-shadow:
+0 20px 45px rgba(0, 0, 0, 0.15),
+inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* HERO PARAGRAPH */
+.hero p {
+font-size: 1.15em;
+margin-bottom: 0;
+opacity: 0.9;
+}
 
 /* ========================== CTA BUTTONS ========================== */
-.cta-buttons { 
-    margin-top: 15px; 
-    display: flex; 
-    flex-wrap: wrap; 
-    justify-content: center; 
-    gap: 10px; 
+.cta-buttons {
+margin-top: 15px;
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: 10px;
 }
 
 .cta-buttons .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 18px 36px;
-    font-size: 1.3em;
-    font-weight: 700;
-    border-radius: 12px;
-    text-decoration: none;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+padding: 18px 36px;
+font-size: 1.3em;
+font-weight: 700;
+border-radius: 12px;
+text-decoration: none;
+cursor: pointer;
+position: relative;
+overflow: hidden;
 
-    /* Gradient background animation (slower & calming) */
-    background-size: 300% 300%;
-    animation: gradient-flow 10s linear infinite, pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+/* Gradient background animation (slower & calming) */  
+background-size: 300% 300%;  
+animation: gradient-flow 10s linear infinite, pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;  
 
-    /* Smooth transition for hover pop & shadow */
-    transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
+/* Smooth transition for hover pop & shadow */  
+transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
+
 }
 
 /* Primary CTA (Get Started) */
 .cta-buttons .btn.primary {
-    background: linear-gradient(135deg, #2a6b2a, #3c9c3c, #2a6b2a);
-    color: #f0e6d2;
+background: linear-gradient(135deg, #2a6b2a, #3c9c3c, #2a6b2a);
+color: #f0e6d2;
 }
 
 /* Secondary CTA (Login) */
 .cta-buttons .btn.secondary {
-    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-    color: #fff;
+background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+color: #fff;
 }
 
-/* Hover pop & shadow like global buttons */
+/* Hover pop & shadow like global buttons /
 .cta-buttons .btn:hover {
-    transform: scale(1.04);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-    background-position: 100% 0; /* keeps gradient moving on hover */
+transform: scale(1.04);
+box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+background-position: 100% 0; / keeps gradient moving on hover */
 }
 
 /* Icon animation */
-.btn-icon { 
-    display: inline-block; 
-    transition: transform 0.3s ease; 
+.btn-icon {
+display: inline-block;
+transition: transform 0.3s ease;
 }
-.cta-buttons .btn:hover .btn-icon { 
-    transform: translateX(6px) rotate(10deg); 
+.cta-buttons .btn:hover .btn-icon {
+transform: translateX(6px) rotate(10deg);
 }
 
-/* ========================== Light sweep on click ========================== */
+/* ========================== Light sweep on click ========================== /
 .cta-buttons .btn::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -75%;
-    width: 50%;
-    height: 100%;
-    background: rgba(255,255,255,0.25);
-    transform: skewX(-20deg);
-    transition: left 0.7s ease; /* slower for calming effect */
+content: '';
+position: absolute;
+top: 0;
+left: -75%;
+width: 50%;
+height: 100%;
+background: rgba(255,255,255,0.25);
+transform: skewX(-20deg);
+transition: left 0.7s ease; / slower for calming effect */
 }
 
 .cta-buttons .btn:active::after {
-    left: 125%;
+left: 125%;
 }
 
 /* ========================== KEYFRAMES ========================== */
 @keyframes pop-in {
-    0% { transform: scale(0.85); opacity: 0; }
-    60% { transform: scale(1.08); opacity: 1; }
-    100% { transform: scale(1); }
+0% { transform: scale(0.85); opacity: 0; }
+60% { transform: scale(1.08); opacity: 1; }
+100% { transform: scale(1); }
 }
 
 @keyframes gradient-flow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+0% { background-position: 0% 50%; }
+50% { background-position: 100% 50%; }
+100% { background-position: 0% 50%; }
 }
 
 /* ========================== RESPONSIVE ========================== */
 @media (max-width: 480px) {
-    .cta-buttons .btn { padding: 14px 28px; font-size: 1.1em; }
+.cta-buttons .btn { padding: 14px 28px; font-size: 1.1em; }
 }
 
 //* ========================== PAY NOW BUTTON ========================== */
 .btn-pay-now {
-    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-    color: #2b1e00;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(212,175,55,0.35);
+background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+color: #2b1e00;
+font-weight: 600;
+letter-spacing: 0.5px;
+border-radius: 8px;
+box-shadow: 0 6px 18px rgba(212,175,55,0.35);
 
-    /* Gradient light flow effect */
-    background-size: 300% 300%;
-    animation: gradient-flow 6s ease infinite, payNowPop 0.6s ease-out both;
+/* Gradient light flow effect */  
+background-size: 300% 300%;  
+animation: gradient-flow 6s ease infinite, payNowPop 0.6s ease-out both;  
 
-    /* Hover/active transitions */
-    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
-    
-    /* Make it clickable */
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
+/* Hover/active transitions */  
+transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;  
+  
+/* Make it clickable */  
+cursor: pointer;  
+position: relative;  
+z-index: 1;
+
 }
 
 /* Hover effect */
 .btn-pay-now:hover {
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 10px 28px rgba(212,175,55,0.45);
-    filter: brightness(1.05);
+transform: translateY(-2px) scale(1.04);
+box-shadow: 0 10px 28px rgba(212,175,55,0.45);
+filter: brightness(1.05);
 }
 
 /* Active/click effect */
 .btn-pay-now:active {
-    transform: scale(0.98);
-    box-shadow: 0 4px 12px rgba(212,175,55,0.3);
+transform: scale(0.98);
+box-shadow: 0 4px 12px rgba(212,175,55,0.3);
 }
 
 /* Optional: unpaid animation delay */
-.unpaid .btn-pay-now { 
-    animation-delay: 0.15s; 
+.unpaid .btn-pay-now {
+animation-delay: 0.15s;
 }
 
 /* Light gradient sweep keyframes */
 @keyframes gradient-flow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+0% { background-position: 0% 50%; }
+50% { background-position: 100% 50%; }
+100% { background-position: 0% 50%; }
 }
 
 /* Pop-in animation */
-@keyframes payNowPop { 
-    from { opacity: 0; transform: scale(0.92); } 
-    to { opacity: 1; transform: scale(1); } 
+@keyframes payNowPop {
+from { opacity: 0; transform: scale(0.92); }
+to { opacity: 1; transform: scale(1); }
 }
 
-/* Make pseudo-element for light sweep click-through */
+/* Make pseudo-element for light sweep click-through /
 .btn-pay-now::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -75%;
-    width: 50%;
-    height: 100%;
-    background: rgba(255,255,255,0.25);
-    transform: skewX(-20deg);
-    transition: left 0.5s;
-    pointer-events: none; /* important so clicks pass through */
+content: '';
+position: absolute;
+top: 0;
+left: -75%;
+width: 50%;
+height: 100%;
+background: rgba(255,255,255,0.25);
+transform: skewX(-20deg);
+transition: left 0.5s;
+pointer-events: none; / important so clicks pass through */
 }
 
 .btn-pay-now:active::after {
-    left: 125%;
+left: 125%;
 }
 /* ========================== FORMS ========================== */
 form {
-    max-width: 340px;
-    width: 95%;
-    margin: 15px auto;
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    box-sizing: border-box;
+max-width: 340px;
+width: 95%;
+margin: 15px auto;
+background: white;
+padding: 20px;
+border-radius: 8px;
+box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+box-sizing: border-box;
 }
 
 input, textarea, button, select {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    font-family: 'Poppins', sans-serif;
-    box-sizing: border-box;
+width: 100%;
+padding: 10px;
+margin-bottom: 10px;
+border-radius: 5px;
+border: 1px solid #ccc;
+font-family: 'Poppins', sans-serif;
+box-sizing: border-box;
 }
 
 .back-login-btn {
-    display: inline-block;
-    padding: 10px 20px;
-    background: black;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    margin-top: 10px;
-    transition: background 0.3s, transform 0.2s;
+display: inline-block;
+padding: 10px 20px;
+background: black;
+color: white;
+text-decoration: none;
+border-radius: 5px;
+margin-top: 10px;
+transition: background 0.3s, transform 0.2s;
 }
 .back-login-btn:hover { background: #8B7500; transform: scale(1.05); }
 
 /* ========================== ACCOUNT SECTION ========================== */
 .account-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    margin-top: 15px;
-    width: 100%;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 15px;
+margin-top: 15px;
+width: 100%;
 }
 
 .account-box, .courses-box {
-    background: #f0e6d2;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    width: 95%;
-    max-width: 340px;
-    text-align: center;
+background: #f0e6d2;
+padding: 20px;
+border-radius: 12px;
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+width: 95%;
+max-width: 340px;
+text-align: center;
 }
 
 .profile-avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 15px;
+width: 100px;
+height: 100px;
+border-radius: 50%;
+object-fit: cover;
+margin-bottom: 15px;
 }
 
 .courses-box ul, .courses-list ul, .admin-list { list-style: none; padding: 0; margin: 0; }
@@ -374,14 +462,14 @@ input, textarea, button, select {
 .dashboard-subtitle { font-size: 0.95em; margin-bottom: 20px; opacity: 0.85; }
 .dashboard-boxes { display: flex; flex-direction: column; gap: 15px; }
 .dashboard-box {
-    background: white;
-    color: #222;
-    padding: 20px;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    text-decoration: none;
-    text-align: left;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+background: white;
+color: #222;
+padding: 20px;
+border-radius: 14px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+text-decoration: none;
+text-align: left;
+transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .dashboard-box:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
 
@@ -389,60 +477,87 @@ input, textarea, button, select {
 
 /* ========================== ADMIN COURSES PAGE ========================== */
 .courses-list, .add-course {
-    background: #fff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-    max-width: 480px;
-    width: 75%;
-    margin-left: auto;
-    margin-right: auto;
+background: #fff;
+padding: 20px;
+border-radius: 12px;
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+margin-bottom: 20px;
+max-width: 480px;
+width: 75%;
+margin-left: auto;
+margin-right: auto;
 }
 
 .add-course form textarea { resize: vertical; }
 #form-feedback { margin-top: 10px; font-weight: bold; }
 
-
 /* ========================== FOOTER ========================== */
 .site-footer {
-    background: #8B7500;
-    color: #f0e6d2;
-    padding: 15px 10px;
-    text-align: center;
-    max-width: 360px;
-    margin: 0 auto;
-    border-radius: 0 0 8px 8px;
+background: #8B7500;
+color: #f0e6d2;
+padding: 15px 10px;
+text-align: center;
+max-width: 360px;
+margin: 0 auto;
+border-radius: 0 0 8px 8px;
 }
 .footer-nav { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .footer-nav a { color: #f0e6d2; text-decoration: none; }
 
 /* ========================== RESPONSIVE ADJUSTMENTS ========================== */
 @media (max-width: 768px) {
-    .site-header .header-logo { max-width: 300px; }
-    .account-box, .courses-box, form { width: 95%; padding: 15px; }
-    main.content { padding: 15px; }
-    .cta-buttons .btn { padding: 8px 15px; }
-    .hero h1 { font-size: 1.8em; }
-    .hero p { font-size: 0.95em; }
+.site-header .header-logo { max-width: 300px; }
+.account-box, .courses-box, form { width: 95%; padding: 15px; }
+main.content { padding: 15px; }
+.cta-buttons .btn { padding: 8px 15px; }
+.hero h1 { font-size: 1.8em; }
+.hero p { font-size: 0.95em; }
 }
 
 /* ========================== TOAST ========================== */
 .toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background-color: #333;
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 8px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    max-width: 300px;
-    word-wrap: break-word;
-    z-index: 1000;
+position: fixed;
+top: 20px;
+left: 50%;
+transform: translateX(-50%);
+
+background-color: #333;  
+color: #fff;  
+
+padding: 10px 18px;  
+border-radius: 8px;  
+
+opacity: 0;  
+transition: opacity 0.3s ease, transform 0.3s ease;  
+
+max-width: 90%;  
+word-wrap: break-word;  
+
+z-index: 1000;  
+
+pointer-events: none;
+
 }
-.toast.show { opacity: 1; }
-.toast, .admin-toast { pointer-events: none; }
-.message-box { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-.message-box.unread { border-left: 5px solid crimson; background: #fff6f6; }
+
+.toast.show {
+opacity: 1;
+transform: translateX(-50%) translateY(0);
+}
+
+.toast,
+.admin-toast {
+pointer-events: none;
+}
+
+/* ========================== MESSAGE BOX ========================== */
+.message-box {
+background: #fff;
+padding: 15px;
+border-radius: 10px;
+margin-bottom: 15px;
+}
+
+.message-box.unread {
+border-left: 5px solid crimson;
+background: #fff6f6;
+}

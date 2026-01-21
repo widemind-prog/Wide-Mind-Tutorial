@@ -1,105 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Wide Mind Tutorials{% endblock %}</title>
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>{% block title %}Wide Mind Tutorials{% endblock %}</title>  <link rel="stylesheet" href="/static/css/main.css">  <style>  
+/* TOAST NOTIFICATIONS (SHARED) */  
+.toast, .admin-toast {  
+    position: fixed;  
+    top: 20px;  
+    right: 20px;  
+    background-color: #333;  
+    color: #fff;  
+    padding: 10px 20px;  
+    border-radius: 8px;  
+    opacity: 0;  
+    transition: opacity 0.3s;  
+    z-index: 1000;  
+}  
+.toast.show, .admin-toast.show {  
+    opacity: 1;  
+}  
+  
+/* FLASH MESSAGES */  
+.flash {  
+    position: fixed;  
+    top: 80px;  
+    right: 20px;  
+    padding: 10px 20px;  
+    border-radius: 8px;  
+    color: #fff;  
+    margin-bottom: 10px;  
+    z-index: 1000;  
+    opacity: 0;  
+    transition: opacity 0.3s;  
+}  
+.flash.show {  
+    opacity: 1;  
+}  
+.flash.success { background-color: darkgreen; }  
+.flash.error   { background-color: crimson; }  
+.flash.info    { background-color: #8B7500; }  
+</style>  </head>  <body>  <header class="site-header">  
+    <a href="/">  
+        <img src="/static/images/logo.png" alt="Wide Mind Tutorials" class="header-logo">  
+    </a>  
+</header>  <main class="content">  <!-- FLASH MESSAGES -->  
+{% with messages = get_flashed_messages(with_categories=true) %}  
+  {% if messages %}  
+    <div id="flash-container">  
+      {% for category, message in messages %}  
+        <div class="flash {{ category }} show">{{ message }}</div>  
+      {% endfor %}  
+    </div>  
+  {% endif %}  
+{% endwith %}  
 
-<link rel="stylesheet" href="/static/css/main.css">
+{% block content %}{% endblock %}
 
-<style>
-/* TOAST NOTIFICATIONS (SHARED) */
-.toast, .admin-toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background-color: #333;
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 8px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    z-index: 1000;
-}
-.toast.show, .admin-toast.show {
-    opacity: 1;
-}
+</main>  <footer class="site-footer">  
+    <nav class="footer-nav">  
+        <a href="/home">Home</a>  
+        <a href="/about">About</a>  
+        <a href="/contact">Contact</a>  
+        <a href="/privacy">Privacy</a>  
+    </nav>  
+    <p>&copy; {{ now().year }} Wide Mind Tutorials</p>  
+</footer>  <!-- SHARED TOAST CONTAINERS -->  <div id="toast" class="toast"></div>  
+<div id="admin-toast" class="admin-toast"></div>  <!-- PAGE-SPECIFIC SCRIPTS -->  {% block scripts %}{% endblock %}
 
-/* FLASH MESSAGES */
-.flash {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    color: #fff;
-    margin-bottom: 10px;
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-.flash.show {
-    opacity: 1;
-}
-.flash.success { background-color: darkgreen; }
-.flash.error   { background-color: crimson; }
-.flash.info    { background-color: #8B7500; }
-</style>
-</head>
-
-<body>
-
-<header class="site-header">
-    <a href="/">
-        <img src="/static/images/logo.png" alt="Wide Mind Tutorials" class="header-logo">
-    </a>
-</header>
-
-<main class="content">
-
-    <!-- FLASH MESSAGES -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div id="flash-container">
-          {% for category, message in messages %}
-            <div class="flash {{ category }} show">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
-</main>
-
-<footer class="site-footer">
-    <nav class="footer-nav">
-        <a href="/home">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-        <a href="/privacy">Privacy</a>
-    </nav>
-    <p>&copy; {{ now().year }} Wide Mind Tutorials</p>
-</footer>
-
-<!-- SHARED TOAST CONTAINERS -->
-<div id="toast" class="toast"></div>
-<div id="admin-toast" class="admin-toast"></div>
-
-<!-- PAGE-SPECIFIC SCRIPTS -->
-{% block scripts %}{% endblock %}
-
-<script>
-// Auto-hide flashes after 3 seconds
-window.addEventListener('DOMContentLoaded', () => {
-    const flashes = document.querySelectorAll('.flash.show');
-    flashes.forEach(flash => {
-        setTimeout(() => {
-            flash.style.opacity = '0';
-            setTimeout(() => flash.remove(), 300);
-        }, 3000);
-    });
-});
-</script>
-
-</body>
+<script>  
+// Auto-hide flashes after 3 seconds  
+window.addEventListener('DOMContentLoaded', () => {  
+    const flashes = document.querySelectorAll('.flash.show');  
+    flashes.forEach(flash => {  
+        setTimeout(() => {  
+            flash.style.opacity = '0';  
+            setTimeout(() => flash.remove(), 300);  
+        }, 3000);  
+    });  
+});  
+</script>  </body>  
 </html>
