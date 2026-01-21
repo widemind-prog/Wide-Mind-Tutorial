@@ -53,22 +53,24 @@
     70% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
 }
-
-/* ========================== TOAST ========================== */
+/* ========================== TOAST (SLIM) ========================== */
 .toast {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    background: #2ecc71;
-    color: white;
-    padding: 14px 20px;
-    border-radius: 8px;
-    font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    background: #333; /* admin style background */
+    color: #fff;
+    padding: 6px 12px; /* smaller padding for compact look */
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     opacity: 0;
     transform: translateY(20px);
-    transition: all 0.4s ease;
+    transition: all 0.3s ease;
     z-index: 9999;
+    max-width: 80%; /* optional to prevent huge width on long text */
+    text-align: center;
 }
 
 .toast.show {
