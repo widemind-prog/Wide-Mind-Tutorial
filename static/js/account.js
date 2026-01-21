@@ -4,8 +4,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const payBtn = document.getElementById("pay-btn");
     const coursesList = document.getElementById("courses");
     const logoutBtn = document.getElementById("logout-btn");
+    const toastEl = document.getElementById("toast");
 
-    let isPaid = false; // tracks if user has paid
+    let isPaid = false;
 
     /* -------------------- HELPER: GET URL PARAMS -------------------- */
     function getQueryParam(param) {
@@ -15,17 +16,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* -------------------- TOAST FUNCTION -------------------- */
     function showToast(message) {
-        let toast = document.getElementById("toast");
-        if (!toast) {
-            toast = document.createElement("div");
-            toast.id = "toast";
-            toast.className = "toast";
-            document.body.appendChild(toast);
-        }
+        if (!toastEl) return;
 
-        toast.textContent = message;
-        toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 3000);
+        toastEl.textContent = message;
+
+        // Reset animation
+        toastEl.classList.remove("show");
+        void toastEl.offsetWidth; // force reflow
+        toastEl.classList.add("show");
+
+        setTimeout(() => {
+            toastEl.classList.remove("show");
+        }, 3000);
     }
 
     /* -------------------- LOAD COURSES -------------------- */
@@ -54,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     a.href = "#";
                     a.addEventListener("click", e => {
                         e.preventDefault();
-                        alert("Payment required to access this course");
+                        showToast("Payment required to access this course ❌");
                     });
                 }
 
@@ -75,7 +77,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             const res = await fetch("/api/payment/status", { credentials: "same-origin" });
             if (!res.ok) {
                 if (res.status === 401) {
-                    console.warn("User not authenticated, skipping payment check");
                     paymentStatusEl.textContent = "UNPAID ❌";
                     paymentStatusEl.style.color = "red";
                     payBtn.style.display = "inline-block";
@@ -114,10 +115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function loadUserInfo() {
         try {
             const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
-            if (!meRes.ok) {
-                console.warn("Not authenticated, redirecting to login");
-                return; // Don't force reload
-            }
+            if (!meRes.ok) return;
             const user = await meRes.json();
             const usernameEl = document.getElementById("username");
             const departmentEl = document.getElementById("department");
@@ -128,7 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (levelEl) levelEl.textContent = user.level;
         } catch (err) {
             console.error("Failed to load user info:", err);
-            showToast("Failed to load user info");
+            showToast("Failed to load user info ❌");
         }
     }
 
@@ -148,13 +146,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (data.status && data.data && data.data.authorization_url) {
                     window.location.href = data.data.authorization_url;
                 } else {
-                    alert(data.message || "Payment initialization failed");
+                    showToast(data.message || "Payment initialization failed ❌");
                     payBtn.disabled = false;
                     payBtn.textContent = "Pay Now 💳";
                 }
             } catch (err) {
                 console.error("Payment initiation failed:", err);
-                alert("Payment initiation failed. Try again.");
+                showToast("Payment initiation failed ❌");
                 payBtn.disabled = false;
                 payBtn.textContent = "Pay Now 💳";
             }
@@ -166,12 +164,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (paymentRedirect === "callback") {
         showToast("Payment successful ✅");
 
-        // Remove query param to avoid loop
+        // Remove query param
         const url = new URL(window.location);
         url.searchParams.delete("payment");
         window.history.replaceState({}, document.title, url);
 
-        // Delay the payment status check to allow cookies/session to settle
         setTimeout(async () => {
             await checkPaymentStatus();
         }, 500);

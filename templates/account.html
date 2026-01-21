@@ -16,7 +16,7 @@
             Payment Status: <strong id="payment-status">Checking...</strong>
         </p>
 
-        <!-- ✅ PAY BUTTON -->
+        <!-- PAY BUTTON -->
         <button type="button" id="pay-btn" class="btn-pay-now">
             Pay Now 💳
         </button>
@@ -35,8 +35,8 @@
 
 </section>
 
-<!-- TOAST -->
-<div id="toast" class="toast">Payment Verified ✅</div>
+<!-- TOAST (reuse main.css .toast) -->
+<div id="toast" class="toast"></div>
 
 <style>
 /* ========================== PAID ANIMATION ========================== */
@@ -49,31 +49,6 @@
     0% { transform: scale(0.6); opacity: 0; }
     70% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
-}
-
-/* ========================== TOAST (SLIM, ADMIN STYLE) ========================== */
-.toast {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    background: #333; /* matches admin toast */
-    color: #fff;
-    padding: 6px 12px; /* compact padding */
-    border-radius: 6px;
-    font-weight: 500;
-    font-size: 14px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.3s ease;
-    z-index: 9999;
-    max-width: 80%;
-    text-align: center;
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
 }
 </style>
 
