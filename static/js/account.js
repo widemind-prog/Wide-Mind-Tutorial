@@ -13,37 +13,58 @@ document.addEventListener("DOMContentLoaded", async () => {
         return urlParams.get(param);
     }
 
+    /* -------------------- TOAST FUNCTION -------------------- */
+    function showToast(message) {
+        let toast = document.getElementById("toast");
+        if (!toast) {
+            // Create toast element if it doesn't exist
+            toast = document.createElement("div");
+            toast.id = "toast";
+            toast.className = "toast";
+            document.body.appendChild(toast);
+        }
+
+        toast.textContent = message;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
     /* -------------------- LOAD COURSES -------------------- */
     async function loadCourses() {
         if (!coursesList) return;
 
-        const res = await fetch("/api/courses/my", { credentials: "same-origin" });
-        const data = await res.json();
-        coursesList.innerHTML = "";
+        try {
+            const res = await fetch("/api/courses/my", { credentials: "same-origin" });
+            const data = await res.json();
+            coursesList.innerHTML = "";
 
-        if (!data.courses || data.courses.length === 0) {
-            coursesList.innerHTML = "<li>No courses yet</li>";
-            return;
-        }
-
-        data.courses.forEach(course => {
-            const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.textContent = `${course.code} - ${course.title}`;
-
-            if (isPaid) {
-                a.href = `/course/${course.id}`;
-            } else {
-                a.href = "#";
-                a.addEventListener("click", e => {
-                    e.preventDefault();
-                    alert("Payment required to access this course");
-                });
+            if (!data.courses || data.courses.length === 0) {
+                coursesList.innerHTML = "<li>No courses yet</li>";
+                return;
             }
 
-            li.appendChild(a);
-            coursesList.appendChild(li);
-        });
+            data.courses.forEach(course => {
+                const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.textContent = `${course.code} - ${course.title}`;
+
+                if (isPaid) {
+                    a.href = `/course/${course.id}`;
+                } else {
+                    a.href = "#";
+                    a.addEventListener("click", e => {
+                        e.preventDefault();
+                        alert("Payment required to access this course");
+                    });
+                }
+
+                li.appendChild(a);
+                coursesList.appendChild(li);
+            });
+        } catch (err) {
+            console.error("Failed to load courses:", err);
+            coursesList.innerHTML = "<li>Error loading courses</li>";
+        }
     }
 
     /* -------------------- CHECK PAYMENT STATUS -------------------- */
@@ -52,7 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             const res = await fetch("/api/payment/status", { credentials: "same-origin" });
-            if (!res.ok) return;
+            if (!res.ok) throw new Error("Failed to fetch payment status");
 
             const payment = await res.json();
 
@@ -61,6 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     isPaid = true;
                     paymentStatusEl.textContent = "PAID ✅";
                     paymentStatusEl.classList.add("paid-animate");
+                    paymentStatusEl.style.color = "green";
                     payBtn.style.display = "none";
                     await loadCourses();
                     showToast("Payment verified ✅");
@@ -74,6 +96,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (err) {
             console.error("Error checking payment status:", err);
+            paymentStatusEl.textContent = "UNKNOWN ❌";
+            paymentStatusEl.style.color = "gray";
         }
     }
 
@@ -94,6 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (levelEl) levelEl.textContent = user.level;
     } catch (err) {
         console.error("Failed to load user info:", err);
+        showToast("Failed to load user info");
     }
 
     /* -------------------- PAY BUTTON -------------------- */
@@ -109,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
                 const data = await res.json();
 
-                if (data.status && data.data.authorization_url) {
+                if (data.status && data.data && data.data.authorization_url) {
                     window.location.href = data.data.authorization_url;
                 } else {
                     alert(data.message || "Payment initialization failed");
@@ -143,16 +168,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* -------------------- INITIAL LOAD -------------------- */
     await checkPaymentStatus();
     await loadCourses();
-
-    /* -------------------- TOAST FUNCTION -------------------- */
-    function showToast(message) {
-        const toast = document.getElementById("toast");
-        if (!toast) return;
-        toast.textContent = message;
-        toast.classList.add("show");
-        setTimeout(() => {
-            toast.classList.remove("show");
-        }, 3000);
-    }
 
 });
