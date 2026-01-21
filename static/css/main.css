@@ -1,6 +1,4 @@
-/* ==========================
-   GLOBAL STYLES
-========================== */
+/* ========================== GLOBAL STYLES ========================== */
 html, body {
     margin: 0;
     padding: 0;
@@ -8,88 +6,79 @@ html, body {
     text-align: center;
 }
 
-/* ==========================
-   GLOBAL BUTTONS (except CTA)
-========================== */
+.badge {
+    background: crimson;
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    min-width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+/* ========================== GLOBAL BUTTONS (except CTA) ========================== */
 button, .btn {
-    background: linear-gradient(135deg, #D4AF37,#8B7500 ); /* golden gradient */
+    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
     color: #fff;
     font-weight: 600;
     border: none;
     border-radius: 6px;
     padding: 10px 20px;
     transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
-    background-size: 200% 200%; /* for gradient hover animation */
+    background-size: 200% 200%;
+    cursor: pointer;
 }
 
-/* Hover: subtle shift + pop */
 button:hover, .btn:hover {
     transform: scale(1.04);
     box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-    background-position: 100% 0; /* shift gradient for dynamic effect */
+    background-position: 100% 0;
 }
 
-/* Optional: click/tap effect */
 button:active, .btn:active {
     transform: scale(0.98);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-/* ==========================
-   HEADERS STYLING
-========================== */
+
+/* ========================== HEADERS STYLING ========================== */
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;              /* bold */
-    text-transform: uppercase;     /* all caps */
-    letter-spacing: 1px;           /* subtle spacing */
-    color: #222;                   /* darker color for emphasis */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #222;
     line-height: 1.2;
     margin-bottom: 0.5em;
-    font-family: 'Poppins', sans-serif; /* inherit global font */
+    font-family: 'Poppins', sans-serif;
 }
 
-/* Optional: size tweaks for headers */
 h1 { font-size: 2.2em; }
 h2 { font-size: 1.9em; }
 h3 { font-size: 1.6em; }
 h4 { font-size: 1.3em; }
 h5 { font-size: 1.1em; }
 h6 { font-size: 1em; }
-/* ==========================
-   HERO / HEADER POP & PRESENCE
-========================== */
 
-/* Dashboard & messages main header */
-.admin-dashboard .dashboard-title,
-.admin-dashboard h1 {
-    font-size: 2.2em;              /* slightly bigger */
-    font-weight: 900;              /* extra bold for impact */
-    text-transform: uppercase;     
+/* ========================== HERO / HEADER POP & PRESENCE ========================== */
+.admin-dashboard .dashboard-title, .admin-dashboard h1 {
+    font-size: 2.2em;
+    font-weight: 900;
+    text-transform: uppercase;
     letter-spacing: 2px;
-    color: #fff;                   /* stand out on darker hero image */
+    color: #fff;
     margin-bottom: 15px;
-
-    /* POP EFFECT */
-    text-shadow:
-        2px 2px 4px rgba(0,0,0,0.5),  /* strong shadow for depth */
-        0 0 15px rgba(255, 235, 180, 0.4); /* soft glow for light pop */
-}
-
-/* Optional: subtle animated shine over header */
-@keyframes header-glow {
-    0%, 100% { text-shadow:
-        2px 2px 4px rgba(0,0,0,0.5),
-        0 0 10px rgba(255, 235, 180, 0.3); }
-    50% { text-shadow:
-        2px 2px 4px rgba(0,0,0,0.5),
-        0 0 25px rgba(255, 235, 180, 0.6); }
-}
-
-.admin-dashboard .dashboard-title,
-.admin-dashboard h1 {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(255, 235, 180, 0.4);
     animation: header-glow 3s ease-in-out infinite;
 }
 
-/* Subheaders under main title */
+@keyframes header-glow {
+    0%, 100% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255, 235, 180, 0.3); }
+    50% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 25px rgba(255, 235, 180, 0.6); }
+}
+
 .admin-dashboard .dashboard-subtitle {
     font-size: 1.2em;
     font-weight: 700;
@@ -100,9 +89,7 @@ h6 { font-size: 1em; }
     letter-spacing: 1px;
 }
 
-/* Card headers (messages & dashboard boxes) */
-.message-box h3,
-.dashboard-box h3 {
+.message-box h3, .dashboard-box h3 {
     font-size: 1.5em;
     font-weight: 800;
     text-transform: uppercase;
@@ -110,43 +97,34 @@ h6 { font-size: 1em; }
     margin-bottom: 10px;
     position: relative;
     z-index: 2;
-
-    /* subtle gradient text for pop */
     background: linear-gradient(45deg, #f0e6d2, #8B7500);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-/* Card header hover for extra pop */
-.message-box h3:hover,
-.dashboard-box h3:hover {
+.message-box h3:hover, .dashboard-box h3:hover {
     color: #8B7500;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
     transform: scale(1.02);
     transition: all 0.25s ease-in-out;
 }
-/* ==========================
-   MAIN CONTENT
-========================== */
+
+/* ========================== MAIN CONTENT ========================== */
 main.content {
     padding: 15px;
-    max-width: 360px; /* mobile width */
+    max-width: 360px;
     width: 95%;
     margin: 0 auto;
     box-sizing: border-box;
 }
 
-/* ==========================
-   HERO
-========================== */
-.hero {
-    text-align: center;
-}
+/* ========================== HERO ========================== */
+.hero { text-align: center; }
 
 .hero-description {
-    background: #fff8dc; /* light gold background */
+    background: #fff8dc;
     padding: 20px 25px;
-    max-width: 480px; /* mobile friendly */
+    max-width: 480px;
     margin: 0 auto;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
@@ -155,159 +133,98 @@ main.content {
     color: #3c2f1f;
     transition: transform 0.3s, box-shadow 0.3s;
 }
-.hero h1 {
-    font-size: 3em;
-    margin-bottom: 10px;
-}
 
-.hero p {
-    font-size: 2em;
-    margin-bottom: 15px;
-}
+.hero h1 { font-size: 3em; margin-bottom: 10px; }
+.hero p { font-size: 2em; margin-bottom: 15px; }
 
-.cta-buttons {
-    margin-top: 15px;
-}
-
-.cta-buttons .btn {
-    display: inline-block;
-    padding: 10px 20px;
-    background: darkgreen;
-    color: #f0e6d2;
-    text-decoration: none;
-    margin: 5px;
-    border-radius: 5px;
-    transition: background 0.3s, transform 0.2s;
-}
-
-.cta-buttons .btn:hover {
-    background: #8B7500;
-    transform: scale(1.05);
+.cta-buttons { 
+    margin-top: 15px; 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: center; 
+    gap: 10px; 
 }
 
 .cta-buttons .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;                /* space between text and icon */
+    gap: 8px;
     padding: 18px 36px;
     font-size: 1.3em;
     font-weight: 700;
     border-radius: 12px;
     text-decoration: none;
     cursor: pointer;
-    background: darkgreen;
-    color: #f0e6d2;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
+
+    /* Gradient background animation */
+    background-size: 300% 300%;
+    animation: gradient-flow 3s linear infinite, pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+
+    /* Transition for hover scaling and shadow */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Primary CTA (Get Started) */
+.cta-buttons .btn.primary {
+    background: linear-gradient(135deg, #2a6b2a, #3c9c3c, #2a6b2a);
+    color: #f0e6d2;
+}
+
+/* Secondary CTA (Login) */
+.cta-buttons .btn.secondary {
+    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+    color: #fff;
+}
+
+/* Hover pop & shadow */
 .cta-buttons .btn:hover {
     transform: scale(1.08);
     box-shadow: 0 6px 18px rgba(0,0,0,0.25);
 }
 
 /* Icon animation */
-.btn-icon {
-    display: inline-block;
-    transition: transform 0.3s ease;
+.btn-icon { display: inline-block; transition: transform 0.3s ease; }
+.cta-buttons .btn:hover .btn-icon { transform: translateX(6px) rotate(10deg); }
+
+/* ========================== Pseudo-element for light sweep on click ========================== */
+.cta-buttons .btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 50%;
+    height: 100%;
+    background: rgba(255,255,255,0.25);
+    transform: skewX(-20deg);
+    transition: left 0.5s;
 }
 
-.cta-buttons .btn:hover .btn-icon {
-    transform: translateX(6px) rotate(10deg);
+.cta-buttons .btn:active::after {
+    left: 125%;
 }
 
-@media (max-width: 480px) {
-    .cta-buttons .btn {
-        padding: 14px 28px;
-        font-size: 1.1em;
-    }
-}
-
-/* ==========================
-   CTA BUTTON GRADIENT & ANIMATIONS
-========================== */
-
-/* Base gradient for primary buttons */
-.cta-buttons .btn {
-    background: linear-gradient(135deg, #8B7500, #D4AF37); /* warm gold gradient */
-    color: #fff;
-    font-weight: 600;
-    padding: 15px 30px;
-    font-size: 1.2em;
-    border-radius: 8px;
-    border: none;
-    text-decoration: none;
-    display: inline-block;
-    animation: pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    transition: transform 0.3s ease, box-shadow 0.6s ease, background-position 0.5s ease;
-    background-size: 200% 200%; /* for gradient shift on hover */
-}
-
-/* Staggered pop-in */
-.cta-buttons .btn:first-child { animation-delay: 0s; }
-.cta-buttons .btn:nth-child(2) { animation-delay: 0.25s; }
-
-/* Hover: shadow pulse + gradient shift + subtle scale */
-.cta-buttons .btn:hover {
-    transform: scale(1.06);
-    animation: shadow-breathe 2s ease-in-out infinite;
-    background-position: 100% 0; /* subtle gradient shift */
-}
-
-/* Keyframes remain the same */
+/* ========================== KEYFRAMES ========================== */
 @keyframes pop-in {
     0% { transform: scale(0.85); opacity: 0; }
     60% { transform: scale(1.08); opacity: 1; }
     100% { transform: scale(1); }
 }
 
-@keyframes shadow-breathe {
-    0%, 100% { box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
-    50% { box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-}
-/* ==========================
-   HERO CTA BUTTONS POP (Unified hover/interaction)
-========================== */
-.cta-buttons .btn {
-    display: inline-block;
-    padding: 18px 36px;       
-    font-size: 1.3em;         
-    font-weight: 700;         
-    border-radius: 12px;       
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    text-decoration: none;
-    cursor: pointer;          /* make sure pointer appears */
+/* Animate gradient background continuously */
+@keyframes gradient-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* Hover effects for all CTA buttons */
-.cta-buttons .btn:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-}
-
-/* Specific colors */
-.cta-buttons .btn { /* Primary */
-    background: darkgreen;
-    color: #f0e6d2;
-}
-
-.cta-buttons .btn.secondary { /* Secondary (Login) */
-    background: #444;  /* darker button */
-    color: #f0e6d2;
-}
-
-/* Mobile responsiveness */
 @media (max-width: 480px) {
-    .cta-buttons .btn {
-        padding: 14px 28px;
-        font-size: 1.1em;
-    }
+    .cta-buttons .btn { padding: 14px 28px; font-size: 1.1em; }
 }
-/* ==========================
-   FORMS
-========================== */
+
+/* ========================== FORMS ========================== */
 form {
     max-width: 340px;
     width: 95%;
@@ -329,23 +246,6 @@ input, textarea, button, select {
     box-sizing: border-box;
 }
 
-button, .btn {
-    cursor: pointer;
-}
-
-button {
-    background: #8B7500;
-    color: white;
-    border: none;
-    font-size: 1em;
-    transition: background 0.3s, transform 0.2s;
-}
-
-button:hover {
-    background: #8B7500;
-    transform: scale(1.02);
-}
-
 .back-login-btn {
     display: inline-block;
     padding: 10px 20px;
@@ -356,15 +256,9 @@ button:hover {
     margin-top: 10px;
     transition: background 0.3s, transform 0.2s;
 }
+.back-login-btn:hover { background: #8B7500; transform: scale(1.05); }
 
-.back-login-btn:hover {
-    background: #8B7500;
-    transform: scale(1.05);
-}
-
-/* ==========================
-   ACCOUNT SECTION
-========================== */
+/* ========================== ACCOUNT SECTION ========================== */
 .account-section {
     display: flex;
     flex-direction: column;
@@ -380,7 +274,7 @@ button:hover {
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     width: 95%;
-    max-width: 340px; /* mobile fit */
+    max-width: 340px;
     text-align: center;
 }
 
@@ -392,45 +286,16 @@ button:hover {
     margin-bottom: 15px;
 }
 
-.courses-box ul {
-    list-style: none;
-    padding: 0;
-}
+.courses-box ul, .courses-list ul, .admin-list { list-style: none; padding: 0; margin: 0; }
 
-.courses-box li {
-    padding: 10px 0;
-    border-bottom: 1px solid #eee;
-}
+.courses-box li, .courses-list li, .admin-list li { padding: 10px 0; border-bottom: 1px solid #eee; }
+.courses-box li:last-child, .courses-list li:last-child, .admin-list li:last-child { border-bottom: none; }
 
-.courses-box li:last-child {
-    border-bottom: none;
-}
-/* ==========================
-   ADMIN DASHBOARD
-========================== */
-
-.admin-dashboard {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.dashboard-title {
-    font-size: 1.8em;
-    margin-bottom: 5px;
-}
-
-.dashboard-subtitle {
-    font-size: 0.95em;
-    margin-bottom: 20px;
-    opacity: 0.85;
-}
-
-.dashboard-boxes {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
+/* ========================== ADMIN DASHBOARD ========================== */
+.admin-dashboard { text-align: center; margin-top: 20px; }
+.dashboard-title { font-size: 1.8em; margin-bottom: 5px; }
+.dashboard-subtitle { font-size: 0.95em; margin-bottom: 20px; opacity: 0.85; }
+.dashboard-boxes { display: flex; flex-direction: column; gap: 15px; }
 .dashboard-box {
     background: white;
     color: #222;
@@ -441,51 +306,11 @@ button:hover {
     text-align: left;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+.dashboard-box:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
 
-.dashboard-box h3 {
-    margin-bottom: 10px;
-    font-size: 1.2em;
-}
+.admin-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
 
-.dashboard-box ul {
-    padding-left: 18px;
-    margin: 0;
-}
-
-.dashboard-box li {
-    font-size: 0.9em;
-    margin-bottom: 5px;
-}
-
-.dashboard-box:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-}
-.admin-box {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
-
-.admin-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.admin-list li {
-    padding: 10px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.admin-list li:last-child {
-    border-bottom: none;
-}
-/* ==========================
-   ADMIN COURSES PAGE
-========================== */
+/* ========================== ADMIN COURSES PAGE ========================== */
 .courses-list, .add-course {
     background: #fff;
     padding: 20px;
@@ -498,93 +323,50 @@ button:hover {
     margin-right: auto;
 }
 
-.courses-list ul {
-    list-style: none;
-    padding: 0;
-}
+.add-course form textarea { resize: vertical; }
+#form-feedback { margin-top: 10px; font-weight: bold; }
 
-.courses-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
+/* ========================== PAY NOW ========================== */
+.btn-pay-now {
+    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+    color: #2b1e00;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(212,175,55,0.35);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+    animation: payNowPop 0.6s ease-out both;
 }
+.btn-pay-now:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 10px 28px rgba(212,175,55,0.45); filter: brightness(1.05); }
+.btn-pay-now:active { transform: scale(0.98); box-shadow: 0 4px 12px rgba(212,175,55,0.3); }
+.unpaid .btn-pay-now { animation-delay: 0.15s; }
 
-.courses-list li:last-child {
-    border-bottom: none;
-}
+@keyframes payNowPop { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 
-.add-course form input,
-.add-course form textarea,
-.add-course form button {
-    width: 100%;
-    margin-bottom: 10px;
-    padding: 10px;
-    font-family: 'Poppins', sans-serif;
-}
-
-.add-course form textarea {
-    resize: vertical;
-}
-
-#form-feedback {
-    margin-top: 10px;
-    font-weight: bold;
-}
-/* ==========================
-   FOOTER
-========================== */
+/* ========================== FOOTER ========================== */
 .site-footer {
     background: #8B7500;
     color: #f0e6d2;
     padding: 15px 10px;
     text-align: center;
-    max-width: 360px; /* match main content width */
+    max-width: 360px;
     margin: 0 auto;
     border-radius: 0 0 8px 8px;
 }
+.footer-nav { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.footer-nav a { color: #f0e6d2; text-decoration: none; }
 
-.footer-nav {
-    display: flex;
-    flex-direction: column; /* stacked links for mobile */
-    gap: 5px;
-    margin-bottom: 10px;
-}
-
-.footer-nav a {
-    color: #f0e6d2;
-    text-decoration: none;
-}
-
-/* ==========================
-   RESPONSIVE ADJUSTMENTS
-========================== */
+/* ========================== RESPONSIVE ADJUSTMENTS ========================== */
 @media (max-width: 768px) {
-    .site-header .header-logo {
-        max-width: 300px;
-    }
-
-    .account-box, .courses-box, form {
-        width: 95%;
-        padding: 15px;
-    }
-
-    main.content {
-        padding: 15px;
-    }
-
-    .cta-buttons .btn {
-        padding: 8px 15px;
-    }
-
-    .hero h1 {
-        font-size: 1.8em;
-    }
-
-    .hero p {
-        font-size: 0.95em;
-    }
+    .site-header .header-logo { max-width: 300px; }
+    .account-box, .courses-box, form { width: 95%; padding: 15px; }
+    main.content { padding: 15px; }
+    .cta-buttons .btn { padding: 8px 15px; }
+    .hero h1 { font-size: 1.8em; }
+    .hero p { font-size: 0.95em; }
 }
 
-/* Admin toast */
+/* ========================== TOAST ========================== */
 .toast {
     position: fixed;
     top: 20px;
@@ -595,79 +377,11 @@ button:hover {
     border-radius: 8px;
     opacity: 0;
     transition: opacity 0.3s;
-    max-width: 300px; /* prevent too long toast */
-    word-wrap: break-word; /* wrap text if necessary */
+    max-width: 300px;
+    word-wrap: break-word;
     z-index: 1000;
 }
-
-.toast.show {
-    opacity: 1;
-}
-.toast, .admin-toast {
-    pointer-events: none;
-}
-
-.message-box {
-    background: #fff;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-}
-
-.message-box.unread {
-    border-left: 5px solid crimson;
-    background: #fff6f6;
-}
-
-.badge {
-    background: crimson;
-    color: white;
-    font-size: 12px;
-    padding: 3px 8px;
-    border-radius: 12px;
-    margin-left: 6px;
-}
-
-/* ==========================
-   ADMIN DASHBOARD & MESSAGES HEADER ENHANCEMENTS
-========================== */
-
-/* Dashboard & message section headers */
-.admin-dashboard .dashboard-title,
-.admin-dashboard h1 {
-    font-size: 2em;              /* larger */
-    font-weight: 800;            /* extra bold */
-    text-transform: uppercase;   /* all caps */
-    letter-spacing: 1.5px;       /* subtle spacing for readability */
-    color: #333;                 /* dark neutral color */
-    margin-bottom: 15px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* subtle lift */
-}
-
-/* Subtitles for context or stats under dashboard title */
-.admin-dashboard .dashboard-subtitle {
-    font-size: 1.1em;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #555;
-    opacity: 0.85;
-    margin-bottom: 25px;
-}
-
-/* Section headers inside cards, e.g., messages list or boxes */
-.message-box h3,
-.dashboard-box h3 {
-    font-size: 1.4em;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #222;
-    margin-bottom: 10px;
-}
-
-/* Optional: hover effect to give headers subtle depth */
-.message-box h3:hover,
-.dashboard-box h3:hover {
-    color: #8B7500;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.15);
-    transition: color 0.2s, text-shadow 0.2s;
-}
+.toast.show { opacity: 1; }
+.toast, .admin-toast { pointer-events: none; }
+.message-box { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+.message-box.unread { border-left: 5px solid crimson; background: #fff6f6; }

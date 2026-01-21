@@ -155,19 +155,39 @@ def users():
     conn.close()
     return render_template("admin/users.html", users=users)
 
+from flask import flash, redirect, url_for
+
 @admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
 @admin_required
 def toggle_suspend_user(user_id):
     conn = get_db()
     c = conn.cursor()
+
+    # Toggle suspension
     c.execute("""
         UPDATE users
-        SET is_suspended = CASE WHEN is_suspended=1 THEN 0 ELSE 1 END
-        WHERE id=?
+        SET is_suspended = CASE 
+            WHEN is_suspended = 1 THEN 0 
+            ELSE 1 
+        END
+        WHERE id = ?
     """, (user_id,))
+
     conn.commit()
+
+    # Get updated state for message
+    c.execute("SELECT is_suspended FROM users WHERE id = ?", (user_id,))
+    user = c.fetchone()
+
     conn.close()
-    return jsonify({"message": "User suspension updated"}), 200
+
+    if user and user["is_suspended"]:
+        flash("User has been suspended", "success")
+    else:
+        flash("User has been unsuspended", "success")
+
+    # Redirect back to users admin page
+    return redirect(url_for("admin.users"))
 
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
 @admin_required
@@ -184,6 +204,7 @@ def delete_user(user_id):
 def toggle_payment(user_id):
     conn = get_db()
     c = conn.cursor()
+
     c.execute("SELECT role FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
     if not user or user["role"] == "admin":
@@ -197,11 +218,17 @@ def toggle_payment(user_id):
         abort(404)
 
     new_status = "unpaid" if payment["status"] == "paid" else "paid"
-    c.execute("UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?", (new_status, user_id))
+
+    c.execute(
+        "UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?",
+        (new_status, user_id)
+    )
+
     conn.commit()
     conn.close()
-    return jsonify({"message": f"Payment status set to {new_status}"}), 200
 
+    flash(f"Payment marked as {new_status}", "success")
+    return redirect("/admin/users")
 # ---------------------
 # COURSES
 # ---------------------
