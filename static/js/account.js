@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /* -------------------- CHECK PAYMENT STATUS -------------------- */
-    async function checkPaymentStatus() {
+    async function checkPaymentStatus(showPaymentToast = false) {
         if (!paymentStatusEl || !payBtn) return;
 
         try {
@@ -95,7 +95,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                     paymentStatusEl.style.color = "green";
                     payBtn.style.display = "none";
                     await loadCourses();
-                    showToast("Payment verified ✅");
+
+                    // Only show toast if explicitly requested
+                    if (showPaymentToast) showToast("Payment verified ✅");
                 }
             } else {
                 isPaid = false;
@@ -162,16 +164,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* -------------------- PAYSTACK REDIRECT HANDLING -------------------- */
     const paymentRedirect = getQueryParam("payment");
     if (paymentRedirect === "callback") {
-        showToast("Payment successful ✅");
-
-        // Remove query param
+        // Remove query param to prevent loop
         const url = new URL(window.location);
         url.searchParams.delete("payment");
         window.history.replaceState({}, document.title, url);
 
+        // Show toast only once after payment
         setTimeout(async () => {
-            await checkPaymentStatus();
+            await checkPaymentStatus(true); // <-- show toast only this time
         }, 500);
+    } else {
+        // Normal reloads won't show toast
+        await checkPaymentStatus(false);
     }
 
     /* -------------------- LOGOUT -------------------- */
@@ -183,7 +187,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* -------------------- INITIAL LOAD -------------------- */
     await loadUserInfo();
-    await checkPaymentStatus();
     await loadCourses();
 
 });
