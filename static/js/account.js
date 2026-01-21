@@ -7,17 +7,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let isPaid = false; // tracks if user has paid
 
-    /* --------------------
-       HELPER: GET URL PARAMS
-    -------------------- */
+    /* -------------------- HELPER: GET URL PARAMS -------------------- */
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(param);
     }
 
-    /* --------------------
-       LOAD COURSES
-    -------------------- */
+    /* -------------------- LOAD COURSES -------------------- */
     async function loadCourses() {
         if (!coursesList) return;
 
@@ -50,37 +46,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    /* --------------------
-       CHECK PAYMENT STATUS
-    -------------------- */
+    /* -------------------- CHECK PAYMENT STATUS -------------------- */
     async function checkPaymentStatus() {
         if (!paymentStatusEl || !payBtn) return;
 
-        const res = await fetch("/api/payment/status", { credentials: "same-origin" });
-        if (!res.ok) return;
+        try {
+            const res = await fetch("/api/payment/status", { credentials: "same-origin" });
+            if (!res.ok) return;
 
-        const payment = await res.json();
+            const payment = await res.json();
 
-        if (payment.status === "paid") {
-            if (!isPaid) {
-                isPaid = true;
-                paymentStatusEl.textContent = "PAID ✅";
-                paymentStatusEl.classList.add("paid-animate");
-                payBtn.style.display = "none";
+            if (payment.status === "paid") {
+                if (!isPaid) {
+                    isPaid = true;
+                    paymentStatusEl.textContent = "PAID ✅";
+                    paymentStatusEl.classList.add("paid-animate");
+                    payBtn.style.display = "none";
+                    await loadCourses();
+                    showToast("Payment verified ✅");
+                }
+            } else {
+                isPaid = false;
+                paymentStatusEl.textContent = "UNPAID ❌";
+                paymentStatusEl.style.color = "red";
+                payBtn.style.display = "inline-block";
                 await loadCourses();
             }
-        } else {
-            isPaid = false;
-            paymentStatusEl.textContent = "UNPAID ❌";
-            paymentStatusEl.style.color = "red";
-            payBtn.style.display = "inline-block";
-            await loadCourses();
+        } catch (err) {
+            console.error("Error checking payment status:", err);
         }
     }
 
-    /* --------------------
-       LOAD USER INFO
-    -------------------- */
+    /* -------------------- LOAD USER INFO -------------------- */
     try {
         const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
         if (!meRes.ok) {
@@ -99,51 +96,63 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Failed to load user info:", err);
     }
 
-    /* --------------------
-       PAY BUTTON
-    -------------------- */
+    /* -------------------- PAY BUTTON -------------------- */
     if (payBtn) {
         payBtn.addEventListener("click", async () => {
+            payBtn.disabled = true;
+            payBtn.textContent = "Initializing...";
+
             try {
-                const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
+                const res = await fetch("/api/payment/init", {
+                    method: "POST",
+                    credentials: "same-origin",
+                });
                 const data = await res.json();
-                if (data.status) {
-                    // Redirect to Paystack full page
+
+                if (data.status && data.data.authorization_url) {
                     window.location.href = data.data.authorization_url;
                 } else {
                     alert(data.message || "Payment initialization failed");
+                    payBtn.disabled = false;
+                    payBtn.textContent = "Pay Now 💳";
                 }
             } catch (err) {
                 console.error("Payment initiation failed:", err);
                 alert("Payment initiation failed. Try again.");
+                payBtn.disabled = false;
+                payBtn.textContent = "Pay Now 💳";
             }
         });
     }
 
-    /* --------------------
-       PAYSTACK REDIRECT HANDLING
-    -------------------- */
+    /* -------------------- PAYSTACK REDIRECT HANDLING -------------------- */
     const paymentRedirect = getQueryParam("payment");
     if (paymentRedirect === "callback") {
-        alert("Payment successful ✅");
-        // Remove query string so message doesn't repeat on reload
+        showToast("Payment successful ✅");
         window.history.replaceState({}, document.title, "/account");
         await checkPaymentStatus();
     }
 
-    /* --------------------
-       INITIAL LOAD
-    -------------------- */
-    await checkPaymentStatus();
-    await loadCourses();
-
-    /* --------------------
-       LOGOUT
-    -------------------- */
+    /* -------------------- LOGOUT -------------------- */
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
             window.location.href = "/logout";
         });
+    }
+
+    /* -------------------- INITIAL LOAD -------------------- */
+    await checkPaymentStatus();
+    await loadCourses();
+
+    /* -------------------- TOAST FUNCTION -------------------- */
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.add("show");
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 3000);
     }
 
 });

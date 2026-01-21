@@ -17,11 +17,11 @@
             <strong id="payment-status">Checking...</strong>
         </p>
 
-        <!-- ✅ PAY BUTTON (JS NOW FINDS THIS) -->
+        <!-- ✅ PAY BUTTON -->
         <button
             type="button"
             id="pay-btn"
-            class="btn btn-ajax btn-pay">
+            class="btn-pay-now">
             Pay Now 💳
         </button>
     </div>
@@ -42,7 +42,7 @@
 <div id="toast" class="toast">Payment Verified ✅</div>
 
 <style>
-/* Paid animation */
+/* ========================== PAID ANIMATION ========================== */
 .paid-animate {
     animation: pop 0.6s ease-out;
     color: green;
@@ -54,7 +54,7 @@
     100% { transform: scale(1); }
 }
 
-/* Toast */
+/* ========================== TOAST ========================== */
 .toast {
     position: fixed;
     bottom: 30px;
