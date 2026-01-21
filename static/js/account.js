@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     function showToast(message) {
         let toast = document.getElementById("toast");
         if (!toast) {
-            // Create toast element if it doesn't exist
             toast = document.createElement("div");
             toast.id = "toast";
             toast.className = "toast";
@@ -35,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             const res = await fetch("/api/courses/my", { credentials: "same-origin" });
+            if (!res.ok) throw new Error("Failed to fetch courses");
             const data = await res.json();
             coursesList.innerHTML = "";
 
@@ -73,7 +73,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             const res = await fetch("/api/payment/status", { credentials: "same-origin" });
-            if (!res.ok) throw new Error("Failed to fetch payment status");
+            if (!res.ok) {
+                if (res.status === 401) {
+                    console.warn("User not authenticated, skipping payment check");
+                    paymentStatusEl.textContent = "UNPAID ❌";
+                    paymentStatusEl.style.color = "red";
+                    payBtn.style.display = "inline-block";
+                    return;
+                }
+                throw new Error("Failed to fetch payment status");
+            }
 
             const payment = await res.json();
 
@@ -102,23 +111,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /* -------------------- LOAD USER INFO -------------------- */
-    try {
-        const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
-        if (!meRes.ok) {
-            window.location.href = "/login-page";
-            return;
-        }
-        const user = await meRes.json();
-        const usernameEl = document.getElementById("username");
-        const departmentEl = document.getElementById("department");
-        const levelEl = document.getElementById("level");
+    async function loadUserInfo() {
+        try {
+            const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
+            if (!meRes.ok) {
+                console.warn("Not authenticated, redirecting to login");
+                return; // Don't force reload
+            }
+            const user = await meRes.json();
+            const usernameEl = document.getElementById("username");
+            const departmentEl = document.getElementById("department");
+            const levelEl = document.getElementById("level");
 
-        if (usernameEl) usernameEl.textContent = user.name;
-        if (departmentEl) departmentEl.textContent = user.department;
-        if (levelEl) levelEl.textContent = user.level;
-    } catch (err) {
-        console.error("Failed to load user info:", err);
-        showToast("Failed to load user info");
+            if (usernameEl) usernameEl.textContent = user.name;
+            if (departmentEl) departmentEl.textContent = user.department;
+            if (levelEl) levelEl.textContent = user.level;
+        } catch (err) {
+            console.error("Failed to load user info:", err);
+            showToast("Failed to load user info");
+        }
     }
 
     /* -------------------- PAY BUTTON -------------------- */
@@ -154,8 +165,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const paymentRedirect = getQueryParam("payment");
     if (paymentRedirect === "callback") {
         showToast("Payment successful ✅");
-        window.history.replaceState({}, document.title, "/account");
-        await checkPaymentStatus();
+
+        // Remove query param to avoid loop
+        const url = new URL(window.location);
+        url.searchParams.delete("payment");
+        window.history.replaceState({}, document.title, url);
+
+        // Delay the payment status check to allow cookies/session to settle
+        setTimeout(async () => {
+            await checkPaymentStatus();
+        }, 500);
     }
 
     /* -------------------- LOGOUT -------------------- */
@@ -166,6 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /* -------------------- INITIAL LOAD -------------------- */
+    await loadUserInfo();
     await checkPaymentStatus();
     await loadCourses();
 
