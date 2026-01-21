@@ -13,15 +13,11 @@
         <p>Level: <span id="level">Loading...</span></p>
 
         <p>
-            Payment Status:
-            <strong id="payment-status">Checking...</strong>
+            Payment Status: <strong id="payment-status">Checking...</strong>
         </p>
 
         <!-- ✅ PAY BUTTON -->
-        <button
-            type="button"
-            id="pay-btn"
-            class="btn btn-pay-now">
+        <button type="button" id="pay-btn" class="btn-pay-now">
             Pay Now 💳
         </button>
     </div>
@@ -34,6 +30,7 @@
         </ul>
     </div>
 
+    <!-- LOGOUT -->
     <button id="logout-btn" class="btn">Logout</button>
 
 </section>
@@ -53,14 +50,15 @@
     70% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
 }
-/* ========================== TOAST (SLIM) ========================== */
+
+/* ========================== TOAST (SLIM, ADMIN STYLE) ========================== */
 .toast {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    background: #333; /* admin style background */
+    background: #333; /* matches admin toast */
     color: #fff;
-    padding: 6px 12px; /* smaller padding for compact look */
+    padding: 6px 12px; /* compact padding */
     border-radius: 6px;
     font-weight: 500;
     font-size: 14px;
@@ -69,7 +67,7 @@
     transform: translateY(20px);
     transition: all 0.3s ease;
     z-index: 9999;
-    max-width: 80%; /* optional to prevent huge width on long text */
+    max-width: 80%;
     text-align: center;
 }
 
