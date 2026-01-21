@@ -207,6 +207,17 @@ main.content,
     box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
+.hero-image {
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
+.header-logo {
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: auto;
+}
+
 .badge {
     background: crimson;
     color: #fff;

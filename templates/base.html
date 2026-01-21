@@ -56,11 +56,14 @@
 
 <header class="site-header">
     <a href="{{ url_for('home') }}">
-        <img
-            src="{{ url_for('static', filename='images/logo.png') }}"
-            alt="Wide Mind Tutorials"
-            class="header-logo"
-        >
+    <img
+        src="{{ url_for('static', filename='images/logo.png') }}"
+        alt="Wide Mind Tutorials"
+        class="header-logo"
+        draggable="false"
+        oncontextmenu="return false;"
+    >
+</a>
     </a>
 </header>
 

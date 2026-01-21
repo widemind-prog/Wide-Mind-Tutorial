@@ -7,9 +7,11 @@
 <!-- Hero Section -->
 <section class="hero-section">
 
-    <!-- Hero Image -->
-    <img src="{{ url_for('static', filename='images/hero-picture.png') }}" 
-         alt="Hero Image" class="hero-image">
+<img src="{{ url_for('static', filename='images/hero-picture.png') }}"
+     alt="Hero Image"
+     class="hero-image"
+     draggable="false"
+     oncontextmenu="return false;">
 
     <!-- Hero Headings -->
     <h1>Learn Smarter</h1>

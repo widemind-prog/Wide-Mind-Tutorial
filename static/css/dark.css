@@ -48,6 +48,11 @@ form {
     backdrop-filter: blur(2px);
 }
 
+.hero-image {
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
 /* ===================== GLOBAL BACKGROUND IMAGE ===================== */
 body {
     background-image: url('../images/background-picture.png'); /* adjust path if needed */
@@ -84,6 +89,12 @@ form {
 [data-theme="dark"] form {
     background-color: rgba(20, 20, 20, 0.75); /* dark cards with some transparency */
     backdrop-filter: blur(5px);
+}
+
+.header-logo {
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: auto;
 }
 
 /* ========================== SUBTLE FADED BACKGROUND IMAGE - LIGHT THEME ========================== */
