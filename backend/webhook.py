@@ -38,7 +38,7 @@ def paystack_webhook():
             return jsonify({"status": "invalid_payload"}), 200
 
         # Only accept ₦100 payments (10000 kobo)
-        if amount != 10000:
+        if amount != 1000:
             return jsonify({"status": "invalid_amount"}), 200
 
         conn = get_db()

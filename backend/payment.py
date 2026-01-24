@@ -19,7 +19,7 @@ def init_payment():
     user_id = session["user_id"]
 
     # ₦100 in kobo
-    amount = 100 * 100  # 10000 kobo
+    amount = 10 * 100  # 10000 kobo
 
     conn = get_db()
     c = conn.cursor()

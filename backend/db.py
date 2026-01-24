@@ -127,7 +127,7 @@ def init_db():
         # ₦100 in kobo (Paystack-compatible)
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (demo_user_id, 10000, "paid")
+            (demo_user_id, 1000, "paid")
         )
 
     # -------------------------
