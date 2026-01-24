@@ -15,13 +15,8 @@ def paystack_webhook():
     if not paystack_secret or not signature:
         return "Unauthorized", 401
 
-    # Verify Paystack signature
-    computed_hash = hmac.new(
-        paystack_secret.encode("utf-8"),
-        payload,
-        hashlib.sha512
-    ).hexdigest()
-
+    # Verify signature
+    computed_hash = hmac.new(paystack_secret.encode("utf-8"), payload, hashlib.sha512).hexdigest()
     if signature != computed_hash:
         return "Unauthorized", 401
 
@@ -32,45 +27,38 @@ def paystack_webhook():
         customer_info = data.get("customer", {})
         email = customer_info.get("email")
         ref = data.get("reference")
-        amount = data.get("amount")  # amount in kobo
+        amount = data.get("amount")  # in kobo
 
-        # Safety checks
         if not email or not ref or amount is None:
             return jsonify({"status": "invalid_payload"}), 200
 
         conn = get_db()
         c = conn.cursor()
 
-        # Prevent replay attacks (duplicate webhook)
-        c.execute(
-            "SELECT id FROM payments WHERE reference = ?",
-            (ref,)
-        )
+        # Prevent duplicate webhook
+        c.execute("SELECT id FROM payments WHERE reference = ?", (ref,))
         if c.fetchone():
             conn.close()
             return jsonify({"status": "duplicate"}), 200
 
-        # Update existing payment if user has a record
-        c.execute("""
-            UPDATE payments
-            SET status = 'paid',
-                amount = ?,
-                reference = ?,
-                paid_at = datetime('now')
-            WHERE user_id = (
-                SELECT id FROM users WHERE email = ?
-            )
-        """, (amount, ref, email))
+        # Get current payment
+        c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=(SELECT id FROM users WHERE email=?)", (email,))
+        payment = c.fetchone()
 
-        # If no existing payment record, create a new one
-        if c.rowcount == 0:
+        # Only mark paid if currently unpaid (default or admin marked unpaid)
+        if not payment:
+            # Create new record
             c.execute("""
                 INSERT INTO payments (user_id, amount, status, reference, paid_at)
-                VALUES (
-                    (SELECT id FROM users WHERE email = ?),
-                    ?, 'paid', ?, datetime('now')
-                )
+                VALUES ((SELECT id FROM users WHERE email=?), ?, 'paid', ?, datetime('now'))
             """, (email, amount, ref))
+        elif payment["admin_override_status"] == "unpaid" or (not payment["admin_override_status"] and payment["status"] == "unpaid"):
+            c.execute("""
+                UPDATE payments
+                SET status='paid', reference=?, paid_at=datetime('now')
+                WHERE user_id=(SELECT id FROM users WHERE email=?)
+            """, (ref, email))
+        # Else admin has absolute control, do nothing
 
         conn.commit()
         conn.close()

@@ -325,33 +325,25 @@ def payment_status():
     payment = c.fetchone()
 
     if not payment:
-        # No payment record, return default ₦100 unpaid and insert record
-        default_payment = {
-            "user_id": user_id,
-            "amount": 100,
-            "status": "unpaid",
-            "reference": None,
-            "paid_at": None
-        }
+        # No payment record → insert default unpaid
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
             (user_id, 100, "unpaid")
         )
         conn.commit()
-        conn.close()
-        return jsonify(default_payment)
+        c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))
+        payment = c.fetchone()
 
-    # Prepare payment data
     payment_data = {key: payment[key] for key in payment.keys()}
 
-    # 1️⃣ Admin override takes absolute precedence
-    if payment.get("admin_override_status"):
+    # 1️⃣ Admin override takes absolute precedence if exists
+    if payment.get("admin_override_status") in ["paid", "unpaid"]:
         payment_data["status"] = payment["admin_override_status"]
         conn.close()
         return jsonify(payment_data)
 
-    # 2️⃣ Otherwise, verify with Paystack if reference exists
-    if payment_data.get("reference"):
+    # 2️⃣ Paystack can only mark paid if current status is unpaid
+    if payment_data.get("reference") and payment_data["status"] == "unpaid":
         headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
         try:
             resp = requests.get(
@@ -361,22 +353,19 @@ def payment_status():
             resp.raise_for_status()
             data = resp.json()
             if data.get("status") and data["data"]["status"] == "success":
-                # Mark as paid if not already
-                if payment_data["status"] != "paid":
-                    c.execute(
-                        "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?",
-                        (user_id,)
-                    )
-                    conn.commit()
-                    payment_data["status"] = "paid"
-                    payment_data["paid_at"] = data["data"].get("paid_at")
+                # Only mark paid if currently unpaid
+                c.execute(
+                    "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=? AND status='unpaid'",
+                    (user_id,)
+                )
+                conn.commit()
+                payment_data["status"] = "paid"
+                payment_data["paid_at"] = data["data"].get("paid_at")
         except requests.RequestException:
-            # Network/API issue → fallback to local status
             payment_data["status"] = payment_data.get("status", "unpaid")
 
     conn.close()
     return jsonify(payment_data)
-
 # =====================
 # PAYMENT SUCCESS
 # =====================

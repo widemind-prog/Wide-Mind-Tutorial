@@ -170,6 +170,9 @@ def toggle_payment(user_id):
     conn = get_db()
     c = conn.cursor()
 
+    # ---------------------
+    # Check if user exists and is not admin
+    # ---------------------
     c.execute("SELECT role FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
     if not user or user["role"] == "admin":
@@ -177,23 +180,31 @@ def toggle_payment(user_id):
         flash("Cannot modify admin payment", "error")
         return redirect(url_for("admin_bp.users"))
 
-    # Check if payment exists, create if not
+    # ---------------------
+    # Get current payment record
+    # ---------------------
     c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=?", (user_id,))
     payment = c.fetchone()
+
     if not payment:
-        # Create payment record if it doesn't exist
-        c.execute("INSERT INTO payments (user_id, amount, status, admin_override_status) VALUES (?, ?, ?, ?)", 
-                  (user_id, 100, "unpaid", "paid"))
+        # No payment record exists → create one with admin override = paid
+        c.execute(
+            "INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at) VALUES (?, ?, ?, ?, datetime('now'))",
+            (user_id, 100, "unpaid", "paid")
+        )
         new_status = "paid"
     else:
-        # Toggle admin_override_status manually
+        # Admin override toggles the status
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
         new_status = "unpaid" if current == "paid" else "paid"
-        c.execute("UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE user_id=?", 
-                  (new_status, user_id))
+        c.execute(
+            "UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE user_id=?",
+            (new_status, user_id)
+        )
 
     conn.commit()
     conn.close()
+
     flash(f"Payment marked as {new_status}", "success")
     return redirect(url_for("admin_bp.users"))
 
