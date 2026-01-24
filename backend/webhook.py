@@ -25,8 +25,14 @@ def paystack_webhook():
     event = request.json
 
     if event["event"] == "charge.success":
-        email = event["data"]["customer"]["email"]
-        ref = event["data"]["reference"]
+        data = event["data"]
+        email = data["customer"]["email"]
+        ref = data["reference"]
+        amount = data["amount"]  # amount is in kobo
+
+        # Only accept ₦100 payments (10000 kobo)
+        if amount != 10000:
+            return jsonify({"status": "invalid_amount"}), 200
 
         conn = get_db()
         c = conn.cursor()

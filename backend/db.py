@@ -70,19 +70,19 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-    
+
     c.execute("""
-       CREATE TABLE IF NOT EXISTS contact_messages (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       name TEXT NOT NULL,
-       email TEXT NOT NULL,
-       subject TEXT,
-       message TEXT NOT NULL,
-       is_read INTEGER DEFAULT 0,
-       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-       )
+        CREATE TABLE IF NOT EXISTS contact_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            subject TEXT,
+            message TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
     """)
-    
+
     # -------------------------
     # SEED COURSES & MATERIALS
     # -------------------------
@@ -94,14 +94,17 @@ def init_db():
     for code, title, desc, files in courses:
         c.execute("SELECT id FROM courses WHERE course_code=?", (code,))
         if not c.fetchone():
-            c.execute("INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)",
-                      (code, title, desc))
+            c.execute(
+                "INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)",
+                (code, title, desc)
+            )
             course_id = c.lastrowid
-            # Add materials
             for f in files:
                 file_type = "audio" if f.endswith(".mp3") else "pdf"
-                c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
-                          (course_id, f, file_type, title))
+                c.execute(
+                    "INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
+                    (course_id, f, file_type, title)
+                )
 
     # -------------------------
     # CREATE DEMO STUDENT USER
@@ -113,13 +116,18 @@ def init_db():
     if not c.fetchone():
         hashed_pw = generate_password_hash(demo_password)
         c.execute(
-            "INSERT INTO users (name, email, password, department, level, role, is_suspended) VALUES (?, ?, ?, ?, ?, 'student', 0)",
+            """
+            INSERT INTO users (name, email, password, department, level, role, is_suspended)
+            VALUES (?, ?, ?, ?, ?, 'student', 0)
+            """,
             ("Demo User", demo_email, hashed_pw, "Psychology", "400")
         )
         demo_user_id = c.lastrowid
+
+        # ₦100 in kobo (Paystack-compatible)
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (demo_user_id, 100, "paid")
+            (demo_user_id, 10000, "paid")
         )
 
     # -------------------------
@@ -127,8 +135,11 @@ def init_db():
     # -------------------------
     admin_email = "wideminddevs@gmail.com"
 
-    # ✅ Paste your pre-generated hash here
-    admin_hashed_password = "scrypt:32768:8:1$AMDSiSevHwChJp23$083a029ff1370771a4afd5e72bcb3803bafccdac058f559a997d6641084e6b955489fc4df1678bb19d857516c7c22844601494c0c50e75a56ab90e1c25b46e8e"  
+    admin_hashed_password = (
+        "scrypt:32768:8:1$AMDSiSevHwChJp23$083a029ff1370771a4afd5e72bcb3803"
+        "bafccdac058f559a997d6641084e6b955489fc4df1678bb19d857516c7c228446"
+        "01494c0c50e75a56ab90e1c25b46e8e"
+    )
 
     c.execute("SELECT id FROM users WHERE email=?", (admin_email,))
     if not c.fetchone():
@@ -163,4 +174,3 @@ def hash_password(password):
 # -------------------------
 if __name__ == "__main__":
     init_db()
-
