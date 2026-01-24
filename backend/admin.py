@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash
+from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, url_for
 from backend.db import get_db, is_admin
 from functools import wraps
 import os
@@ -36,7 +36,7 @@ def dashboard():
     return render_template("admin/dashboard.html", unread=unread)
 
 # ---------------------
-# MESSAGES
+# MESSAGES MANAGEMENT
 # ---------------------
 @admin_bp.route("/messages")
 @admin_required
@@ -61,7 +61,7 @@ def unread_messages_count():
     unread = c.fetchone()["unread"]
     conn.close()
     return jsonify({"unread": unread})
-    
+
 @admin_bp.route("/messages/read/<int:msg_id>", methods=["POST"])
 @admin_required
 def mark_message_read(msg_id):
@@ -70,16 +70,9 @@ def mark_message_read(msg_id):
     c.execute("UPDATE contact_messages SET is_read = 1 WHERE id = ?", (msg_id,))
     conn.commit()
     conn.close()
-    
-    # Use flash to send message to the template
     flash("Message marked as read", "success")
-    
-    # Redirect back to messages page
     return redirect("/admin/messages")
-    
-# ---------------------
-# MARK AS UNREAD
-# ---------------------
+
 @admin_bp.route("/messages/unread/<int:msg_id>", methods=["POST"])
 @admin_required
 def mark_message_unread(msg_id):
@@ -88,13 +81,9 @@ def mark_message_unread(msg_id):
     c.execute("UPDATE contact_messages SET is_read = 0 WHERE id = ?", (msg_id,))
     conn.commit()
     conn.close()
-    # You can still use flash if you want toast after reload
     flash("Message marked as unread", "success")
     return redirect("/admin/messages")
-    
-# ---------------------
-# DELETE SINGLE MESSAGE
-# ---------------------
+
 @admin_bp.route("/messages/delete/<int:msg_id>", methods=["POST"])
 @admin_required
 def delete_message(msg_id):
@@ -106,32 +95,24 @@ def delete_message(msg_id):
     flash("Message deleted", "success")
     return redirect("/admin/messages")
 
-
-# ---------------------
-# BULK DELETE MESSAGES
-# ---------------------
 @admin_bp.route("/messages/delete-bulk", methods=["POST"])
 @admin_required
 def bulk_delete_messages():
     ids = request.form.getlist("message_ids")
-
     if not ids:
         flash("No messages selected", "error")
         return redirect("/admin/messages")
-
     conn = get_db()
     c = conn.cursor()
-
     placeholders = ",".join("?" for _ in ids)
     c.execute(f"DELETE FROM contact_messages WHERE id IN ({placeholders})", ids)
-
     conn.commit()
     conn.close()
-
     flash(f"{len(ids)} message(s) deleted", "success")
     return redirect("/admin/messages")
+
 # ---------------------
-# USERS
+# USERS MANAGEMENT
 # ---------------------
 @admin_bp.route("/users")
 @admin_required
@@ -155,38 +136,21 @@ def users():
     conn.close()
     return render_template("admin/users.html", users=users)
 
-from flask import flash, redirect, url_for
-
 @admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
 @admin_required
 def toggle_suspend_user(user_id):
     conn = get_db()
     c = conn.cursor()
-
-    # Toggle suspension
     c.execute("""
         UPDATE users
-        SET is_suspended = CASE 
-            WHEN is_suspended = 1 THEN 0 
-            ELSE 1 
-        END
+        SET is_suspended = CASE WHEN is_suspended = 1 THEN 0 ELSE 1 END
         WHERE id = ?
     """, (user_id,))
-
     conn.commit()
-
-    # Get updated state for message
     c.execute("SELECT is_suspended FROM users WHERE id = ?", (user_id,))
     user = c.fetchone()
-
     conn.close()
-
-    if user and user["is_suspended"]:
-        flash("User has been suspended", "success")
-    else:
-        flash("User has been unsuspended", "success")
-
-    # Redirect back to users admin page
+    flash("User has been suspended" if user["is_suspended"] else "User has been unsuspended", "success")
     return redirect(url_for("admin.users"))
 
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
@@ -197,7 +161,8 @@ def delete_user(user_id):
     c.execute("DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
     conn.close()
-    return jsonify({"message": "User deleted"}), 200
+    flash("User deleted", "success")
+    return redirect(url_for("admin.users"))
 
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
 @admin_required
@@ -209,28 +174,29 @@ def toggle_payment(user_id):
     user = c.fetchone()
     if not user or user["role"] == "admin":
         conn.close()
-        abort(400)
+        flash("Cannot modify admin payment", "error")
+        return redirect(url_for("admin.users"))
 
+    # Check if payment exists, create if not
     c.execute("SELECT status FROM payments WHERE user_id=?", (user_id,))
     payment = c.fetchone()
     if not payment:
-        conn.close()
-        abort(404)
-
-    new_status = "unpaid" if payment["status"] == "paid" else "paid"
-
-    c.execute(
-        "UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?",
-        (new_status, user_id)
-    )
+        c.execute("INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)", (user_id, 100, "paid"))
+        new_status = "paid"
+    else:
+        new_status = "unpaid" if payment["status"] == "paid" else "paid"
+        c.execute(
+            "UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?",
+            (new_status, user_id)
+        )
 
     conn.commit()
     conn.close()
-
     flash(f"Payment marked as {new_status}", "success")
-    return redirect("/admin/users")
+    return redirect(url_for("admin.users"))
+
 # ---------------------
-# COURSES
+# COURSES MANAGEMENT
 # ---------------------
 @admin_bp.route("/courses")
 @admin_required
@@ -242,20 +208,15 @@ def courses():
     conn.close()
     return render_template("admin/courses.html", courses=courses)
 
-@admin_bp.route("/courses/add", methods=["GET", "POST"])
+@admin_bp.route("/courses/add", methods=["POST"])
 @admin_required
 def add_course():
-    if request.method == "GET":
-        return redirect("/admin/courses")
-
     course_code = request.form.get("course_code", "").strip()
     course_title = request.form.get("course_title", "").strip()
     description = request.form.get("description", "").strip()
-
     if not course_code or not course_title:
         flash("Course code and title are required.", "error")
         return redirect("/admin/courses")
-
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
@@ -263,7 +224,6 @@ def add_course():
         conn.close()
         flash(f"Course code '{course_code}' already exists.", "error")
         return redirect("/admin/courses")
-
     c.execute("INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)", (course_code, course_title, description))
     conn.commit()
     conn.close()
@@ -279,20 +239,16 @@ def edit_course(course_id):
         course_code = request.form.get("course_code", "").strip()
         course_title = request.form.get("course_title", "").strip()
         description = request.form.get("description", "").strip()
-
         if not course_code or not course_title:
             flash("Course code and title are required.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
-
         c.execute("SELECT id FROM courses WHERE course_code=? AND id != ?", (course_code, course_id))
         if c.fetchone():
             flash(f"Course code '{course_code}' already exists.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
-
         c.execute("UPDATE courses SET course_code=?, course_title=?, description=? WHERE id=?", (course_code, course_title, description, course_id))
         conn.commit()
         flash("Course updated successfully!", "success")
-
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     c.execute("SELECT id, filename, file_type FROM materials WHERE course_id=?", (course_id,))
@@ -308,10 +264,11 @@ def delete_course(course_id):
     c.execute("DELETE FROM courses WHERE id=?", (course_id,))
     conn.commit()
     conn.close()
-    return jsonify({"message": "Course deleted"}), 200
+    flash("Course deleted", "success")
+    return redirect(url_for("admin.courses"))
 
 # ---------------------
-# MATERIALS
+# MATERIALS MANAGEMENT
 # ---------------------
 @admin_bp.route("/courses/material/add/<file_type>/<int:course_id>", methods=["POST"])
 @admin_required
@@ -320,21 +277,17 @@ def add_material(file_type, course_id):
     title = request.form.get("title")
     if not file or not title or title.strip() == "":
         return "Error: File and title are required.", 400
-
     filename = secure_filename(file.filename)
     if filename == "":
         return "Error: Invalid file name.", 400
-
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT id FROM materials WHERE course_id=? AND filename=?", (course_id, filename))
     if c.fetchone():
         conn.close()
         return f"Error: Material '{filename}' already exists for this course.", 400
-
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
-
     c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", (course_id, filename, file_type, title))
     conn.commit()
     conn.close()
@@ -350,11 +303,9 @@ def delete_material(material_id):
     if not material:
         conn.close()
         abort(404)
-
     filepath = os.path.join(UPLOAD_FOLDER, material["filename"])
     if os.path.exists(filepath):
         os.remove(filepath)
-
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))
     conn.commit()
     conn.close()

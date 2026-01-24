@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const toast = document.getElementById("admin-toast");
 
     // ------------------------
-    // Global toast
+    // Show toast
     // ------------------------
     window.showToast = function(message, isError = false) {
         if (!toast) return;
@@ -14,22 +14,45 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ------------------------
-    // Mark as read
+    // Suspend / Unsuspend
     // ------------------------
-    document.querySelectorAll(".btn-mark-read").forEach(btn => {
+    document.querySelectorAll(".btn-suspend").forEach(btn => {
         btn.addEventListener("click", () => {
-            showToast("Message marked as read");
-            setTimeout(() => btn.closest("form").submit(), 800);
+            showToast("Toggling suspension...");
+            setTimeout(() => {
+                const form = btn.closest("form");
+                form.action = btn.dataset.url;
+                form.submit();
+            }, 800);
         });
     });
 
     // ------------------------
-    // Mark as unread
+    // Toggle Payment
     // ------------------------
-    document.querySelectorAll(".btn-mark-unread").forEach(btn => {
+    document.querySelectorAll(".btn-payment").forEach(btn => {
         btn.addEventListener("click", () => {
-            showToast("Message marked as unread");
-            setTimeout(() => btn.closest("form").submit(), 800);
+            showToast("Updating payment status...");
+            setTimeout(() => {
+                const form = btn.closest("form");
+                form.action = btn.dataset.url;
+                form.submit();
+            }, 800);
+        });
+    });
+
+    // ------------------------
+    // Delete User
+    // ------------------------
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (!confirm("This action is permanent. Continue?")) return;
+            showToast("Deleting user...", true);
+            setTimeout(() => {
+                const form = btn.closest("form");
+                form.action = btn.dataset.url;
+                form.submit();
+            }, 800);
         });
     });
 

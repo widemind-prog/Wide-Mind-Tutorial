@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, session, redirect, request
 import requests
 import os
-from backend.db import get_db
+from backend.db import get_db, is_admin
 
 payment_bp = Blueprint("payment_bp", __name__)
 
@@ -17,6 +17,10 @@ def init_payment():
         return jsonify({"status": False, "message": "Not authenticated"}), 401
 
     user_id = session["user_id"]
+
+    # Admins don't need payment
+    if is_admin(user_id):
+        return jsonify({"status": True, "message": "Admin does not require payment"}), 200
 
     # ₦100 in kobo
     amount = 100 * 100  # 10000 kobo
@@ -130,6 +134,10 @@ def payment_status():
 
     user_id = session["user_id"]
 
+    # Admin users don't require payment
+    if is_admin(user_id):
+        return jsonify({"status": "admin", "amount": 0}), 200
+
     conn = get_db()
     c = conn.cursor()
     c.execute(
@@ -149,6 +157,7 @@ def payment_status():
         return jsonify({"status": "unpaid", "amount": 100})
 
     # If there is a reference, verify it with Paystack
+    payment_status = payment["status"]
     if payment["reference"]:
         headers = {
             "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
@@ -175,8 +184,6 @@ def payment_status():
                 payment_status = "unpaid"
         except requests.RequestException:
             payment_status = payment["status"]
-    else:
-        payment_status = payment["status"]
 
     conn.close()
     return jsonify({"status": payment_status, "amount": payment["amount"]})

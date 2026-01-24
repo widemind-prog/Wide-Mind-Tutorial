@@ -310,29 +310,75 @@ def payment_status():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
+    user_id = session["user_id"]
+
     # Admin users don't need payment
-    if is_admin(session["user_id"]):
-        return jsonify({"status": "admin", "amount": 0})
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT * FROM payments WHERE user_id=?", (session["user_id"],))
-    payment = c.fetchone()
-    conn.close()
-
-    if not payment:
-        # If no record, return default ₦100 unpaid
+    if is_admin(user_id):
         return jsonify({
-            "user_id": session["user_id"],
-            "amount": 100,
-            "status": "unpaid",
+            "user_id": user_id,
+            "amount": 0,
+            "status": "admin",
             "reference": None,
             "paid_at": None
         })
 
-    # Return all columns from payments
-    payment_data = {k: payment[k] for k in payment.keys()}
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))
+    payment = c.fetchone()
 
+    if not payment:
+        # No payment record, return default ₦100 unpaid
+        default_payment = {
+            "user_id": user_id,
+            "amount": 100,
+            "status": "unpaid",
+            "reference": None,
+            "paid_at": None
+        }
+        # Optionally, insert a default payment record
+        c.execute(
+            "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
+            (user_id, 100, "unpaid")
+        )
+        conn.commit()
+        conn.close()
+        return jsonify(default_payment)
+
+    # Respect existing admin mark-paid status
+    payment_data = {key: payment[key] for key in payment.keys()}
+
+    # Verify with Paystack only if there's a reference
+    if payment_data.get("reference"):
+        import os, requests
+        headers = {
+            "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
+        }
+        try:
+            resp = requests.get(
+                f"https://api.paystack.co/transaction/verify/{payment_data['reference']}",
+                headers=headers
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("status") and data["data"]["status"] == "success":
+                # Update status to paid if not already marked
+                if payment_data["status"] != "paid":
+                    c.execute(
+                        "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?",
+                        (user_id,)
+                    )
+                    conn.commit()
+                    payment_data["status"] = "paid"
+                    payment_data["paid_at"] = data["data"].get("paid_at")
+            else:
+                # Payment not successful, keep current status (could be admin-marked)
+                payment_data["status"] = payment_data.get("status", "unpaid")
+        except requests.RequestException:
+            # Network / API error, fallback to local status
+            payment_data["status"] = payment_data.get("status", "unpaid")
+
+    conn.close()
     return jsonify(payment_data)
 
 @app.route("/payment-success")

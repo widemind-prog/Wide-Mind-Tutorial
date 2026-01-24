@@ -38,18 +38,22 @@
                 {% endif %}
 
                 <!-- ACTIONS -->
-                <form method="POST">
+                <form method="POST" class="user-actions">
 
                     <!-- TOGGLE SUSPEND -->
-                    <button formaction="/admin/users/suspend/{{ user.id }}" type="submit">
+                    <button
+                        type="button"
+                        class="btn-suspend"
+                        data-url="/admin/users/suspend/{{ user.id }}">
                         {% if user.is_suspended %}Unsuspend{% else %}Suspend{% endif %}
                     </button>
 
                     <!-- TOGGLE PAYMENT -->
                     {% if user.role != "admin" %}
                         <button
-                            formaction="/admin/users/mark-paid/{{ user.id }}"
-                            type="submit"
+                            type="button"
+                            class="btn-payment"
+                            data-url="/admin/users/mark-paid/{{ user.id }}"
                             style="background:#0a7c2f;">
                             {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
                         </button>
@@ -57,9 +61,9 @@
 
                     <!-- DELETE -->
                     <button
-                        formaction="/admin/users/delete/{{ user.id }}"
-                        type="submit"
-                        onclick="return confirm('This action is permanent. Continue?')"
+                        type="button"
+                        class="btn-delete"
+                        data-url="/admin/users/delete/{{ user.id }}"
                         style="background:#a00000;">
                         Delete Permanently
                     </button>
@@ -77,6 +81,7 @@
     <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
 
 </section>
+
 <!-- Toast for admin actions -->
 <div id="admin-toast" class="toast"></div>
 
