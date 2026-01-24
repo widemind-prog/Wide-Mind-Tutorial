@@ -169,7 +169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         url.searchParams.delete("payment");
         window.history.replaceState({}, document.title, url);
 
-        // Show toast only once after payment
+        // Check payment status from backend (which verifies Paystack)
         setTimeout(async () => {
             await checkPaymentStatus(true); // <-- show toast only this time
         }, 500);

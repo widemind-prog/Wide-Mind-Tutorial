@@ -38,7 +38,7 @@ def paystack_webhook():
             return jsonify({"status": "invalid_payload"}), 200
 
         # Only accept ₦100 payments (10000 kobo)
-        if amount != 1000:
+        if amount != 10000:
             return jsonify({"status": "invalid_amount"}), 200
 
         conn = get_db()
@@ -64,6 +64,16 @@ def paystack_webhook():
                 SELECT id FROM users WHERE email = ?
             )
         """, (amount, ref, email))
+
+        # If the user doesn't have a payment record, create it
+        if c.rowcount == 0:
+            c.execute("""
+                INSERT INTO payments (user_id, amount, status, reference, paid_at)
+                VALUES (
+                    (SELECT id FROM users WHERE email = ?),
+                    ?, 'paid', ?, datetime('now')
+                )
+            """, (email, amount, ref))
 
         conn.commit()
         conn.close()

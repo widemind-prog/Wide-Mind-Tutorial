@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, session, redirect
+from flask import Blueprint, jsonify, session, redirect, request
 import requests
 import os
 from backend.db import get_db
@@ -19,8 +19,9 @@ def init_payment():
     user_id = session["user_id"]
 
     # ₦100 in kobo
-    amount = 10 * 100  # 10000 kobo
+    amount = 100 * 100  # 10000 kobo
 
+    # Get user email from DB
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT email FROM users WHERE id=?", (user_id,))
@@ -65,15 +66,58 @@ def init_payment():
 
 
 # ------------------------------------
-# PAYSTACK CALLBACK (REDIRECT ONLY)
+# PAYSTACK CALLBACK (REDIRECT + VERIFY)
 # ------------------------------------
 @payment_bp.route("/payment/callback", methods=["GET"])
 def payment_callback():
     """
     Paystack redirects here after payment.
-    Webhook handles confirmation.
+    Verify payment via Paystack API and update DB.
     """
-    return redirect("/account?payment=callback")
+    reference = request.args.get("reference")
+    if not reference:
+        return redirect("/account?payment=failed")
+
+    headers = {
+        "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
+    }
+
+    # Verify payment with Paystack
+    try:
+        resp = requests.get(
+            f"https://api.paystack.co/transaction/verify/{reference}",
+            headers=headers
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException:
+        return redirect("/account?payment=failed")
+
+    if data.get("status") and data["data"]["status"] == "success":
+        email = data["data"]["customer"]["email"]
+        amount = data["data"]["amount"]
+
+        # Only accept ₦100 payments (10000 kobo)
+        if amount != 10000:
+            return redirect("/account?payment=invalid_amount")
+
+        # Update database
+        conn = get_db()
+        c = conn.cursor()
+        # Prevent duplicate reference
+        c.execute("SELECT reference FROM payments WHERE reference=?", (reference,))
+        if not c.fetchone():
+            c.execute("""
+                UPDATE payments
+                SET status='paid', reference=?
+                WHERE user_id=(SELECT id FROM users WHERE email=?)
+            """, (reference, email))
+            conn.commit()
+        conn.close()
+
+        return redirect("/account?payment=success")
+    else:
+        return redirect("/account?payment=failed")
 
 
 # ------------------------------------
@@ -89,13 +133,50 @@ def payment_status():
     conn = get_db()
     c = conn.cursor()
     c.execute(
-        "SELECT status FROM payments WHERE user_id=?",
+        "SELECT status, reference, amount FROM payments WHERE user_id=?",
         (user_id,)
     )
     payment = c.fetchone()
-    conn.close()
 
+    # If no payment record, create default unpaid
     if not payment:
-        return jsonify({"status": "unpaid"})
+        c.execute(
+            "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
+            (user_id, 100, "unpaid")
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "unpaid", "amount": 100})
 
-    return jsonify({"status": payment["status"]})
+    # If there is a reference, verify it with Paystack
+    if payment["reference"]:
+        headers = {
+            "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
+        }
+        try:
+            resp = requests.get(
+                f"https://api.paystack.co/transaction/verify/{payment['reference']}",
+                headers=headers
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            if data.get("status") and data["data"]["status"] == "success":
+                # Update DB if not marked paid
+                if payment["status"] != "paid":
+                    c.execute("""
+                        UPDATE payments
+                        SET status='paid'
+                        WHERE user_id=?
+                    """, (user_id,))
+                    conn.commit()
+                payment_status = "paid"
+            else:
+                payment_status = "unpaid"
+        except requests.RequestException:
+            payment_status = payment["status"]
+    else:
+        payment_status = payment["status"]
+
+    conn.close()
+    return jsonify({"status": payment_status, "amount": payment["amount"]})

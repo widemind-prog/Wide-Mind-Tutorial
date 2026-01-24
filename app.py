@@ -311,24 +311,58 @@ def stream_pdf(material_id):
 # =====================
 # PAYMENT STATUS
 # =====================
-@app.route("/api/payment/status")
+@app.route("/api/payment/status", methods=["GET"])
 def payment_status():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
+    # Admin users don't need payment
     if is_admin(session["user_id"]):
-        return jsonify({"status": "admin"})
+        return jsonify({"status": "admin", "amount": 0})
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT amount, status FROM payments WHERE user_id=?", (session["user_id"],))
+    c.execute("SELECT email, amount, status, reference FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
-    conn.close()
 
     if not payment:
+        # If no record, return default ₦100 unpaid
         return jsonify({"amount": 100, "status": "unpaid"})
 
-    return jsonify({"amount": payment["amount"], "status": payment["status"]})
+    email = payment["email"] if "email" in payment.keys() else None
+    ref = payment["reference"] if "reference" in payment.keys() else None
+    amount = payment["amount"]
+
+    # If we have a Paystack reference, verify it with Paystack
+    if ref:
+        headers = {
+            "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
+        }
+        try:
+            resp = requests.get(f"https://api.paystack.co/transaction/verify/{ref}", headers=headers)
+            resp.raise_for_status()
+            resp_json = resp.json()
+
+            if resp_json.get("status") and resp_json["data"]["status"] == "success":
+                # Update DB if not already marked paid
+                if payment["status"] != "paid":
+                    c.execute("""
+                        UPDATE payments
+                        SET status='paid'
+                        WHERE user_id=?
+                    """, (session["user_id"],))
+                    conn.commit()
+                payment_status = "paid"
+            else:
+                payment_status = "unpaid"
+        except requests.RequestException:
+            payment_status = payment["status"]  # fallback to DB status if verification fails
+    else:
+        payment_status = payment["status"]  # no reference yet
+
+    conn.close()
+
+    return jsonify({"amount": amount, "status": payment_status})
     
 @app.route("/payment-success")
 def payment_success():
