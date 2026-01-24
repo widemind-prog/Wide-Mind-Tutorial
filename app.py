@@ -381,6 +381,21 @@ def payment_status():
         except requests.RequestException:
             # Network / API error, fallback to local status
             payment_data["status"] = payment_data.get("status", "unpaid")
+            
+            # Inside /api/payment/status after Paystack verification
+if data.get("status") and data["data"]["status"] == "success":
+    # Update status to paid
+    c.execute(
+        """
+        UPDATE payments 
+        SET status='paid', admin_override_status=NULL, paid_at=datetime('now') 
+        WHERE user_id=?
+        """,
+        (user_id,)
+    )
+    conn.commit()
+    payment_data["status"] = "paid"
+    payment_data["paid_at"] = data["data"].get("paid_at")
 
     conn.close()
     return jsonify(payment_data)
