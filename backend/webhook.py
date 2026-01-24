@@ -29,17 +29,14 @@ def paystack_webhook():
 
     if event.get("event") == "charge.success":
         data = event.get("data", {})
-        email = data.get("customer", {}).get("email")
+        customer_info = data.get("customer", {})
+        email = customer_info.get("email")
         ref = data.get("reference")
         amount = data.get("amount")  # amount in kobo
 
         # Safety checks
         if not email or not ref or amount is None:
             return jsonify({"status": "invalid_payload"}), 200
-
-        # Only accept ₦100 payments (10000 kobo)
-        if amount != 10000:
-            return jsonify({"status": "invalid_amount"}), 200
 
         conn = get_db()
         c = conn.cursor()
@@ -53,7 +50,7 @@ def paystack_webhook():
             conn.close()
             return jsonify({"status": "duplicate"}), 200
 
-        # Mark payment as paid
+        # Update existing payment if user has a record
         c.execute("""
             UPDATE payments
             SET status = 'paid',
@@ -65,7 +62,7 @@ def paystack_webhook():
             )
         """, (amount, ref, email))
 
-        # If the user doesn't have a payment record, create it
+        # If no existing payment record, create a new one
         if c.rowcount == 0:
             c.execute("""
                 INSERT INTO payments (user_id, amount, status, reference, paid_at)

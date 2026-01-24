@@ -7,7 +7,6 @@ auth_bp = Blueprint("auth_bp", __name__)
 # ---------------------
 # GET CURRENT USER
 # ---------------------
-
 @auth_bp.route("/me", methods=["GET"])
 def me():
     if "user_id" not in session:
@@ -16,7 +15,7 @@ def me():
     conn = get_db()
     c = conn.cursor()
     c.execute(
-        "SELECT name, department, level FROM users WHERE id=?",
+        "SELECT name, department, level, email, role FROM users WHERE id=?",
         (session["user_id"],)
     )
     user = c.fetchone()
@@ -27,14 +26,15 @@ def me():
 
     return jsonify({
         "name": user["name"],
+        "email": user["email"],
         "department": user["department"],
-        "level": user["level"]
+        "level": user["level"],
+        "role": user["role"]
     })
 
 # ---------------------
 # LOGIN
 # ---------------------
-
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json() or {}

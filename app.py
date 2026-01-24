@@ -33,13 +33,11 @@ if os.environ.get("ENV") == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
     app.debug = False
 
-    
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=3600  # 1 hour
 )
-
 
 # =====================
 # REGISTER BLUEPRINTS
@@ -276,8 +274,6 @@ def stream_audio(material_id):
 
     return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
 
-
-
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     if "user_id" not in session:
@@ -306,8 +302,6 @@ def stream_pdf(material_id):
 
     return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
 
-
-
 # =====================
 # PAYMENT STATUS
 # =====================
@@ -322,52 +316,29 @@ def payment_status():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT email, amount, status, reference FROM payments WHERE user_id=?", (session["user_id"],))
+    c.execute("SELECT * FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
+    conn.close()
 
     if not payment:
         # If no record, return default ₦100 unpaid
-        return jsonify({"amount": 100, "status": "unpaid"})
+        return jsonify({
+            "user_id": session["user_id"],
+            "amount": 100,
+            "status": "unpaid",
+            "reference": None,
+            "paid_at": None
+        })
 
-    email = payment["email"] if "email" in payment.keys() else None
-    ref = payment["reference"] if "reference" in payment.keys() else None
-    amount = payment["amount"]
+    # Return all columns from payments
+    payment_data = {k: payment[k] for k in payment.keys()}
 
-    # If we have a Paystack reference, verify it with Paystack
-    if ref:
-        headers = {
-            "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
-        }
-        try:
-            resp = requests.get(f"https://api.paystack.co/transaction/verify/{ref}", headers=headers)
-            resp.raise_for_status()
-            resp_json = resp.json()
+    return jsonify(payment_data)
 
-            if resp_json.get("status") and resp_json["data"]["status"] == "success":
-                # Update DB if not already marked paid
-                if payment["status"] != "paid":
-                    c.execute("""
-                        UPDATE payments
-                        SET status='paid'
-                        WHERE user_id=?
-                    """, (session["user_id"],))
-                    conn.commit()
-                payment_status = "paid"
-            else:
-                payment_status = "unpaid"
-        except requests.RequestException:
-            payment_status = payment["status"]  # fallback to DB status if verification fails
-    else:
-        payment_status = payment["status"]  # no reference yet
-
-    conn.close()
-
-    return jsonify({"amount": amount, "status": payment_status})
-    
 @app.route("/payment-success")
 def payment_success():
     return render_template("payment_success.html")
-    
+
 @app.route("/api/contact", methods=["POST"])
 def submit_contact():
     user_id = session.get("user_id")
@@ -413,4 +384,3 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5002))
     app.run(host="0.0.0.0", port=port, debug=True)
-

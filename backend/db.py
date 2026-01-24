@@ -23,7 +23,9 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
 
-    # Users table
+    # -------------------------
+    # USERS TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +39,9 @@ def init_db():
         )
     """)
 
-    # Courses table
+    # -------------------------
+    # COURSES TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +51,9 @@ def init_db():
         )
     """)
 
-    # Materials table
+    # -------------------------
+    # MATERIALS TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,18 +65,24 @@ def init_db():
         )
     """)
 
-    # Payments table
+    # -------------------------
+    # PAYMENTS TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER UNIQUE NOT NULL,
+            user_id INTEGER NOT NULL,
             amount INTEGER NOT NULL,
             status TEXT DEFAULT 'unpaid',
-            paid_at TEXT,
+            reference TEXT,
+            paid_at DATETIME,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
 
+    # -------------------------
+    # CONTACT MESSAGES TABLE
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS contact_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,10 +136,13 @@ def init_db():
         )
         demo_user_id = c.lastrowid
 
-        # ₦100 in kobo (Paystack-compatible)
+        # ₦100 in kobo (Paystack-compatible) with reference and timestamp
         c.execute(
-            "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (demo_user_id, 1000, "paid")
+            """
+            INSERT INTO payments (user_id, amount, status, reference, paid_at)
+            VALUES (?, ?, 'paid', ?, datetime('now'))
+            """,
+            (demo_user_id, 1000, "DEMO-REF-001")
         )
 
     # -------------------------
