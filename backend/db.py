@@ -119,7 +119,7 @@ def init_db():
         demo_user_id = c.lastrowid
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (demo_user_id, 20000, "paid")
+            (demo_user_id, 100, "paid")
         )
 
     # -------------------------

@@ -15,7 +15,7 @@ def init_payment():
         return jsonify({"status": False, "message": "Not authenticated"}), 401
 
     user_id = session["user_id"]
-    amount = 20000 * 100  # Paystack expects amount in kobo (₦20,000)
+    amount = 100 * 100  # Paystack expects amount in kobo (₦20,000)
 
     # Get user email from DB
     conn = get_db()

@@ -153,7 +153,7 @@ def register():
 
     c.execute(
         "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-        (user_id, 20000, "unpaid")
+        (user_id, 100, "unpaid")
     )
 
     conn.commit()
@@ -326,7 +326,7 @@ def payment_status():
     conn.close()
 
     if not payment:
-        return jsonify({"amount": 20000, "status": "unpaid"})
+        return jsonify({"amount": 100, "status": "unpaid"})
 
     return jsonify({"amount": payment["amount"], "status": payment["status"]})
     
