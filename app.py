@@ -302,13 +302,6 @@ def stream_pdf(material_id):
 # =====================
 # PAYMENT STATUS
 # =====================
-from flask import Blueprint, jsonify, session, request
-import requests
-import os
-from backend.db import get_db, is_admin
-
-payment_bp = Blueprint("payment_bp", __name__)
-
 @payment_bp.route("/api/payment/status", methods=["GET"])
 def payment_status():
     if "user_id" not in session:
@@ -316,7 +309,7 @@ def payment_status():
 
     user_id = session["user_id"]
 
-    # Admin users don't need payment
+    # Admin users are always paid
     if is_admin(user_id):
         return jsonify({
             "user_id": user_id,
@@ -324,15 +317,16 @@ def payment_status():
             "status": "admin",
             "reference": None,
             "paid_at": None
-        })
+        }), 200
 
     conn = get_db()
     c = conn.cursor()
+
     c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))
     payment = c.fetchone()
 
+    # Create default unpaid record if missing
     if not payment:
-        # No payment record → insert default unpaid
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
             (user_id, 100, "unpaid")
@@ -341,38 +335,47 @@ def payment_status():
         c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))
         payment = c.fetchone()
 
-    payment_data = {key: payment[key] for key in payment.keys()}
+    # Convert sqlite Row → dict (VERY IMPORTANT)
+    payment_data = dict(payment)
 
-    # 1️⃣ Admin override takes absolute precedence if exists
-    if payment.get("admin_override_status") in ["paid", "unpaid"]:
-        payment_data["status"] = payment["admin_override_status"]
+    # 1️⃣ ADMIN OVERRIDE IS ABSOLUTE
+    if payment_data["admin_override_status"] in ("paid", "unpaid"):
+        payment_data["status"] = payment_data["admin_override_status"]
         conn.close()
-        return jsonify(payment_data)
+        return jsonify(payment_data), 200
 
-    # 2️⃣ Paystack can only mark paid if current status is unpaid
-    if payment_data.get("reference") and payment_data["status"] == "unpaid":
-        headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
+    # 2️⃣ PAYSTACK CAN ONLY MARK PAID IF CURRENT STATUS IS UNPAID
+    if payment_data["reference"] and payment_data["status"] == "unpaid":
+        headers = {
+            "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
+        }
         try:
             resp = requests.get(
                 f"https://api.paystack.co/transaction/verify/{payment_data['reference']}",
-                headers=headers
+                headers=headers,
+                timeout=10
             )
             resp.raise_for_status()
             data = resp.json()
+
             if data.get("status") and data["data"]["status"] == "success":
-                # Only mark paid if currently unpaid
-                c.execute(
-                    "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=? AND status='unpaid'",
-                    (user_id,)
-                )
+                c.execute("""
+                    UPDATE payments
+                    SET status='paid',
+                        paid_at=datetime('now')
+                    WHERE user_id=? AND status='unpaid'
+                """, (user_id,))
                 conn.commit()
+
                 payment_data["status"] = "paid"
                 payment_data["paid_at"] = data["data"].get("paid_at")
-        except requests.RequestException:
-            payment_data["status"] = payment_data.get("status", "unpaid")
+
+        except Exception as e:
+            # Fail silently → fallback to DB status
+            pass
 
     conn.close()
-    return jsonify(payment_data)
+    return jsonify(payment_data), 200
     
 # =====================
 # PAYMENT SUCCESS
