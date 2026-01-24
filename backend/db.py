@@ -74,6 +74,7 @@ def init_db():
             user_id INTEGER NOT NULL,
             amount INTEGER NOT NULL,
             status TEXT DEFAULT 'unpaid',
+            admin_override_status TEXT DEFAULT NULL,
             reference TEXT,
             paid_at DATETIME,
             FOREIGN KEY(user_id) REFERENCES users(id)

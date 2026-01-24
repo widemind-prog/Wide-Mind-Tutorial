@@ -336,7 +336,7 @@ def payment_status():
             "reference": None,
             "paid_at": None
         }
-        # Optionally, insert a default payment record
+        # Insert a default payment record
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
             (user_id, 100, "unpaid")
@@ -345,11 +345,15 @@ def payment_status():
         conn.close()
         return jsonify(default_payment)
 
-    # Respect existing admin mark-paid status
+    # Prepare payment data
     payment_data = {key: payment[key] for key in payment.keys()}
 
+    # If admin_override_status exists, it takes precedence
+    if payment.get("admin_override_status"):
+        payment_data["status"] = payment["admin_override_status"]
+
     # Verify with Paystack only if there's a reference
-    if payment_data.get("reference"):
+    elif payment_data.get("reference"):
         import os, requests
         headers = {
             "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
@@ -372,7 +376,7 @@ def payment_status():
                     payment_data["status"] = "paid"
                     payment_data["paid_at"] = data["data"].get("paid_at")
             else:
-                # Payment not successful, keep current status (could be admin-marked)
+                # Payment not successful, fallback to local status
                 payment_data["status"] = payment_data.get("status", "unpaid")
         except requests.RequestException:
             # Network / API error, fallback to local status

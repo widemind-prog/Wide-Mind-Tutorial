@@ -127,7 +127,7 @@ def users():
             u.level,
             u.role,
             u.is_suspended,
-            p.status AS payment_status
+            COALESCE(p.admin_override_status, p.status) AS payment_status
         FROM users u
         LEFT JOIN payments p ON u.id = p.user_id
         ORDER BY u.id DESC
@@ -178,19 +178,19 @@ def toggle_payment(user_id):
         return redirect(url_for("admin_bp.users"))
 
     # Check if payment exists, create if not
-    c.execute("SELECT status FROM payments WHERE user_id=?", (user_id,))
+    c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=?", (user_id,))
     payment = c.fetchone()
     if not payment:
-        # Admin can mark paid manually even if Paystack wasn't used
-        c.execute("INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)", (user_id, 100, "paid"))
+        # Create payment record if it doesn't exist
+        c.execute("INSERT INTO payments (user_id, amount, status, admin_override_status) VALUES (?, ?, ?, ?)", 
+                  (user_id, 100, "unpaid", "paid"))
         new_status = "paid"
     else:
-        # Toggle paid/unpaid even if already paid via Paystack
-        new_status = "unpaid" if payment["status"] == "paid" else "paid"
-        c.execute(
-            "UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?",
-            (new_status, user_id)
-        )
+        # Toggle admin_override_status manually
+        current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
+        new_status = "unpaid" if current == "paid" else "paid"
+        c.execute("UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE user_id=?", 
+                  (new_status, user_id))
 
     conn.commit()
     conn.close()
@@ -248,7 +248,8 @@ def edit_course(course_id):
         if c.fetchone():
             flash(f"Course code '{course_code}' already exists.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
-        c.execute("UPDATE courses SET course_code=?, course_title=?, description=? WHERE id=?", (course_code, course_title, description, course_id))
+        c.execute("UPDATE courses SET course_code=?, course_title=?, description=? WHERE id=?", 
+                  (course_code, course_title, description, course_id))
         conn.commit()
         flash("Course updated successfully!", "success")
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
@@ -290,7 +291,8 @@ def add_material(file_type, course_id):
         return f"Error: Material '{filename}' already exists for this course.", 400
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
-    c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", (course_id, filename, file_type, title))
+    c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", 
+              (course_id, filename, file_type, title))
     conn.commit()
     conn.close()
     return redirect(f"/admin/courses/edit/{course_id}")
