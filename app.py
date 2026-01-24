@@ -1,6 +1,6 @@
 from flask import (
     Flask, render_template, redirect, session,
-    request, jsonify, send_from_directory, abort
+    request, jsonify, send_from_directory, abort, g
 )
 from flask_cors import CORS
 import os
@@ -90,13 +90,11 @@ def login_page():
         return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("login.html")
 
-
 @app.route("/register-page")
 def register_page():
     if "user_id" in session:
         return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("register.html")
-
 
 @app.route("/account")
 def account_page():
@@ -105,7 +103,6 @@ def account_page():
     if is_admin(session["user_id"]):
         return redirect("/admin")
     return render_template("account.html")
-
 
 @app.before_request
 def block_suspended_users():
@@ -354,7 +351,6 @@ def payment_status():
 
     # Verify with Paystack only if there's a reference
     elif payment_data.get("reference"):
-        import os, requests
         headers = {
             "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
         }
@@ -369,7 +365,7 @@ def payment_status():
                 # Update status to paid if not already marked
                 if payment_data["status"] != "paid":
                     c.execute(
-                        "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?",
+                        "UPDATE payments SET status='paid', admin_override_status=NULL, paid_at=datetime('now') WHERE user_id=?",
                         (user_id,)
                     )
                     conn.commit()
@@ -381,38 +377,27 @@ def payment_status():
         except requests.RequestException:
             # Network / API error, fallback to local status
             payment_data["status"] = payment_data.get("status", "unpaid")
-            
-            # Inside /api/payment/status after Paystack verification
-if data.get("status") and data["data"]["status"] == "success":
-    # Update status to paid
-    c.execute(
-        """
-        UPDATE payments 
-        SET status='paid', admin_override_status=NULL, paid_at=datetime('now') 
-        WHERE user_id=?
-        """,
-        (user_id,)
-    )
-    conn.commit()
-    payment_data["status"] = "paid"
-    payment_data["paid_at"] = data["data"].get("paid_at")
 
     conn.close()
     return jsonify(payment_data)
 
+# =====================
+# PAYMENT SUCCESS
+# =====================
 @app.route("/payment-success")
 def payment_success():
     return render_template("payment_success.html")
 
+# =====================
+# CONTACT FORM
+# =====================
 @app.route("/api/contact", methods=["POST"])
 def submit_contact():
     user_id = session.get("user_id")
     if not user_id:
-        # User logged out → redirect
         return jsonify({"redirect": "/login-page"}), 200
 
     if is_admin(user_id):
-        # Admin logged in → send a toast error
         return jsonify({"error": "Admins cannot send contact messages"}), 200
 
     data = request.get_json() or {}
@@ -440,9 +425,9 @@ def submit_contact():
 # =====================
 @app.route("/logout")
 def logout():
-    session.clear()  # clears all session data
-    return redirect("/login-page")  # redirect to login page
-    
+    session.clear()
+    return redirect("/login-page")
+
 # =====================
 # RUN
 # =====================
