@@ -17,14 +17,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* -------------------- TOAST FUNCTION -------------------- */
     function showToast(message) {
         if (!toastEl) return;
-
         toastEl.textContent = message;
-
-        // Reset animation
         toastEl.classList.remove("show");
-        void toastEl.offsetWidth; // force reflow
+        void toastEl.offsetWidth;
         toastEl.classList.add("show");
-
         setTimeout(() => {
             toastEl.classList.remove("show");
         }, 3000);
@@ -33,7 +29,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* -------------------- LOAD COURSES -------------------- */
     async function loadCourses() {
         if (!coursesList) return;
-
         try {
             const res = await fetch("/api/courses/my", { credentials: "same-origin" });
             if (!res.ok) throw new Error("Failed to fetch courses");
@@ -87,7 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const payment = await res.json();
 
-            // Admin users are always considered paid
+            // Admin or paid users
             if (payment.status === "paid" || payment.status === "admin") {
                 if (!isPaid) {
                     isPaid = true;

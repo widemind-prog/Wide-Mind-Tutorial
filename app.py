@@ -302,7 +302,14 @@ def stream_pdf(material_id):
 # =====================
 # PAYMENT STATUS
 # =====================
-@app.route("/api/payment/status", methods=["GET"])
+from flask import Blueprint, jsonify, session, request
+import requests
+import os
+from backend.db import get_db, is_admin
+
+payment_bp = Blueprint("payment_bp", __name__)
+
+@payment_bp.route("/api/payment/status", methods=["GET"])
 def payment_status():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
@@ -366,6 +373,7 @@ def payment_status():
 
     conn.close()
     return jsonify(payment_data)
+    
 # =====================
 # PAYMENT SUCCESS
 # =====================
