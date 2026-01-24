@@ -87,16 +87,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const payment = await res.json();
 
-            if (payment.status === "paid") {
+            // Admin users are always considered paid
+            if (payment.status === "paid" || payment.status === "admin") {
                 if (!isPaid) {
                     isPaid = true;
-                    paymentStatusEl.textContent = "PAID ✅";
+                    paymentStatusEl.textContent = payment.status === "admin" ? "ADMIN ✅" : "PAID ✅";
                     paymentStatusEl.classList.add("paid-animate");
                     paymentStatusEl.style.color = "green";
                     payBtn.style.display = "none";
                     await loadCourses();
 
-                    // Only show toast if explicitly requested
                     if (showPaymentToast) showToast("Payment verified ✅");
                 }
             } else {
@@ -164,17 +164,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* -------------------- PAYSTACK REDIRECT HANDLING -------------------- */
     const paymentRedirect = getQueryParam("payment");
     if (paymentRedirect === "callback") {
-        // Remove query param to prevent loop
         const url = new URL(window.location);
         url.searchParams.delete("payment");
         window.history.replaceState({}, document.title, url);
 
-        // Check payment status from backend (which verifies Paystack)
         setTimeout(async () => {
-            await checkPaymentStatus(true); // <-- show toast only this time
+            await checkPaymentStatus(true); // show toast
         }, 500);
     } else {
-        // Normal reloads won't show toast
         await checkPaymentStatus(false);
     }
 
