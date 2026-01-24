@@ -1,25 +1,26 @@
-from flask import Blueprint, jsonify, session
+from flask import Blueprint, jsonify, session, redirect
 import requests
 import os
 from backend.db import get_db
 
 payment_bp = Blueprint("payment_bp", __name__)
 
+# ------------------------------------
+# INIT PAYSTACK PAYMENT
+# ------------------------------------
 @payment_bp.route("/api/payment/init", methods=["POST"])
 def init_payment():
     """
     Initialize Paystack payment for the logged-in user.
-    Full-page redirect is used instead of modal.
     """
     if "user_id" not in session:
         return jsonify({"status": False, "message": "Not authenticated"}), 401
 
     user_id = session["user_id"]
 
-    # ₦100 in kobo (Paystack expects amount in kobo)
-    amount = 100 * 100  # = 10000 kobo (₦100)
+    # ₦100 in kobo
+    amount = 100 * 100  # 10000 kobo
 
-    # Get user email from DB
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT email FROM users WHERE id=?", (user_id,))
@@ -37,8 +38,7 @@ def init_payment():
     payload = {
         "email": user["email"],
         "amount": amount,
-        # Redirect back to account page after payment
-        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/account?payment=callback"
+        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment/callback"
     }
 
     try:
@@ -57,8 +57,45 @@ def init_payment():
 
     if resp_json.get("status"):
         return jsonify({"status": True, "data": resp_json["data"]})
-    else:
-        return jsonify({
-            "status": False,
-            "message": resp_json.get("message", "Failed to initialize payment")
-        })
+
+    return jsonify({
+        "status": False,
+        "message": resp_json.get("message", "Payment initialization failed")
+    })
+
+
+# ------------------------------------
+# PAYSTACK CALLBACK (REDIRECT ONLY)
+# ------------------------------------
+@payment_bp.route("/payment/callback", methods=["GET"])
+def payment_callback():
+    """
+    Paystack redirects here after payment.
+    Webhook handles confirmation.
+    """
+    return redirect("/account?payment=callback")
+
+
+# ------------------------------------
+# PAYMENT STATUS (USED BY ACCOUNT PAGE)
+# ------------------------------------
+@payment_bp.route("/api/payment/status", methods=["GET"])
+def payment_status():
+    if "user_id" not in session:
+        return jsonify({"status": "unauthorized"}), 401
+
+    user_id = session["user_id"]
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT status FROM payments WHERE user_id=?",
+        (user_id,)
+    )
+    payment = c.fetchone()
+    conn.close()
+
+    if not payment:
+        return jsonify({"status": "unpaid"})
+
+    return jsonify({"status": payment["status"]})
