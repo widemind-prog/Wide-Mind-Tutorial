@@ -325,7 +325,7 @@ def payment_status():
     payment = c.fetchone()
 
     if not payment:
-        # No payment record, return default ₦100 unpaid
+        # No payment record, return default ₦100 unpaid and insert record
         default_payment = {
             "user_id": user_id,
             "amount": 100,
@@ -333,7 +333,6 @@ def payment_status():
             "reference": None,
             "paid_at": None
         }
-        # Insert a default payment record
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
             (user_id, 100, "unpaid")
@@ -345,15 +344,15 @@ def payment_status():
     # Prepare payment data
     payment_data = {key: payment[key] for key in payment.keys()}
 
-    # If admin_override_status exists, it takes precedence
+    # 1️⃣ Admin override takes absolute precedence
     if payment.get("admin_override_status"):
         payment_data["status"] = payment["admin_override_status"]
+        conn.close()
+        return jsonify(payment_data)
 
-    # Verify with Paystack only if there's a reference
-    elif payment_data.get("reference"):
-        headers = {
-            "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"
-        }
+    # 2️⃣ Otherwise, verify with Paystack if reference exists
+    if payment_data.get("reference"):
+        headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
         try:
             resp = requests.get(
                 f"https://api.paystack.co/transaction/verify/{payment_data['reference']}",
@@ -362,20 +361,17 @@ def payment_status():
             resp.raise_for_status()
             data = resp.json()
             if data.get("status") and data["data"]["status"] == "success":
-                # Update status to paid if not already marked
+                # Mark as paid if not already
                 if payment_data["status"] != "paid":
                     c.execute(
-                        "UPDATE payments SET status='paid', admin_override_status=NULL, paid_at=datetime('now') WHERE user_id=?",
+                        "UPDATE payments SET status='paid', paid_at=datetime('now') WHERE user_id=?",
                         (user_id,)
                     )
                     conn.commit()
                     payment_data["status"] = "paid"
                     payment_data["paid_at"] = data["data"].get("paid_at")
-            else:
-                # Payment not successful, fallback to local status
-                payment_data["status"] = payment_data.get("status", "unpaid")
         except requests.RequestException:
-            # Network / API error, fallback to local status
+            # Network/API issue → fallback to local status
             payment_data["status"] = payment_data.get("status", "unpaid")
 
     conn.close()
