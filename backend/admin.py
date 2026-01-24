@@ -71,7 +71,7 @@ def mark_message_read(msg_id):
     conn.commit()
     conn.close()
     flash("Message marked as read", "success")
-    return redirect("/admin/messages")
+    return redirect(url_for("admin_bp.messages"))
 
 @admin_bp.route("/messages/unread/<int:msg_id>", methods=["POST"])
 @admin_required
@@ -82,7 +82,7 @@ def mark_message_unread(msg_id):
     conn.commit()
     conn.close()
     flash("Message marked as unread", "success")
-    return redirect("/admin/messages")
+    return redirect(url_for("admin_bp.messages"))
 
 @admin_bp.route("/messages/delete/<int:msg_id>", methods=["POST"])
 @admin_required
@@ -93,7 +93,7 @@ def delete_message(msg_id):
     conn.commit()
     conn.close()
     flash("Message deleted", "success")
-    return redirect("/admin/messages")
+    return redirect(url_for("admin_bp.messages"))
 
 @admin_bp.route("/messages/delete-bulk", methods=["POST"])
 @admin_required
@@ -101,7 +101,7 @@ def bulk_delete_messages():
     ids = request.form.getlist("message_ids")
     if not ids:
         flash("No messages selected", "error")
-        return redirect("/admin/messages")
+        return redirect(url_for("admin_bp.messages"))
     conn = get_db()
     c = conn.cursor()
     placeholders = ",".join("?" for _ in ids)
@@ -109,7 +109,7 @@ def bulk_delete_messages():
     conn.commit()
     conn.close()
     flash(f"{len(ids)} message(s) deleted", "success")
-    return redirect("/admin/messages")
+    return redirect(url_for("admin_bp.messages"))
 
 # ---------------------
 # USERS MANAGEMENT
@@ -151,7 +151,7 @@ def toggle_suspend_user(user_id):
     user = c.fetchone()
     conn.close()
     flash("User has been suspended" if user["is_suspended"] else "User has been unsuspended", "success")
-    return redirect(url_for("admin.users"))
+    return redirect(url_for("admin_bp.users"))
 
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
 @admin_required
@@ -162,7 +162,7 @@ def delete_user(user_id):
     conn.commit()
     conn.close()
     flash("User deleted", "success")
-    return redirect(url_for("admin.users"))
+    return redirect(url_for("admin_bp.users"))
 
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
 @admin_required
@@ -175,15 +175,17 @@ def toggle_payment(user_id):
     if not user or user["role"] == "admin":
         conn.close()
         flash("Cannot modify admin payment", "error")
-        return redirect(url_for("admin.users"))
+        return redirect(url_for("admin_bp.users"))
 
     # Check if payment exists, create if not
     c.execute("SELECT status FROM payments WHERE user_id=?", (user_id,))
     payment = c.fetchone()
     if not payment:
+        # Admin can mark paid manually even if Paystack wasn't used
         c.execute("INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)", (user_id, 100, "paid"))
         new_status = "paid"
     else:
+        # Toggle paid/unpaid even if already paid via Paystack
         new_status = "unpaid" if payment["status"] == "paid" else "paid"
         c.execute(
             "UPDATE payments SET status=?, paid_at=datetime('now') WHERE user_id=?",
@@ -193,7 +195,7 @@ def toggle_payment(user_id):
     conn.commit()
     conn.close()
     flash(f"Payment marked as {new_status}", "success")
-    return redirect(url_for("admin.users"))
+    return redirect(url_for("admin_bp.users"))
 
 # ---------------------
 # COURSES MANAGEMENT
@@ -216,19 +218,19 @@ def add_course():
     description = request.form.get("description", "").strip()
     if not course_code or not course_title:
         flash("Course code and title are required.", "error")
-        return redirect("/admin/courses")
+        return redirect(url_for("admin_bp.courses"))
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
     if c.fetchone():
         conn.close()
         flash(f"Course code '{course_code}' already exists.", "error")
-        return redirect("/admin/courses")
+        return redirect(url_for("admin_bp.courses"))
     c.execute("INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)", (course_code, course_title, description))
     conn.commit()
     conn.close()
     flash("Course added successfully!", "success")
-    return redirect("/admin/courses")
+    return redirect(url_for("admin_bp.courses"))
 
 @admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @admin_required
@@ -265,7 +267,7 @@ def delete_course(course_id):
     conn.commit()
     conn.close()
     flash("Course deleted", "success")
-    return redirect(url_for("admin.courses"))
+    return redirect(url_for("admin_bp.courses"))
 
 # ---------------------
 # MATERIALS MANAGEMENT
