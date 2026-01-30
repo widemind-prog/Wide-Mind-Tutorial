@@ -1,15 +1,10 @@
-from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, url_for
+from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, url_for, current_app
 from backend.db import get_db, is_admin
 from functools import wraps
 import os
 from werkzeug.utils import secure_filename
 
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
-
-UPLOAD_FOLDER = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "../files"
-)
 
 # ---------------------
 # ADMIN GUARD
@@ -172,8 +167,6 @@ def delete_user(user_id):
 def toggle_payment(user_id):
     conn = get_db()
     c = conn.cursor()
-
-    # Check user exists and is not admin
     c.execute("SELECT role FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
     if not user or user["role"] == "admin":
@@ -181,7 +174,6 @@ def toggle_payment(user_id):
         flash("Cannot modify admin payment", "error")
         return redirect(url_for("admin_bp.users"))
 
-    # Fetch latest payment row for the user
     c.execute("""
         SELECT id, status, admin_override_status
         FROM payments
@@ -192,17 +184,14 @@ def toggle_payment(user_id):
     payment = c.fetchone()
 
     if not payment:
-        # No payment record exists → create one with admin_override_status='paid'
         c.execute("""
             INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at)
             VALUES (?, ?, 'unpaid', 'paid', datetime('now'))
         """, (user_id, 10000))
         new_status = "paid"
     else:
-        # Toggle admin_override_status
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
         new_status = "unpaid" if current == "paid" else "paid"
-
         c.execute("""
             UPDATE payments
             SET admin_override_status=?, paid_at=datetime('now')
@@ -271,7 +260,7 @@ def edit_course(course_id):
         flash("Course updated successfully!", "success")
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
-    c.execute("SELECT id, filename, file_type FROM materials WHERE course_id=?", (course_id,))
+    c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course_id,))
     materials = c.fetchall()
     conn.close()
     return render_template("admin/edit_course.html", course=course, materials=materials)
@@ -306,8 +295,8 @@ def add_material(file_type, course_id):
     if c.fetchone():
         conn.close()
         return f"Error: Material '{filename}' already exists for this course.", 400
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    file.save(os.path.join(UPLOAD_FOLDER, filename))
+    os.makedirs(current_app.config["UPLOAD_FOLDER"], exist_ok=True)
+    file.save(os.path.join(current_app.config["UPLOAD_FOLDER"], filename))
     c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", 
               (course_id, filename, file_type, title))
     conn.commit()
@@ -324,7 +313,7 @@ def delete_material(material_id):
     if not material:
         conn.close()
         abort(404)
-    filepath = os.path.join(UPLOAD_FOLDER, material["filename"])
+    filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], material["filename"])
     if os.path.exists(filepath):
         os.remove(filepath)
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))

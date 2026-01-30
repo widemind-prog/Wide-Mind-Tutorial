@@ -1,6 +1,6 @@
 from flask import (
     Flask, render_template, redirect, session,
-    request, jsonify, send_from_directory, abort, g
+    request, jsonify, send_from_directory, abort, g, current_app
 )
 from flask_cors import CORS
 import os
@@ -24,10 +24,11 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
-app.config["UPLOAD_FOLDER"] = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "files"
-)
+
+# Persistent upload folder for files (safe on Render)
+UPLOAD_BASE = os.environ.get("UPLOAD_PATH", "/var/data/uploads")
+os.makedirs(UPLOAD_BASE, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_BASE
 
 if os.environ.get("ENV") == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
@@ -278,7 +279,7 @@ def stream_audio(material_id):
     if not material:
         abort(404)
 
-    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], material["filename"])
 
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
@@ -307,7 +308,7 @@ def stream_pdf(material_id):
     if not material:
         abort(404)
 
-    return send_from_directory(app.config["UPLOAD_FOLDER"], material["filename"])
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], material["filename"])
 
 # =====================
 # PAYMENT SUCCESS

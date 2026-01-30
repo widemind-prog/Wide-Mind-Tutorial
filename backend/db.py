@@ -3,17 +3,19 @@ import os
 from werkzeug.security import generate_password_hash
 
 # -------------------------
-# DATABASE PATH
+# DATABASE PATH (PERSISTENT)
 # -------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "tutor.db")
+DB_PATH = os.environ.get(
+    "DATABASE_PATH",
+    "/var/data/tutor.db"   # Render persistent disk
+)
 
 # -------------------------
 # GET DATABASE CONNECTION
 # -------------------------
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # rows act like dicts
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
     return conn
 
 # -------------------------
