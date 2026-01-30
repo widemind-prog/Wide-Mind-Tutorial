@@ -143,7 +143,7 @@ def init_db():
             INSERT INTO payments (user_id, amount, status, reference, paid_at)
             VALUES (?, ?, 'paid', ?, datetime('now'))
             """,
-            (demo_user_id, 1000, "DEMO-REF-001")
+            (demo_user_id, 10000, "DEMO-REF-001")
         )
 
     # -------------------------

@@ -166,7 +166,7 @@ def payment_status():
     if not payment:
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (user_id, 100, "unpaid")
+            (user_id, 10000, "unpaid")
         )
         conn.commit()
         c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))

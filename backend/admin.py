@@ -164,15 +164,16 @@ def delete_user(user_id):
     flash("User deleted", "success")
     return redirect(url_for("admin_bp.users"))
 
+# ---------------------
+# TOGGLE PAYMENT (FIXED)
+# ---------------------
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
 @admin_required
 def toggle_payment(user_id):
     conn = get_db()
     c = conn.cursor()
 
-    # ---------------------
-    # Check if user exists and is not admin
-    # ---------------------
+    # Check user exists and is not admin
     c.execute("SELECT role FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
     if not user or user["role"] == "admin":
@@ -180,31 +181,34 @@ def toggle_payment(user_id):
         flash("Cannot modify admin payment", "error")
         return redirect(url_for("admin_bp.users"))
 
-    # ---------------------
-    # Get current payment record
-    # ---------------------
-    c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=?", (user_id,))
+    # Fetch latest payment row
+    c.execute("""
+        SELECT id, status, admin_override_status
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (user_id,))
     payment = c.fetchone()
 
     if not payment:
-        # No payment record exists → create one with admin override = paid
+        # No payment record exists → create one
         c.execute(
-            "INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at) VALUES (?, ?, ?, ?, datetime('now'))",
-            (user_id, 100, "unpaid", "paid")
+            "INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at) VALUES (?, ?, 'unpaid', 'paid', datetime('now'))",
+            (user_id, 10000)
         )
         new_status = "paid"
     else:
-        # Admin override toggles the status
+        # Toggle admin_override_status
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
         new_status = "unpaid" if current == "paid" else "paid"
         c.execute(
-            "UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE user_id=?",
-            (new_status, user_id)
+            "UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE id=?",
+            (new_status, payment["id"])
         )
 
     conn.commit()
     conn.close()
-
     flash(f"Payment marked as {new_status}", "success")
     return redirect(url_for("admin_bp.users"))
 
