@@ -188,11 +188,14 @@ def course_page(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    # fetch latest payment
+    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
-    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
+
+    # allow access if paid or admin override is paid
+    if not payment or (payment.get("status") != "paid" and payment.get("admin_override_status") != "paid"):
         conn.close()
-        return "<h3>Payment required to access courses</h3>", 403
+        return "<h3>Payment required to access this course</h3>", 403
 
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
@@ -221,9 +224,11 @@ def pdf_viewer(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    # fetch latest payment
+    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
-    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
+
+    if not payment or (payment.get("status") != "paid" and payment.get("admin_override_status") != "paid"):
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
@@ -252,10 +257,10 @@ def stream_audio(material_id):
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
-    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
+
+    if not payment or (payment.get("status") != "paid" and payment.get("admin_override_status") != "paid"):
         conn.close()
         abort(403)
 
@@ -280,10 +285,10 @@ def stream_pdf(material_id):
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
+    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
-    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
+
+    if not payment or (payment.get("status") != "paid" and payment.get("admin_override_status") != "paid"):
         conn.close()
         abort(403)
 

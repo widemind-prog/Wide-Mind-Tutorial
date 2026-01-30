@@ -118,11 +118,11 @@ def payment_callback():
             VALUES (?, ?, 'paid', ?, datetime('now'))
         """, (user_id, amount, reference))
 
-    elif payment["admin_override_status"] == "unpaid":
+    elif payment.get("admin_override_status") == "unpaid":
         conn.close()
         return redirect("/account?payment=blocked")
 
-    elif payment["admin_override_status"] == "paid":
+    elif payment.get("admin_override_status") == "paid":
         conn.close()
         return redirect("/account?payment=success")
 
@@ -172,32 +172,25 @@ def payment_status():
     """, (user_id,))
     payment = c.fetchone()
 
-    # Create unpaid record if missing
-    if not payment:
-        c.execute(
-            "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (user_id, 10000, "unpaid")
-        )
-        conn.commit()
-        c.execute("""
-            SELECT *
-            FROM payments
-            WHERE user_id=?
-            ORDER BY id DESC
-            LIMIT 1
-        """, (user_id,))
-        payment = c.fetchone()
-
-    payment_data = dict(payment)
+    # Ensure payment_data always has keys to prevent IndexError
+    payment_data = dict(payment) if payment else {
+        "id": None,
+        "user_id": user_id,
+        "amount": 10000,
+        "status": "unpaid",
+        "reference": None,
+        "paid_at": None,
+        "admin_override_status": None
+    }
 
     # ADMIN OVERRIDE (ABSOLUTE)
-    if payment_data["admin_override_status"] in ("paid", "unpaid"):
+    if payment_data.get("admin_override_status") in ("paid", "unpaid"):
         payment_data["status"] = payment_data["admin_override_status"]
         conn.close()
         return jsonify(payment_data), 200
 
     # Verify Paystack ONLY if unpaid
-    if payment_data["reference"] and payment_data["status"] == "unpaid":
+    if payment_data.get("reference") and payment_data["status"] == "unpaid":
         headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
         try:
             resp = requests.get(
