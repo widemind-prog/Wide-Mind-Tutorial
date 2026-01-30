@@ -15,7 +15,6 @@ def paystack_webhook():
     if not paystack_secret or not signature:
         return "Unauthorized", 401
 
-    # 🔐 Verify Paystack signature
     computed_hash = hmac.new(
         paystack_secret.encode("utf-8"),
         payload,
@@ -35,7 +34,7 @@ def paystack_webhook():
 
     email = customer.get("email")
     reference = data.get("reference")
-    amount = data.get("amount")  # kobo
+    amount = data.get("amount")
 
     if not email or not reference or amount is None:
         return jsonify({"status": "invalid_payload"}), 200
@@ -43,13 +42,11 @@ def paystack_webhook():
     conn = get_db()
     c = conn.cursor()
 
-    # 🔁 Prevent duplicate webhook processing (by reference)
     c.execute("SELECT id FROM payments WHERE reference = ?", (reference,))
     if c.fetchone():
         conn.close()
         return jsonify({"status": "duplicate"}), 200
 
-    # 🔍 Get user id
     c.execute("SELECT id FROM users WHERE email = ?", (email,))
     user = c.fetchone()
 
@@ -59,40 +56,30 @@ def paystack_webhook():
 
     user_id = user["id"]
 
-    # 🔍 Get existing payment record
     c.execute("""
-    SELECT *
-    FROM payments
-    WHERE user_id = ?
-    ORDER BY id DESC
-    LIMIT 1
-""", (user_id,))
-payment = c.fetchone()
-
-    # 🧠 RULES:
-    # - admin_override_status = unpaid → NEVER mark paid
-    # - admin_override_status = paid → already paid, do nothing
-    # - no override → can mark paid ONLY if status is unpaid
+        SELECT *
+        FROM payments
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (user_id,))
+    payment = c.fetchone()
 
     if not payment:
-        # No record → create paid record
         c.execute("""
             INSERT INTO payments (user_id, amount, status, reference, paid_at)
             VALUES (?, ?, 'paid', ?, datetime('now'))
         """, (user_id, amount, reference))
 
     elif payment["admin_override_status"] == "unpaid":
-        # 🚫 Admin explicitly blocked payment
         conn.close()
         return jsonify({"status": "blocked_by_admin"}), 200
 
     elif payment["admin_override_status"] == "paid":
-        # ✅ Admin already approved
         conn.close()
         return jsonify({"status": "admin_paid"}), 200
 
     elif payment["status"] == "unpaid":
-        # ✅ Normal Paystack success → mark paid
         c.execute("""
             UPDATE payments
             SET status='paid',
@@ -100,8 +87,6 @@ payment = c.fetchone()
                 paid_at=datetime('now')
             WHERE user_id=? AND status='unpaid'
         """, (reference, user_id))
-
-    # else: already paid → do nothing
 
     conn.commit()
     conn.close()
