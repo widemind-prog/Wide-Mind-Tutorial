@@ -190,7 +190,7 @@ def course_page(course_id):
 
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
-    if not payment or payment["status"] != "paid":
+    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
         conn.close()
         return "<h3>Payment required to access courses</h3>", 403
 
@@ -223,7 +223,7 @@ def pdf_viewer(course_id):
 
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
-    if not payment or payment["status"] != "paid":
+    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
@@ -255,7 +255,7 @@ def stream_audio(material_id):
 
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
-    if not payment or payment["status"] != "paid":
+    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
         conn.close()
         abort(403)
 
@@ -283,7 +283,7 @@ def stream_pdf(material_id):
 
     c.execute("SELECT status FROM payments WHERE user_id=?", (session["user_id"],))
     payment = c.fetchone()
-    if not payment or payment["status"] != "paid":
+    if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
         conn.close()
         abort(403)
 
