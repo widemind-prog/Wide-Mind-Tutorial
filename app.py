@@ -192,8 +192,8 @@ def course_page(course_id):
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
 
-    # allow access if paid or admin override is paid
-    if not payment or (payment["status"] != "paid" and payment.get("admin_override_status", None) != "paid"):
+    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         return "<h3>Payment required to access this course</h3>", 403
 
@@ -228,7 +228,8 @@ def pdf_viewer(course_id):
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
 
-    if not payment or (payment["status"] != "paid" and payment.get("admin_override_status", None) != "paid"):
+    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
@@ -260,7 +261,8 @@ def stream_audio(material_id):
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
 
-    if not payment or (payment["status"] != "paid" and payment.get("admin_override_status", None) != "paid"):
+    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
 
@@ -288,7 +290,8 @@ def stream_pdf(material_id):
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
 
-    if not payment or (payment["status"] != "paid" and payment.get("admin_override_status", None) != "paid"):
+    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
 
