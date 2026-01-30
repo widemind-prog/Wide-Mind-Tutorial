@@ -146,11 +146,12 @@ def register():
     )
     user_id = c.lastrowid
 
+    c.execute("SELECT id FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
+if not c.fetchone():
     c.execute(
         "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
         (user_id, 10000, "unpaid")
     )
-
     conn.commit()
     conn.close()
 

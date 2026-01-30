@@ -181,36 +181,38 @@ def toggle_payment(user_id):
         flash("Cannot modify admin payment", "error")
         return redirect(url_for("admin_bp.users"))
 
-    # Fetch latest payment row
+    # Fetch latest payment row for the user
+c.execute("""
+    SELECT id, status, admin_override_status
+    FROM payments
+    WHERE user_id=?
+    ORDER BY id DESC
+    LIMIT 1
+""", (user_id,))
+payment = c.fetchone()
+
+if not payment:
+    # No payment record exists → create one with admin_override_status='paid'
     c.execute("""
-        SELECT id, status, admin_override_status
-        FROM payments
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 1
-    """, (user_id,))
-    payment = c.fetchone()
+        INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at)
+        VALUES (?, ?, 'unpaid', 'paid', datetime('now'))
+    """, (user_id, 10000))
+    new_status = "paid"
+else:
+    # Toggle admin_override_status
+    current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
+    new_status = "unpaid" if current == "paid" else "paid"
 
-    if not payment:
-        # No payment record exists → create one
-        c.execute(
-            "INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at) VALUES (?, ?, 'unpaid', 'paid', datetime('now'))",
-            (user_id, 10000)
-        )
-        new_status = "paid"
-    else:
-        # Toggle admin_override_status
-        current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
-        new_status = "unpaid" if current == "paid" else "paid"
-        c.execute(
-            "UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE id=?",
-            (new_status, payment["id"])
-        )
+    c.execute("""
+        UPDATE payments
+        SET admin_override_status=?, paid_at=datetime('now')
+        WHERE id=?
+    """, (new_status, payment["id"]))
 
-    conn.commit()
-    conn.close()
-    flash(f"Payment marked as {new_status}", "success")
-    return redirect(url_for("admin_bp.users"))
+conn.commit()
+conn.close()
+flash(f"Payment marked as {new_status}", "success")
+return redirect(url_for("admin_bp.users"))
 
 # ---------------------
 # COURSES MANAGEMENT

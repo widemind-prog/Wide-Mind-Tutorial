@@ -101,11 +101,14 @@ def payment_callback():
 
     user_id = user["id"]
 
-    # Fetch payment
-    c.execute(
-        "SELECT status, admin_override_status FROM payments WHERE user_id=?",
-        (user_id,)
-    )
+    # Fetch latest payment row
+    c.execute("""
+        SELECT *
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (user_id,))
     payment = c.fetchone()
 
     # Apply rules
@@ -129,8 +132,8 @@ def payment_callback():
             SET status='paid',
                 reference=?,
                 paid_at=datetime('now')
-            WHERE user_id=? AND status='unpaid'
-        """, (reference, user_id))
+            WHERE id=?
+        """, (reference, payment["id"]))
 
     conn.commit()
     conn.close()
@@ -159,7 +162,14 @@ def payment_status():
     conn = get_db()
     c = conn.cursor()
 
-    c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))
+    # Fetch latest payment row
+    c.execute("""
+        SELECT *
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (user_id,))
     payment = c.fetchone()
 
     # Create unpaid record if missing
@@ -169,7 +179,13 @@ def payment_status():
             (user_id, 10000, "unpaid")
         )
         conn.commit()
-        c.execute("SELECT * FROM payments WHERE user_id=?", (user_id,))
+        c.execute("""
+            SELECT *
+            FROM payments
+            WHERE user_id=?
+            ORDER BY id DESC
+            LIMIT 1
+        """, (user_id,))
         payment = c.fetchone()
 
     payment_data = dict(payment)
@@ -197,8 +213,8 @@ def payment_status():
                     UPDATE payments
                     SET status='paid',
                         paid_at=datetime('now')
-                    WHERE user_id=? AND status='unpaid'
-                """, (user_id,))
+                    WHERE id=?
+                """, (payment_data["id"],))
                 conn.commit()
                 payment_data["status"] = "paid"
                 payment_data["paid_at"] = data["data"].get("paid_at")

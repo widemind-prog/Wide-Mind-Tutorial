@@ -61,11 +61,13 @@ def paystack_webhook():
 
     # 🔍 Get existing payment record
     c.execute("""
-        SELECT status, admin_override_status
-        FROM payments
-        WHERE user_id = ?
-    """, (user_id,))
-    payment = c.fetchone()
+    SELECT *
+    FROM payments
+    WHERE user_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+""", (user_id,))
+payment = c.fetchone()
 
     # 🧠 RULES:
     # - admin_override_status = unpaid → NEVER mark paid
