@@ -1,112 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>PDF Viewer</title>
-<style>
-  body {
-    margin: 0;
-    background: #111;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+  <meta charset="utf-8">
+  <title>PDF Viewer</title>
 
-  #controls {
-    width: 100%;
-    padding: 10px;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-  #closeBtn {
-    position: absolute;
-    right: 15px;
-    top: 10px;
-    background: transparent;
-    color: #fff;
-    font-size: 20px;
-    border: none;
-    cursor: pointer;
-  }
+    #controls {
+      width: 100%;
+      padding: 10px;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
 
-  #closeBtn:hover { color: #ff4d4d; }
+    button {
+      padding: 6px 12px;
+      border: none;
+      cursor: pointer;
+      background: #444;
+      color: #fff;
+    }
 
-  button {
-    padding: 6px 12px;
-    border: none;
-    cursor: pointer;
-    background: #444;
-    color: #fff;
-  }
+    button:hover {
+      background: #666;
+    }
 
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
-  canvas#pdfCanvas {
-    margin: 20px auto;
-    background: #fff;
-    display: block;
-  }
+    #cancelBtn {
+      background: #a00000;
+    }
 
-  #thumbnailsWrapper {
-    display: flex;
-    align-items: center;
-    width: 95%;
-    background: #222;
-    padding: 10px;
-    overflow: hidden;
-    gap: 5px;
-    position: relative;
-  }
+    #cancelBtn:hover {
+      background: #c00000;
+    }
 
-  #thumbnails {
-    display: flex;
-    overflow-x: auto;
-    gap: 5px;
-    scroll-behavior: smooth;
-  }
+    #pdfWrapper {
+      display: inline-block;
+      margin: 20px auto;
+      max-width: 95%;
+    }
 
-  #thumbnails canvas {
-    width: 60px;
-    cursor: pointer;
-    border: 2px solid #555;
-    transition: border 0.2s;
-    flex-shrink: 0;
-  }
+    canvas#pdfCanvas {
+      display: block;
+      max-width: 100%;
+    }
 
-  #thumbnails canvas.active { border: 2px solid #ff4d4d; }
+    #thumbnailsWrapper {
+      display: flex;
+      align-items: center;
+      width: 95%;
+      background: #222;
+      padding: 10px;
+      gap: 5px;
+      overflow: hidden;
+    }
 
-  .thumbArrow {
-    font-size: 20px;
-    background: #333;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    padding: 5px 10px;
-    z-index: 5;
-  }
+    #thumbnails {
+      display: flex;
+      overflow-x: auto;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
 
-  .thumbArrow:hover { background: #555; }
-</style>
+    #thumbnails canvas {
+      width: 60px;
+      cursor: pointer;
+      border: 2px solid #555;
+      flex-shrink: 0;
+      transition: border 0.2s;
+    }
+
+    #thumbnails canvas.active {
+      border-color: #ff4d4d;
+    }
+
+    .thumbArrow {
+      background: #333;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      padding: 5px 10px;
+      font-size: 20px;
+    }
+
+    .thumbArrow:hover {
+      background: #555;
+    }
+  </style>
 </head>
 
 <body>
+
 <div id="controls">
+  <button id="cancelBtn">✖ Cancel</button>
   <button id="prevBtn">Previous</button>
   <span id="pageInfo">Page 1 of 1</span>
   <button id="nextBtn">Next</button>
-  <button id="closeBtn" title="Close PDF">&times;</button>
 </div>
 
-<canvas id="pdfCanvas"></canvas>
+<div id="pdfWrapper">
+  <canvas id="pdfCanvas"></canvas>
+</div>
 
 <div id="thumbnailsWrapper">
   <button class="thumbArrow" id="thumbLeft">&#10094;</button>
@@ -115,85 +128,101 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <script>
-const pdfUrl = "/stream/pdf/{{ pdf_id }}";
+/* ===== CONFIG ===== */
+const pdfUrl = "/stream/pdf/{{ material_id }}";
+const courseUrl = "/course/{{ course_id }}";
+
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
+/* ===== STATE ===== */
 let pdfDoc = null;
 let pageNum = 1;
 let totalPages = 0;
-const pageCache = {}; // Cache high-res pages
+const pageCache = {};
+
+/* ===== ELEMENTS ===== */
 const canvas = document.getElementById("pdfCanvas");
 const ctx = canvas.getContext("2d");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const pageInfo = document.getElementById("pageInfo");
-const closeBtn = document.getElementById("closeBtn");
 const thumbnailsContainer = document.getElementById("thumbnails");
 const thumbLeft = document.getElementById("thumbLeft");
 const thumbRight = document.getElementById("thumbRight");
+const cancelBtn = document.getElementById("cancelBtn");
 
-// Load PDF
-pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
-  pdfDoc = pdf;
-  totalPages = pdf.numPages;
-  renderPage(pageNum);       // First page
-  createThumbnails();        // Thumbnails in parallel
-});
+/* ===== CANCEL BUTTON ===== */
+cancelBtn.onclick = () => {
+  window.location.href = courseUrl;
+};
 
-// Render page
+/* ===== LOAD PDF ===== */
+pdfjsLib.getDocument(pdfUrl).promise
+  .then(pdf => {
+    pdfDoc = pdf;
+    totalPages = pdf.numPages;
+    updateUI(pageNum);
+    renderPage(pageNum);
+    createThumbnails();
+  })
+  .catch(err => {
+    console.error("PDF load error:", err);
+    pageInfo.textContent = "Failed to load PDF";
+  });
+
+/* ===== RENDER PAGE ===== */
 function renderPage(num) {
-  if (pageCache[num]) return drawFromCache(pageCache[num]);
+  if (!pdfDoc) return;
+
+  if (pageCache[num]) {
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      updateUI(num);
+    };
+    img.src = pageCache[num];
+    return;
+  }
 
   pdfDoc.getPage(num).then(page => {
-    const viewport = page.getViewport({ scale: 1.5 });
+    const scale = 1.2;
+    const viewport = page.getViewport({ scale });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     page.render({ canvasContext: ctx, viewport }).promise.then(() => {
       pageCache[num] = canvas.toDataURL();
+      updateUI(num);
+      preloadAdjacentPages(num);
     });
-
-    pageInfo.textContent = `Page ${num} of ${totalPages}`;
-    prevBtn.disabled = num <= 1;
-    nextBtn.disabled = num >= totalPages;
-    highlightThumbnail(num);
-    preloadAdjacentPages(num);
   });
 }
 
-// Draw from cache
-function drawFromCache(dataURL) {
-  const img = new Image();
-  img.onload = () => ctx.drawImage(img, 0, 0);
-  img.src = dataURL;
-  pageInfo.textContent = `Page ${pageNum} of ${totalPages}`;
-  prevBtn.disabled = pageNum <= 1;
-  nextBtn.disabled = pageNum >= totalPages;
-  highlightThumbnail(pageNum);
-}
-
-// Preload adjacent pages
+/* ===== PRELOAD ADJACENT ===== */
 function preloadAdjacentPages(current) {
-  [current+1, current-1].forEach(n => {
-    if(n >= 1 && n <= totalPages && !pageCache[n]) {
+  [current + 1, current - 1].forEach(n => {
+    if (n >= 1 && n <= totalPages && !pageCache[n]) {
       pdfDoc.getPage(n).then(page => {
-        const viewport = page.getViewport({ scale: 1.5 });
+        const viewport = page.getViewport({ scale: 0.6 });
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = viewport.width;
         tempCanvas.height = viewport.height;
         page.render({ canvasContext: tempCanvas.getContext("2d"), viewport }).promise
-          .then(()=> pageCache[n] = tempCanvas.toDataURL());
+          .then(() => pageCache[n] = tempCanvas.toDataURL());
       });
     }
   });
 }
 
-// Thumbnails
+/* ===== THUMBNAILS ===== */
 function createThumbnails() {
-  for(let i=1;i<=totalPages;i++){
+  for (let i = 1; i <= totalPages; i++) {
     const thumbCanvas = document.createElement("canvas");
     const thumbCtx = thumbCanvas.getContext("2d");
     thumbnailsContainer.appendChild(thumbCanvas);
@@ -202,35 +231,45 @@ function createThumbnails() {
       const viewport = page.getViewport({ scale: 0.15 });
       thumbCanvas.width = viewport.width;
       thumbCanvas.height = viewport.height;
-      page.render({ canvasContext: thumbCtx, viewport }).promise.then(()=>{
-        thumbCanvas.addEventListener("click", ()=> { pageNum=i; renderPage(pageNum); });
-        thumbCanvas.addEventListener("mouseenter", ()=> { if(!pageCache[i]) renderPage(i); });
+
+      page.render({ canvasContext: thumbCtx, viewport }).promise.then(() => {
+        thumbCanvas.addEventListener("click", () => {
+          pageNum = i;
+          renderPage(pageNum);
+        });
       });
     });
   }
 }
 
-// Highlight thumbnail
 function highlightThumbnail(num) {
-  thumbnailsContainer.querySelectorAll("canvas").forEach((thumb,index)=>{
-    thumb.classList.toggle("active", index+1===num);
+  thumbnailsContainer.querySelectorAll("canvas").forEach((c, i) => {
+    c.classList.toggle("active", i + 1 === num);
   });
 }
 
-// Scroll thumbnails
-thumbLeft.addEventListener("click", ()=>thumbnailsContainer.scrollBy({left:-200, behavior:'smooth'}));
-thumbRight.addEventListener("click", ()=>thumbnailsContainer.scrollBy({left:200, behavior:'smooth'}));
+/* ===== UI UPDATE ===== */
+function updateUI(num) {
+  pageInfo.textContent = `Page ${num} of ${totalPages}`;
+  prevBtn.disabled = num <= 1;
+  nextBtn.disabled = num >= totalPages;
+  highlightThumbnail(num);
+}
 
-// Controls
-prevBtn.addEventListener("click", ()=>{ if(pageNum>1) renderPage(--pageNum); });
-nextBtn.addEventListener("click", ()=>{ if(pageNum<totalPages) renderPage(++pageNum); });
-closeBtn.addEventListener("click", ()=> window.history.back());
+/* ===== CONTROLS ===== */
+prevBtn.onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
+nextBtn.onclick = () => { if (pageNum < totalPages) renderPage(++pageNum); };
+thumbLeft.onclick = () => thumbnailsContainer.scrollBy({ left: -200, behavior: "smooth" });
+thumbRight.onclick = () => thumbnailsContainer.scrollBy({ left: 200, behavior: "smooth" });
 
-// Protection
-document.addEventListener("contextmenu", e => e.preventDefault());
+/* ===== PROTECTION ===== */
+canvas.addEventListener("contextmenu", e => e.preventDefault());
 document.addEventListener("keydown", e => {
-  if((e.ctrlKey||e.metaKey) && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
+  if ((e.ctrlKey || e.metaKey) && ["s","p"].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+  }
 });
 </script>
+
 </body>
 </html>
