@@ -129,6 +129,7 @@
 /* ===== CONFIG ===== */
 const pdfUrl = "/stream/pdf/{{ material_id }}";
 const username = "{{ username|e }}"; // Escaped for JS
+const courseUrl = "/course/{{ course_id }}"; // fallback for close button
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -155,6 +156,7 @@ pdfjsLib.getDocument(pdfUrl).promise
   .then(pdf => {
     pdfDoc = pdf;
     totalPages = pdf.numPages;
+    updateUI(pageNum); // show total pages
     renderPage(pageNum);
     createThumbnails();
   })
@@ -165,6 +167,8 @@ pdfjsLib.getDocument(pdfUrl).promise
 
 /* ===== RENDER PAGE ===== */
 function renderPage(num) {
+  if (!pdfDoc) return;
+
   if (pageCache[num]) {
     // draw cached page
     const img = new Image();
@@ -181,14 +185,14 @@ function renderPage(num) {
   }
 
   pdfDoc.getPage(num).then(page => {
-    const scale = 1.2; // smaller scale for speed
+    const scale = 1.2;
     const viewport = page.getViewport({ scale });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
     const renderContext = { canvasContext: ctx, viewport };
     page.render(renderContext).promise.then(() => {
-      pageCache[num] = canvas.toDataURL(); // cache as image
+      pageCache[num] = canvas.toDataURL();
       drawWatermark();
       updateUI(num);
       preloadAdjacentPages(num);
@@ -223,7 +227,7 @@ function preloadAdjacentPages(current) {
   [current + 1, current - 1].forEach(n => {
     if (n >= 1 && n <= totalPages && !pageCache[n]) {
       pdfDoc.getPage(n).then(page => {
-        const viewport = page.getViewport({ scale: 0.6 }); // lower res for preloading
+        const viewport = page.getViewport({ scale: 0.6 });
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = viewport.width;
         tempCanvas.height = viewport.height;
@@ -262,17 +266,28 @@ function highlightThumbnail(num) {
   });
 }
 
+/* ===== UI UPDATE ===== */
+function updateUI(num) {
+  pageInfo.textContent = `Page ${num} of ${totalPages}`;
+  prevBtn.disabled = num <= 1;
+  nextBtn.disabled = num >= totalPages;
+  highlightThumbnail(num);
+}
+
 /* ===== CONTROLS ===== */
 prevBtn.onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
 nextBtn.onclick = () => { if (pageNum < totalPages) renderPage(++pageNum); };
-closeBtn.onclick = () => window.history.back();
+closeBtn.onclick = () => {
+  if (window.history.length > 1) window.history.back();
+  else window.location.href = courseUrl;
+};
 thumbLeft.onclick = () => thumbnailsContainer.scrollBy({ left: -200, behavior: "smooth" });
 thumbRight.onclick = () => thumbnailsContainer.scrollBy({ left: 200, behavior: "smooth" });
 
 /* ===== PROTECTION ===== */
 canvas.addEventListener("contextmenu", e => e.preventDefault());
 document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && ["s", "p"].includes(e.key.toLowerCase())) e.preventDefault();
+  if ((e.ctrlKey || e.metaKey) && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
 });
 </script>
 
