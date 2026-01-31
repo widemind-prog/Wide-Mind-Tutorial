@@ -111,7 +111,7 @@
 <body>
 
 <div id="controls">
-  <button id="cancelBtn">✖ Cancel</button>
+  <button id="cancelBtn">✖ Close</button>
   <button id="prevBtn">Previous</button>
   <span id="pageInfo">Page 1 of 1</span>
   <button id="nextBtn">Next</button>
@@ -154,9 +154,19 @@ const thumbLeft = document.getElementById("thumbLeft");
 const thumbRight = document.getElementById("thumbRight");
 const cancelBtn = document.getElementById("cancelBtn");
 
-/* ===== CANCEL BUTTON ===== */
+/* ===== FIXED CLOSE BUTTON (OLD BEHAVIOR) ===== */
 cancelBtn.onclick = () => {
-  window.location.href = courseUrl;
+  // Try closing tab (works if opened via target="_blank")
+  window.close();
+
+  // Fallbacks
+  setTimeout(() => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = courseUrl;
+    }
+  }, 100);
 };
 
 /* ===== LOAD PDF ===== */
@@ -164,7 +174,6 @@ pdfjsLib.getDocument(pdfUrl).promise
   .then(pdf => {
     pdfDoc = pdf;
     totalPages = pdf.numPages;
-    updateUI(pageNum);
     renderPage(pageNum);
     createThumbnails();
   })
@@ -204,7 +213,7 @@ function renderPage(num) {
   });
 }
 
-/* ===== PRELOAD ADJACENT ===== */
+/* ===== PRELOAD ===== */
 function preloadAdjacentPages(current) {
   [current + 1, current - 1].forEach(n => {
     if (n >= 1 && n <= totalPages && !pageCache[n]) {
@@ -233,10 +242,10 @@ function createThumbnails() {
       thumbCanvas.height = viewport.height;
 
       page.render({ canvasContext: thumbCtx, viewport }).promise.then(() => {
-        thumbCanvas.addEventListener("click", () => {
+        thumbCanvas.onclick = () => {
           pageNum = i;
           renderPage(pageNum);
-        });
+        };
       });
     });
   }
@@ -248,7 +257,7 @@ function highlightThumbnail(num) {
   });
 }
 
-/* ===== UI UPDATE ===== */
+/* ===== UI ===== */
 function updateUI(num) {
   pageInfo.textContent = `Page ${num} of ${totalPages}`;
   prevBtn.disabled = num <= 1;

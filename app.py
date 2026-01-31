@@ -213,29 +213,36 @@ def course_page(course_id):
     conn.close()
 
     return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
-
 # =====================
 # PDF VIEWER
 # =====================
 @app.route("/course/<int:course_id>/pdf")
 def pdf_viewer(course_id):
-    # Check if user is logged in
+    # Require login
     if "user_id" not in session:
         return redirect("/login-page")
 
     conn = get_db()
     c = conn.cursor()
 
-    # Fetch latest payment for user
+    # Get latest payment for user
     c.execute(
-        "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        """
+        SELECT status, admin_override_status
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
         (session["user_id"],)
     )
     payment = c.fetchone()
 
-    # Check for admin override
-    admin_override = payment["admin_override_status"] if payment else None
-    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
+    # Enforce payment or admin override
+    if not payment or (
+        payment["status"] != "paid"
+        and payment["admin_override_status"] != "paid"
+    ):
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
@@ -246,28 +253,29 @@ def pdf_viewer(course_id):
         conn.close()
         abort(404)
 
-    # Fetch the first PDF material for the course
-    c.execute("""
+    # Fetch first PDF material for course
+    c.execute(
+        """
         SELECT id
         FROM materials
         WHERE course_id=? AND file_type='pdf'
         ORDER BY id ASC
         LIMIT 1
-    """, (course_id,))
+        """,
+        (course_id,)
+    )
     material = c.fetchone()
     conn.close()
 
     if not material:
         abort(404)
 
-    # Pass material_id (not PDF filename) and username to template
+    # Render PDF viewer
     return render_template(
         "pdf_viewer.html",
-        course=course,
-        material_id=material["id"],
-        username=session.get("username", "Student")
+        course_id=course_id,        # needed for Close button fallback
+        material_id=material["id"]  # streamed PDF
     )
-
 
 # =====================
 # STREAM FILES
