@@ -281,6 +281,9 @@ def stream_audio(material_id):
 
     return send_from_directory(current_app.config["UPLOAD_FOLDER"], material["filename"])
 
+from flask import send_file, abort, session, current_app
+import os
+
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     if "user_id" not in session:
@@ -288,10 +291,14 @@ def stream_pdf(material_id):
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
+
+    c.execute(
+        "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        (session["user_id"],)
+    )
     payment = c.fetchone()
 
-    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    admin_override = payment["admin_override_status"] if payment else None
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
@@ -302,13 +309,27 @@ def stream_pdf(material_id):
         JOIN courses c ON m.course_id = c.id
         WHERE m.id=? AND m.file_type='pdf'
     """, (material_id,))
+
     material = c.fetchone()
     conn.close()
 
     if not material:
         abort(404)
 
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], material["filename"])
+    file_path = os.path.join(
+        current_app.config["UPLOAD_FOLDER"],
+        material["filename"]
+    )
+
+    if not os.path.exists(file_path):
+        abort(404)
+
+    return send_file(
+        file_path,
+        mimetype="application/pdf",
+        as_attachment=False,
+        conditional=True  # 🔥 REQUIRED FOR PDF.js
+    )
 
 # =====================
 # PAYMENT SUCCESS

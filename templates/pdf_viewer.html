@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>PDF Viewer</title>
+
   <style>
     body {
       margin: 0;
@@ -13,6 +14,7 @@
       flex-direction: column;
       align-items: center;
     }
+
     #controls {
       width: 100%;
       padding: 10px;
@@ -25,6 +27,7 @@
       top: 0;
       z-index: 10;
     }
+
     #closeBtn {
       position: absolute;
       right: 15px;
@@ -35,7 +38,9 @@
       border: none;
       cursor: pointer;
     }
+
     #closeBtn:hover { color: #ff4d4d; }
+
     button {
       padding: 6px 12px;
       border: none;
@@ -43,11 +48,18 @@
       background: #444;
       color: #fff;
     }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
     canvas#pdfCanvas {
       margin: 20px auto;
       background: #fff;
+      max-width: 100%;
     }
+
     #thumbnailsWrapper {
       display: flex;
       align-items: center;
@@ -56,41 +68,49 @@
       padding: 10px;
       overflow: hidden;
       gap: 5px;
-      position: relative;
     }
+
     #thumbnails {
       display: flex;
       overflow-x: auto;
       gap: 5px;
       scroll-behavior: smooth;
     }
+
     #thumbnails canvas {
       width: 60px;
       cursor: pointer;
       border: 2px solid #555;
-      transition: border 0.2s;
       flex-shrink: 0;
+      transition: border 0.2s;
     }
-    #thumbnails canvas.active { border: 2px solid #ff4d4d; }
+
+    #thumbnails canvas.active {
+      border-color: #ff4d4d;
+    }
+
     .thumbArrow {
-      font-size: 20px;
       background: #333;
-      border: none;
       color: #fff;
+      border: none;
       cursor: pointer;
       padding: 5px 10px;
-      z-index: 5;
+      font-size: 20px;
     }
-    .thumbArrow:hover { background: #555; }
+
+    .thumbArrow:hover {
+      background: #555;
+    }
   </style>
 </head>
+
 <body>
 
 <div id="controls">
   <button id="prevBtn">Previous</button>
   <span id="pageInfo">Page 1 of 1</span>
   <button id="nextBtn">Next</button>
-  <button id="closeBtn" title="Close PDF">&times;</button>
+  <button id="closeBtn">&times;</button>
 </div>
 
 <canvas id="pdfCanvas"></canvas>
@@ -102,121 +122,145 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <script>
 const pdfUrl = "/stream/pdf/{{ pdf_id }}";
+
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 let pdfDoc = null;
 let pageNum = 1;
 let totalPages = 0;
-const pageCache = {}; // High-res cache
+const pageCache = {};
 
 const canvas = document.getElementById("pdfCanvas");
 const ctx = canvas.getContext("2d");
+
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const pageInfo = document.getElementById("pageInfo");
 const closeBtn = document.getElementById("closeBtn");
+
 const thumbnailsContainer = document.getElementById("thumbnails");
 const thumbLeft = document.getElementById("thumbLeft");
 const thumbRight = document.getElementById("thumbRight");
 
-// Load PDF
-pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
-  pdfDoc = pdf;
-  totalPages = pdf.numPages;
-  renderPage(pageNum);          // Render first page immediately
-  createThumbnails();           // Render thumbnails in parallel
-});
+/* ===== Load PDF ===== */
+pdfjsLib.getDocument(pdfUrl).promise
+  .then(pdf => {
+    pdfDoc = pdf;
+    totalPages = pdf.numPages;
+    renderPage(pageNum);
+    createThumbnails();
+  })
+  .catch(err => {
+    console.error("PDF load failed:", err);
+    alert("Failed to load PDF.");
+  });
 
-// Render high-res page
+/* ===== Render Page ===== */
 function renderPage(num) {
   if (pageCache[num]) {
     drawFromCache(pageCache[num]);
     return;
   }
+
   pdfDoc.getPage(num).then(page => {
     const viewport = page.getViewport({ scale: 1.5 });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const renderTask = page.render({ canvasContext: ctx, viewport: viewport });
-    renderTask.promise.then(() => {
-      pageCache[num] = canvas.toDataURL(); // Cache rendered page
-    });
-    pageInfo.textContent = `Page ${num} of ${totalPages}`;
-    prevBtn.disabled = num <= 1;
-    nextBtn.disabled = num >= totalPages;
-    highlightThumbnail(num);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    page.render({ canvasContext: ctx, viewport })
+      .promise.then(() => {
+        pageCache[num] = canvas.toDataURL();
+      });
+
+    updateUI(num);
     preloadAdjacentPages(num);
   });
 }
 
-// Draw from cache
 function drawFromCache(dataURL) {
   const img = new Image();
   img.onload = () => ctx.drawImage(img, 0, 0);
   img.src = dataURL;
-  pageInfo.textContent = `Page ${pageNum} of ${totalPages}`;
-  prevBtn.disabled = pageNum <= 1;
-  nextBtn.disabled = pageNum >= totalPages;
-  highlightThumbnail(pageNum);
+  updateUI(pageNum);
 }
 
-// Preload adjacent pages
+function updateUI(num) {
+  pageInfo.textContent = `Page ${num} of ${totalPages}`;
+  prevBtn.disabled = num <= 1;
+  nextBtn.disabled = num >= totalPages;
+  highlightThumbnail(num);
+}
+
+/* ===== Preload ===== */
 function preloadAdjacentPages(current) {
-  [current+1, current-1].forEach(n => {
-    if (n>=1 && n<=totalPages && !pageCache[n]) {
+  [current + 1, current - 1].forEach(n => {
+    if (n >= 1 && n <= totalPages && !pageCache[n]) {
       pdfDoc.getPage(n).then(page => {
         const viewport = page.getViewport({ scale: 1.5 });
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = viewport.width;
         tempCanvas.height = viewport.height;
-        page.render({ canvasContext: tempCanvas.getContext("2d"), viewport: viewport })
-          .promise.then(()=> pageCache[n] = tempCanvas.toDataURL());
+        page.render({
+          canvasContext: tempCanvas.getContext("2d"),
+          viewport
+        }).promise.then(() => {
+          pageCache[n] = tempCanvas.toDataURL();
+        });
       });
     }
   });
 }
 
-// Thumbnails
+/* ===== Thumbnails ===== */
 function createThumbnails() {
-  for (let i=1;i<=totalPages;i++){
+  for (let i = 1; i <= totalPages; i++) {
     const thumbCanvas = document.createElement("canvas");
     const thumbCtx = thumbCanvas.getContext("2d");
-    thumbCanvas.width=100; thumbCanvas.height=130;
     thumbnailsContainer.appendChild(thumbCanvas);
+
     pdfDoc.getPage(i).then(page => {
       const viewport = page.getViewport({ scale: 0.15 });
       thumbCanvas.width = viewport.width;
       thumbCanvas.height = viewport.height;
-      page.render({ canvasContext: thumbCtx, viewport: viewport }).promise.then(()=>{
-        thumbCanvas.addEventListener("click", ()=> { pageNum=i; renderPage(pageNum); });
-        thumbCanvas.addEventListener("mouseenter", ()=> { if(!pageCache[i]) renderPage(i); }); // hover preload
+
+      page.render({ canvasContext: thumbCtx, viewport }).promise.then(() => {
+        thumbCanvas.addEventListener("click", () => {
+          pageNum = i;
+          renderPage(pageNum);
+        });
       });
     });
   }
 }
 
-// Highlight current thumbnail
 function highlightThumbnail(num) {
-  const thumbs = thumbnailsContainer.querySelectorAll("canvas");
-  thumbs.forEach((thumb,index)=> thumb.classList.toggle("active", index+1===num));
+  thumbnailsContainer.querySelectorAll("canvas").forEach((c, i) => {
+    c.classList.toggle("active", i + 1 === num);
+  });
 }
 
-// Scroll thumbnails
-thumbLeft.addEventListener("click", ()=>{ thumbnailsContainer.scrollBy({left:-200,behavior:'smooth'}); });
-thumbRight.addEventListener("click", ()=>{ thumbnailsContainer.scrollBy({left:200,behavior:'smooth'}); });
+/* ===== Controls ===== */
+prevBtn.onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
+nextBtn.onclick = () => { if (pageNum < totalPages) renderPage(++pageNum); };
+closeBtn.onclick = () => history.back();
 
-// Buttons
-prevBtn.addEventListener("click", ()=>{ if(pageNum>1){ pageNum--; renderPage(pageNum); } });
-nextBtn.addEventListener("click", ()=>{ if(pageNum<totalPages){ pageNum++; renderPage(pageNum); } });
-closeBtn.addEventListener("click", ()=>{ window.history.back(); });
+thumbLeft.onclick = () => thumbnailsContainer.scrollBy({ left: -200, behavior: "smooth" });
+thumbRight.onclick = () => thumbnailsContainer.scrollBy({ left: 200, behavior: "smooth" });
 
-// Disable right-click & Ctrl+S
-document.addEventListener("contextmenu", e=> e.preventDefault());
-document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s") e.preventDefault(); });
+/* ===== Protection ===== */
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && ["s", "p"].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+  }
+});
 </script>
 
 </body>
