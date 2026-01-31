@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, url_for, current_app
+from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, send_file, url_for, current_app
 from backend.db import get_db, is_admin
 from functools import wraps
 import os
