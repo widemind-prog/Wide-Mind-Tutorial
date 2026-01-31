@@ -128,7 +128,7 @@
 <script>
 /* ===== CONFIG ===== */
 const pdfUrl = "/stream/pdf/{{ material_id }}";
-const username = "{{ username|e }}";  // Escaped for JS
+const username = "{{ username|e }}"; // Escaped for JS
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -137,7 +137,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let pdfDoc = null;
 let pageNum = 1;
 let totalPages = 0;
-const pageCache = {};
+const pageCache = {}; // store rendered pages as images
 
 /* ===== ELEMENTS ===== */
 const canvas = document.getElementById("pdfCanvas");
@@ -165,22 +165,34 @@ pdfjsLib.getDocument(pdfUrl).promise
 
 /* ===== RENDER PAGE ===== */
 function renderPage(num) {
-  if (!pdfDoc) return;
+  if (pageCache[num]) {
+    // draw cached page
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      drawWatermark();
+      updateUI(num);
+    };
+    img.src = pageCache[num];
+    return;
+  }
 
   pdfDoc.getPage(num).then(page => {
-    const viewport = page.getViewport({ scale: 1.5 });
+    const scale = 1.2; // smaller scale for speed
+    const viewport = page.getViewport({ scale });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    page.render({ canvasContext: ctx, viewport }).promise.then(() => {
-      pageCache[num] = canvas.toDataURL();
-      drawWatermark();  // Draw watermark after page render
+    const renderContext = { canvasContext: ctx, viewport };
+    page.render(renderContext).promise.then(() => {
+      pageCache[num] = canvas.toDataURL(); // cache as image
+      drawWatermark();
+      updateUI(num);
+      preloadAdjacentPages(num);
     });
-
-    updateUI(num);
-    preloadAdjacentPages(num);
   });
 }
 
@@ -189,7 +201,7 @@ function drawWatermark() {
   const text = `${username} · ${new Date().toLocaleString()}`;
   ctx.save();
   ctx.font = "16px Arial";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+  ctx.fillStyle = "rgba(255,255,255,0.15)";
   ctx.rotate(-0.3);
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
@@ -206,36 +218,17 @@ function drawWatermark() {
   ctx.restore();
 }
 
-function drawFromCache(dataURL) {
-  const img = new Image();
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0);
-    drawWatermark();
-  };
-  img.src = dataURL;
-  updateUI(pageNum);
-}
-
-/* ===== UI UPDATES ===== */
-function updateUI(num) {
-  pageInfo.textContent = `Page ${num} of ${totalPages}`;
-  prevBtn.disabled = num <= 1;
-  nextBtn.disabled = num >= totalPages;
-  highlightThumbnail(num);
-}
-
 /* ===== PRELOAD ADJACENT PAGES ===== */
 function preloadAdjacentPages(current) {
   [current + 1, current - 1].forEach(n => {
     if (n >= 1 && n <= totalPages && !pageCache[n]) {
       pdfDoc.getPage(n).then(page => {
-        const viewport = page.getViewport({ scale: 1.5 });
+        const viewport = page.getViewport({ scale: 0.6 }); // lower res for preloading
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = viewport.width;
         tempCanvas.height = viewport.height;
-        page.render({ canvasContext: tempCanvas.getContext("2d"), viewport }).promise.then(() => {
-          pageCache[n] = tempCanvas.toDataURL();
-        });
+        page.render({ canvasContext: tempCanvas.getContext("2d"), viewport }).promise
+          .then(() => pageCache[n] = tempCanvas.toDataURL());
       });
     }
   });
