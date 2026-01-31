@@ -8,11 +8,13 @@
 
 {% if audios %}
   <h3>Audio Lessons 🎧</h3>
-  <ul>
+  <ul style="list-style: none; padding-left: 0;">
     {% for audio in audios %}
-      <li>
+      <li style="margin-bottom: 15px;">
         <p>{{ audio.title or audio.filename }}</p>
-        <audio id="audio-{{ audio.id }}" controls controlsList="nodownload">
+        <audio id="audio-{{ audio.id }}" controls controlsList="nodownload noplaybackrate" 
+               disablePictureInPicture 
+               style="display: block; margin-left: 0; margin-right: auto;">
           <source src="/stream/audio/{{ audio.id }}" type="audio/mpeg">
           Your browser does not support the audio element.
         </audio>
@@ -23,9 +25,9 @@
 
 {% if pdfs %}
   <h3>PDF Lessons 📝</h3>
-  <ul>
+  <ul style="list-style: none; padding-left: 0;">
     {% for pdf in pdfs %}
-      <li>
+      <li style="margin-bottom: 10px;">
         <a href="/course/{{ course.id }}/pdf" target="_blank">
           {{ pdf.title or pdf.filename }}
         </a>
@@ -37,12 +39,18 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("audio").forEach(audio => {
-        // Disable right-click
+        // Prevent right-click
         audio.addEventListener("contextmenu", e => e.preventDefault());
-        // Disable dragging
+        // Prevent dragging
         audio.addEventListener("dragstart", e => e.preventDefault());
-        // Hide download button (modern browsers)
-        audio.controlsList = "nodownload";
+        // Hide download and playback rate
+        audio.setAttribute("controlsList", "nodownload noplaybackrate");
+        // Disable Picture-in-Picture
+        audio.setAttribute("disablePictureInPicture", "true");
+        // Left-align audio player
+        audio.style.display = "block";
+        audio.style.marginLeft = "0";
+        audio.style.marginRight = "auto";
     });
 });
 </script>

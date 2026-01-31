@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Select all audio elements on the page
     const audios = document.querySelectorAll("audio");
 
     audios.forEach(audio => {
@@ -8,10 +9,15 @@ document.addEventListener("DOMContentLoaded", () => {
         // Prevent dragging
         audio.addEventListener("dragstart", e => e.preventDefault());
 
-        // Hide download option (where supported)
+        // Hide download option and prevent changing playback rate
         audio.setAttribute("controlsList", "nodownload noplaybackrate");
 
-        // Extra hardening
+        // Disable Picture-in-Picture
         audio.setAttribute("disablePictureInPicture", "true");
+
+        // Optional: force audio controls to be left-aligned
+        audio.style.display = "block";
+        audio.style.marginLeft = "0";
+        audio.style.marginRight = "auto";
     });
 });

@@ -225,29 +225,47 @@ def pdf_viewer(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    # fetch latest payment
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
+    # Fetch latest payment
+    c.execute(
+        "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        (session["user_id"],)
+    )
     payment = c.fetchone()
 
-    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    admin_override = payment["admin_override_status"] if payment else None
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
+    # Fetch course
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
 
-    c.execute("SELECT id FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
-    pdf = c.fetchone()
+    # Fetch PDF material for course
+    c.execute("""
+        SELECT id
+        FROM materials
+        WHERE course_id=? AND file_type='pdf'
+        ORDER BY id ASC
+        LIMIT 1
+    """, (course_id,))
+
+    material = c.fetchone()
     conn.close()
 
-    if not pdf:
+    if not material:
         abort(404)
 
-    return render_template("pdf_viewer.html", course=course, pdf_id=pdf["id"])
+    # IMPORTANT: pass material_id (not pdf_id)
+    return render_template(
+    "pdf_viewer.html",
+    course=course,
+    material_id=material["id"],
+    username=session.get("username", "Student")
+    )
 
 # =====================
 # STREAM FILES
