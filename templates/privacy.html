@@ -1,7 +1,149 @@
 {% extends "base.html" %}
-{% block title %}Privacy{% endblock %}
+{% block title %}Privacy Policy & Terms{% endblock %}
 
 {% block content %}
+
 <h1>Privacy Policy</h1>
-<p>We respect your privacy and do not share your personal information.</p>
+
+<div class="message-box">
+  <p>
+    At <strong>Wide Mind Tutorials</strong>, your privacy is important to us.
+    This Privacy Policy explains how we collect, use, and protect your personal information
+    when you use our website and services.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Information We Collect</h2>
+  <p>
+    We only collect information that is necessary to provide our tutorial services effectively.
+    This may include:
+  </p>
+  <ul>
+    <li>Your name and basic contact details</li>
+    <li>Account and login information</li>
+    <li>Payment confirmation details</li>
+    <li>Academic-related information needed for tutorials</li>
+  </ul>
+</div>
+
+<div class="message-box">
+  <h2>How We Use Your Information</h2>
+  <ul>
+    <li>Provide access to tutorial materials and recordings</li>
+    <li>Manage student accounts and subscriptions</li>
+    <li>Communicate important updates and announcements</li>
+    <li>Improve the quality of our learning services</li>
+  </ul>
+</div>
+
+<div class="message-box">
+  <h2>Information Sharing</h2>
+  <p>
+    We <strong>do not sell, rent, or share</strong> your personal information with third parties
+    for marketing or advertising purposes.
+  </p>
+  <p>
+    Information may only be shared when required to process payments
+    or when legally required.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Data Security</h2>
+  <p>
+    We take reasonable steps to protect your personal information from unauthorized access,
+    misuse, or loss. While no online system is completely secure, appropriate safeguards
+    are maintained.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Your Rights</h2>
+  <ul>
+    <li>Access the personal information we hold about you</li>
+    <li>Request corrections to inaccurate information</li>
+    <li>Request account deletion where applicable</li>
+  </ul>
+</div>
+
+<hr>
+
+<h1>Terms & Conditions</h1>
+
+<div class="message-box">
+  <h2>Account Ownership</h2>
+  <p>
+    Each account is strictly personal to the registered student.
+    Sharing login details or tutorial materials with others is not permitted.
+  </p>
+  <p>
+    Accounts found engaging in unauthorized sharing may be suspended or terminated.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Payments & Access</h2>
+  <p>
+    All payments grant access to tutorial materials for the specified academic period
+    (e.g., a semester).
+  </p>
+  <p>
+    Access is only activated after successful payment confirmation.
+    Prices may change, but confirmed payments will always honor the price paid at the time.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Suspension of Accounts</h2>
+  <p>
+    Wide Mind Tutorials reserves the right to suspend or restrict accounts if:
+  </p>
+  <ul>
+    <li>There is misuse of the platform</li>
+    <li>Unauthorized sharing of content is detected</li>
+    <li>False or misleading account information is provided</li>
+  </ul>
+</div>
+
+<div class="message-box">
+  <h2>Account Deletion</h2>
+  <p>
+    Students may request account deletion at any time.
+    Once deleted, access to materials will be permanently removed.
+  </p>
+  <p>
+    Deleted accounts cannot be recovered.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Refund Policy</h2>
+  <p>
+    Due to the digital nature of our tutorial materials,
+    <strong>payments are generally non-refundable</strong> once access has been granted.
+  </p>
+  <p>
+    Refunds may only be considered in exceptional cases,
+    such as verified payment errors or duplicate charges.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Policy Updates</h2>
+  <p>
+    These policies may be updated occasionally to reflect changes in services
+    or operational needs. Updated versions will always be published on this page.
+  </p>
+</div>
+
+<div class="message-box">
+  <h2>Contact Us</h2>
+  <p>
+    If you have any questions about this Privacy Policy or Terms & Conditions,
+    please <a href="{{ url_for('contact') }}">contact us</a>
+    through the official communication channels provided in the footer.
+  </p>
+</div>
+
 {% endblock %}

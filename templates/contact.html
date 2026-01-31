@@ -2,7 +2,13 @@
 {% block title %}Contact{% endblock %}
 
 {% block content %}
+
 <h1>Contact Us</h1>
+
+<p>
+  Have a question, concern, or need clarification about Wide Mind Tutorials?
+  Use the form below to reach out, and we’ll get back to you as soon as possible.
+</p>
 
 <form id="contact-form">
     <input type="text" name="name" placeholder="Your Name" required>
@@ -11,6 +17,10 @@
     <textarea name="message" placeholder="Your Message" required></textarea>
     <button type="submit">Send Message</button>
 </form>
+
+<p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+  Please ensure your email address is correct so we can respond to you.
+</p>
 
 <!-- Toast container for messages -->
 <div id="toast" class="toast"></div>
@@ -27,4 +37,5 @@ function showToast(message, isError = false) {
 </script>
 
 <script src="/static/js/contact.js"></script>
+
 {% endblock %}
