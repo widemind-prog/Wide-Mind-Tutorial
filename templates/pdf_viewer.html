@@ -28,19 +28,6 @@
       z-index: 10;
     }
 
-    #closeBtn {
-      position: absolute;
-      right: 15px;
-      top: 10px;
-      background: transparent;
-      color: #fff;
-      font-size: 22px;
-      border: none;
-      cursor: pointer;
-    }
-
-    #closeBtn:hover { color: #ff4d4d; }
-
     button {
       padding: 6px 12px;
       border: none;
@@ -54,12 +41,40 @@
       cursor: not-allowed;
     }
 
-    canvas#pdfCanvas {
-      margin: 20px auto;
-      background: #fff;
-      max-width: 95%;
-      height: auto;
+    #pdfWrapper {
       position: relative;
+      display: inline-block;
+      margin: 20px auto;
+      max-width: 95%;
+    }
+
+    canvas#pdfCanvas {
+      display: block;
+      max-width: 100%;
+    }
+
+    /* Watermark overlay */
+    #watermarkOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      transform: rotate(-20deg);
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      color: black;   /* black */
+      opacity: 1;     /* fully opaque */
+      white-space: pre;
+    }
+
+    .watermark-text {
+      margin: 0 200px 150px 0; /* spacing between repeats */
     }
 
     #thumbnailsWrapper {
@@ -100,9 +115,7 @@
       font-size: 20px;
     }
 
-    .thumbArrow:hover {
-      background: #555;
-    }
+    .thumbArrow:hover { background: #555; }
   </style>
 </head>
 
@@ -114,7 +127,10 @@
   <button id="nextBtn">Next</button>
 </div>
 
-<canvas id="pdfCanvas"></canvas>
+<div id="pdfWrapper">
+  <canvas id="pdfCanvas"></canvas>
+  <div id="watermarkOverlay"></div>
+</div>
 
 <div id="thumbnailsWrapper">
   <button class="thumbArrow" id="thumbLeft">&#10094;</button>
@@ -128,7 +144,7 @@
 /* ===== CONFIG ===== */
 const pdfUrl = "/stream/pdf/{{ material_id }}";
 const username = "{{ username|e }}";
-const courseUrl = "/course/{{ course_id }}"; // fixed redirect for close button
+const courseUrl = "/course/{{ course_id }}";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -137,7 +153,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let pdfDoc = null;
 let pageNum = 1;
 let totalPages = 0;
-const pageCache = {}; // cache rendered pages as images
+const pageCache = {};
 
 /* ===== ELEMENTS ===== */
 const canvas = document.getElementById("pdfCanvas");
@@ -149,6 +165,7 @@ const closeBtn = document.getElementById("closeBtn");
 const thumbnailsContainer = document.getElementById("thumbnails");
 const thumbLeft = document.getElementById("thumbLeft");
 const thumbRight = document.getElementById("thumbRight");
+const watermarkOverlay = document.getElementById("watermarkOverlay");
 
 /* ===== LOAD PDF ===== */
 pdfjsLib.getDocument(pdfUrl).promise
@@ -158,6 +175,7 @@ pdfjsLib.getDocument(pdfUrl).promise
     updateUI(pageNum);
     renderPage(pageNum);
     createThumbnails();
+    drawWatermarkOverlay(username);
   })
   .catch(err => {
     console.error("PDF load error:", err);
@@ -175,7 +193,6 @@ function renderPage(num) {
       canvas.height = img.height;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
-      drawWatermark();
       updateUI(num);
     };
     img.src = pageCache[num];
@@ -190,32 +207,22 @@ function renderPage(num) {
 
     page.render({ canvasContext: ctx, viewport }).promise.then(() => {
       pageCache[num] = canvas.toDataURL();
-      drawWatermark();
       updateUI(num);
       preloadAdjacentPages(num);
     });
   });
 }
 
-/* ===== DRAW WATERMARK ===== */
-function drawWatermark() {
+/* ===== WATERMARK OVERLAY ===== */
+function drawWatermarkOverlay(username) {
+  watermarkOverlay.innerHTML = "";
   const text = `${username} · ${new Date().toLocaleString()}`;
-  ctx.save();
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "rgba(255,255,255,0.15)";
-  ctx.rotate(-0.3);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-
-  const stepX = 200;
-  const stepY = 150;
-
-  for (let x = 0; x < canvas.width; x += stepX) {
-    for (let y = 0; y < canvas.height; y += stepY) {
-      ctx.fillText(text, x, y);
-    }
+  for (let i = 0; i < 20; i++) {
+    const span = document.createElement("span");
+    span.className = "watermark-text";
+    span.textContent = text;
+    watermarkOverlay.appendChild(span);
   }
-  ctx.restore();
 }
 
 /* ===== PRELOAD ADJACENT PAGES ===== */
@@ -273,10 +280,7 @@ function updateUI(num) {
 /* ===== CONTROLS ===== */
 prevBtn.onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
 nextBtn.onclick = () => { if (pageNum < totalPages) renderPage(++pageNum); };
-
-// Close button now redirects properly to course page
 closeBtn.onclick = () => { window.location.href = courseUrl; };
-
 thumbLeft.onclick = () => thumbnailsContainer.scrollBy({ left: -200, behavior: "smooth" });
 thumbRight.onclick = () => thumbnailsContainer.scrollBy({ left: 200, behavior: "smooth" });
 

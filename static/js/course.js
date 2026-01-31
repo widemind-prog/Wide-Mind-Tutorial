@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
         audio.addEventListener("dragstart", e => e.preventDefault());
 
         // Hide download option and prevent changing playback rate
-        audio.setAttribute("controlsList", "nodownload noplaybackrate");
+        audio.setAttribute("controlsList", "nodownload");
 
         // Disable Picture-in-Picture
         audio.setAttribute("disablePictureInPicture", "true");
