@@ -57,14 +57,14 @@
 <div class="message-box">
   <h2>The Tutor</h2>
 
-  <img
-    src="/static/images/tutor.png"
-    alt="Mr. Oreotan Oluwasegun Samuel"
-    style="width:100%; max-width:320px; display:block; margin:0 auto 16px; border-radius:16px;"
-  >
+  <img src="{{ url_for('static', filename='images/tutor.png') }}"
+     alt="Mr. Oluwasegun OREOTAN"
+     class="hero-image"
+     draggable="false"
+     oncontextmenu="return false;">
 
   <p>
-    Wide Mind Tutorials is facilitated by <strong>Mr. Oreotan Oluwasegun Samuel</strong>,
+    Wide Mind Tutorials is facilitated by <strong>Mr. Oluwasegun OREOTAN Samuel</strong>,
     an <strong>Educational Psychologist</strong>, an <strong>Educator</strong>, and a
     digitally inclined academic mentor.
   </p>
@@ -88,17 +88,17 @@
     and better academic performance through Wide Mind Tutorials.
   </p>
 
-  <img
-    src="/static/images/pic1.png"
-    alt="Students feedback"
-    style="width:100%; border-radius:12px; margin-bottom:12px;"
-  >
+  <img src="{{ url_for('static', filename='images/pic1.png') }}"
+     alt="Students Feedback"
+     class="hero-image"
+     draggable="false"
+     oncontextmenu="return false;">
 
-  <img
-    src="/static/images/pic2.png"
-    alt="Students feedback"
-    style="width:100%; border-radius:12px;"
-  >
+  <img src="{{ url_for('static', filename='images/pic2.png') }}"
+     alt="Students Feedback"
+     class="hero-image"
+     draggable="false"
+     oncontextmenu="return false;">
 </div>
 
 {% endblock %}
