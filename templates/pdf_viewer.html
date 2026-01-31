@@ -128,8 +128,8 @@
 <script>
 /* ===== CONFIG ===== */
 const pdfUrl = "/stream/pdf/{{ material_id }}";
-const username = "{{ username|e }}"; // Escaped for JS
-const courseUrl = "/course/{{ course_id }}"; // redirect target for close button
+const username = "{{ username|e }}";
+const courseUrl = "/course/{{ course_id }}"; // fixed redirect for close button
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -138,7 +138,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let pdfDoc = null;
 let pageNum = 1;
 let totalPages = 0;
-const pageCache = {}; // store rendered pages as images
+const pageCache = {}; // cache rendered pages as images
 
 /* ===== ELEMENTS ===== */
 const canvas = document.getElementById("pdfCanvas");
@@ -156,7 +156,7 @@ pdfjsLib.getDocument(pdfUrl).promise
   .then(pdf => {
     pdfDoc = pdf;
     totalPages = pdf.numPages;
-    updateUI(pageNum); // display total pages immediately
+    updateUI(pageNum);
     renderPage(pageNum);
     createThumbnails();
   })
@@ -275,10 +275,8 @@ function updateUI(num) {
 prevBtn.onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
 nextBtn.onclick = () => { if (pageNum < totalPages) renderPage(++pageNum); };
 
-// Close button now always redirects to course page
-closeBtn.onclick = () => {
-  window.location.href = courseUrl;
-};
+// Close button now redirects properly to course page
+closeBtn.onclick = () => { window.location.href = courseUrl; };
 
 thumbLeft.onclick = () => thumbnailsContainer.scrollBy({ left: -200, behavior: "smooth" });
 thumbRight.onclick = () => thumbnailsContainer.scrollBy({ left: 200, behavior: "smooth" });
