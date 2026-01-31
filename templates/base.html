@@ -110,17 +110,17 @@
 <!-- THEME SCRIPT -->
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
-<script>
-    // Auto-hide flashes
-    window.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.flash.show').forEach(flash => {
-            setTimeout(() => {
-                flash.style.opacity = '0';
-                setTimeout(() => flash.remove(), 300);
-            }, 3000);
-        });
-    });
-</script>
+<script src="{{ url_for('static', filename='js/scroll-nav.js') }}"></script>
+<!-- Page Scroll Navigator -->
+<div id="page-scroll-nav">
+  <button id="scroll-top" title="Go to top">▲</button>
 
+  <div id="scroll-track">
+    <div id="scroll-thumb"></div>
+  </div>
+
+  <button id="scroll-bottom" title="Go to bottom">▼</button>
+</div>
+<script src="{{ url_for('static', filename='js/scroll-nav.js') }}"></script>
 </body>
 </html>

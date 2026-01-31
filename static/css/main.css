@@ -102,6 +102,65 @@ body::before {
     filter: brightness(1.1);  /* slightly brightens for light theme */
 }
 
+/* Page Scroll Navigator */
+#page-scroll-nav {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 70vh;
+  width: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 999;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#page-scroll-nav.show {
+  opacity: 1;
+}
+
+#page-scroll-nav button {
+  background: #222;
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+#page-scroll-nav button:hover {
+  background: #444;
+}
+
+#scroll-track {
+  flex: 1;
+  width: 6px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 6px;
+  position: relative;
+  margin: 6px 0;
+}
+
+#scroll-thumb {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 40px;
+  background: #b28b00; /* dark gold brand color */
+  border-radius: 6px;
+  cursor: pointer;
+
+  /* NEW: smooth movement */
+  transition: top 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
 /* ===================== HEADER LOGO ===================== */
 .site-header .header-logo {
     display: block;

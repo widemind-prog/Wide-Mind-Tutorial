@@ -152,6 +152,25 @@ main.content,
     box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
+/* Dark theme overrides for Page Scroll Navigator */
+#page-scroll-nav button {
+    background: #555;   /* darker buttons for dark theme */
+    color: #fff;
+}
+
+#page-scroll-nav button:hover {
+    background: #777;
+}
+
+#scroll-track {
+    background: rgba(255,255,255,0.1); /* lighter track for dark theme */
+}
+
+/* Thumb stays dark gold, no change needed */
+#scroll-thumb {
+    background: #b28b00;
+}
+
 /* ===================== HEADER LOGO ===================== */
 .site-header .header-logo {
     display: block;
