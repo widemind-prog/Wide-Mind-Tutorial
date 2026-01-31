@@ -12,9 +12,9 @@
     {% for audio in audios %}
       <li style="margin-bottom: 15px;">
         <p>{{ audio.title or audio.filename }}</p>
-        <audio id="audio-{{ audio.id }}" controls controlsList="nodownload noplaybackrate" 
-               disablePictureInPicture 
-               style="display: block; margin-left: 0; margin-right: auto;">
+        <audio id="audio-{{ audio.id }}" controls
+               style="display: block; margin-left: 0; margin-right: auto;"
+               disablePictureInPicture>
           <source src="/stream/audio/{{ audio.id }}" type="audio/mpeg">
           Your browser does not support the audio element.
         </audio>
@@ -28,7 +28,7 @@
   <ul style="list-style: none; padding-left: 0;">
     {% for pdf in pdfs %}
       <li style="margin-bottom: 10px;">
-        <a href="/course/{{ course.id }}/pdf" target="_blank">
+        <a href="/course/{{ course.id }}/pdf" target="_blank" rel="noopener noreferrer">
           {{ pdf.title or pdf.filename }}
         </a>
       </li>
@@ -36,17 +36,39 @@
   </ul>
 {% endif %}
 
+<!-- Toast for messages -->
+<div id="toast" class="toast"></div>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    const toast = document.getElementById("toast");
+
+    // Toast helper
+    function showToast(message, isError = false) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.background = isError ? "#a00000" : "#333";
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    // Protect audio elements
     document.querySelectorAll("audio").forEach(audio => {
-        // Prevent right-click
-        audio.addEventListener("contextmenu", e => e.preventDefault());
-        // Prevent dragging
+        // Disable right-click
+        audio.addEventListener("contextmenu", e => {
+            e.preventDefault();
+            showToast("Right-click disabled on audio 🎧", true);
+        });
+
+        // Disable dragging
         audio.addEventListener("dragstart", e => e.preventDefault());
-        // Hide download and playback rate
-        audio.setAttribute("controlsList", "nodownload noplaybackrate");
+
+        // Hide download button but allow playback speed
+        audio.setAttribute("controlsList", "nodownload");
+
         // Disable Picture-in-Picture
         audio.setAttribute("disablePictureInPicture", "true");
+
         // Left-align audio player
         audio.style.display = "block";
         audio.style.marginLeft = "0";
