@@ -152,23 +152,46 @@ main.content,
     box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
-/* Dark theme overrides for Page Scroll Navigator */
+/* ================================
+   Dark Theme – Page Scroll Navigator
+   ================================ */
+
 #page-scroll-nav button {
-    background: #555;   /* darker buttons for dark theme */
-    color: #fff;
+    background: #444;
+    color: #eee;
 }
 
 #page-scroll-nav button:hover {
-    background: #777;
+    background: #666;
 }
 
+/* Scroll track in dark mode */
 #scroll-track {
-    background: rgba(255,255,255,0.1); /* lighter track for dark theme */
+    background: rgba(255, 255, 255, 0.12);
 }
 
-/* Thumb stays dark gold, no change needed */
+/* Thumb – keep brand gold, add subtle glow for contrast */
 #scroll-thumb {
-    background: #b28b00;
+    background: linear-gradient(
+        180deg,
+        #d6ad1a,
+        #b28b00
+    );
+
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 4px 12px rgba(178, 139, 0, 0.45);
+}
+
+/* Hover / active states still feel alive in dark mode */
+#scroll-thumb:hover {
+    transform: scaleX(1.1);
+}
+
+#scroll-thumb:active {
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.15),
+        0 6px 16px rgba(178, 139, 0, 0.6);
 }
 
 /* ===================== HEADER LOGO ===================== */
