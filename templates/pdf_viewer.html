@@ -129,7 +129,7 @@
 /* ===== CONFIG ===== */
 const pdfUrl = "/stream/pdf/{{ material_id }}";
 const username = "{{ username|e }}"; // Escaped for JS
-const courseUrl = "/course/{{ course_id }}"; // fallback for close button
+const courseUrl = "/course/{{ course_id }}"; // redirect target for close button
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -156,7 +156,7 @@ pdfjsLib.getDocument(pdfUrl).promise
   .then(pdf => {
     pdfDoc = pdf;
     totalPages = pdf.numPages;
-    updateUI(pageNum); // show total pages
+    updateUI(pageNum); // display total pages immediately
     renderPage(pageNum);
     createThumbnails();
   })
@@ -170,7 +170,6 @@ function renderPage(num) {
   if (!pdfDoc) return;
 
   if (pageCache[num]) {
-    // draw cached page
     const img = new Image();
     img.onload = () => {
       canvas.width = img.width;
@@ -190,8 +189,7 @@ function renderPage(num) {
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
-    const renderContext = { canvasContext: ctx, viewport };
-    page.render(renderContext).promise.then(() => {
+    page.render({ canvasContext: ctx, viewport }).promise.then(() => {
       pageCache[num] = canvas.toDataURL();
       drawWatermark();
       updateUI(num);
@@ -218,7 +216,6 @@ function drawWatermark() {
       ctx.fillText(text, x, y);
     }
   }
-
   ctx.restore();
 }
 
@@ -277,10 +274,12 @@ function updateUI(num) {
 /* ===== CONTROLS ===== */
 prevBtn.onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
 nextBtn.onclick = () => { if (pageNum < totalPages) renderPage(++pageNum); };
+
+// Close button now always redirects to course page
 closeBtn.onclick = () => {
-  if (window.history.length > 1) window.history.back();
-  else window.location.href = courseUrl;
+  window.location.href = courseUrl;
 };
+
 thumbLeft.onclick = () => thumbnailsContainer.scrollBy({ left: -200, behavior: "smooth" });
 thumbRight.onclick = () => thumbnailsContainer.scrollBy({ left: 200, behavior: "smooth" });
 
