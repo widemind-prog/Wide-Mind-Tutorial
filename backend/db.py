@@ -99,29 +99,6 @@ def init_db():
     """)
 
     # -------------------------
-    # SEED COURSES & MATERIALS
-    # -------------------------
-    courses = [
-        ("Psy432", "Adolescent Psychology", "Adolescent development", ["lesson1.mp3", "lesson1.pdf"]),
-        ("Psy409", "Biological Psychology", "Neural processes", ["lesson2.mp3", "lesson2.pdf"])
-    ]
-
-    for code, title, desc, files in courses:
-        c.execute("SELECT id FROM courses WHERE course_code=?", (code,))
-        if not c.fetchone():
-            c.execute(
-                "INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)",
-                (code, title, desc)
-            )
-            course_id = c.lastrowid
-            for f in files:
-                file_type = "audio" if f.endswith(".mp3") else "pdf"
-                c.execute(
-                    "INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
-                    (course_id, f, file_type, title)
-                )
-
-    # -------------------------
     # CREATE DEMO STUDENT USER
     # -------------------------
     demo_email = "demo@widemind.test"
@@ -139,7 +116,7 @@ def init_db():
         )
         demo_user_id = c.lastrowid
 
-        # ₦100 in kobo (Paystack-compatible) with reference and timestamp
+        # ₦1,500,000 (Paystack-compatible) with reference and timestamp
         c.execute(
             """
             INSERT INTO payments (user_id, amount, status, reference, paid_at)
