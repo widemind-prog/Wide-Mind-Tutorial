@@ -233,10 +233,7 @@ function preloadAdjacentPages(current) {
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = viewport.width;
         tempCanvas.height = viewport.height;
-        page.render({
-          canvasContext: tempCanvas.getContext("2d"),
-          viewport
-        }).promise.then(() => {
+        page.render({ canvasContext: tempCanvas.getContext("2d"), viewport }).promise.then(() => {
           pageCache[n] = tempCanvas.toDataURL();
         });
       });

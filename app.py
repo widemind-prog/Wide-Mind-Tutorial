@@ -219,19 +219,21 @@ def course_page(course_id):
 # =====================
 @app.route("/course/<int:course_id>/pdf")
 def pdf_viewer(course_id):
+    # Check if user is logged in
     if "user_id" not in session:
         return redirect("/login-page")
 
     conn = get_db()
     c = conn.cursor()
 
-    # Fetch latest payment
+    # Fetch latest payment for user
     c.execute(
         "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
         (session["user_id"],)
     )
     payment = c.fetchone()
 
+    # Check for admin override
     admin_override = payment["admin_override_status"] if payment else None
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
@@ -244,7 +246,7 @@ def pdf_viewer(course_id):
         conn.close()
         abort(404)
 
-    # Fetch PDF material for course
+    # Fetch the first PDF material for the course
     c.execute("""
         SELECT id
         FROM materials
@@ -252,24 +254,26 @@ def pdf_viewer(course_id):
         ORDER BY id ASC
         LIMIT 1
     """, (course_id,))
-
     material = c.fetchone()
     conn.close()
 
     if not material:
         abort(404)
 
-    # IMPORTANT: pass material_id (not pdf_id)
+    # Pass material_id (not PDF filename) and username to template
     return render_template(
-    "pdf_viewer.html",
-    course=course,
-    material_id=material["id"],
-    username=session.get("username", "Student")
+        "pdf_viewer.html",
+        course=course,
+        material_id=material["id"],
+        username=session.get("username", "Student")
     )
+
 
 # =====================
 # STREAM FILES
 # =====================
+
+# --- AUDIO STREAM (unchanged) ---
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
     if "user_id" not in session:
@@ -299,9 +303,8 @@ def stream_audio(material_id):
 
     return send_from_directory(current_app.config["UPLOAD_FOLDER"], material["filename"])
 
-from flask import send_file, abort, session, current_app
-import os
 
+# --- PDF STREAM ---
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     if "user_id" not in session:
@@ -310,35 +313,33 @@ def stream_pdf(material_id):
     conn = get_db()
     c = conn.cursor()
 
+    # Fetch latest payment for user
     c.execute(
         "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
         (session["user_id"],)
     )
     payment = c.fetchone()
 
+    # Admin override check
     admin_override = payment["admin_override_status"] if payment else None
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
 
+    # Get PDF filename from materials table
     c.execute("""
         SELECT m.filename
         FROM materials m
         JOIN courses c ON m.course_id = c.id
         WHERE m.id=? AND m.file_type='pdf'
     """, (material_id,))
-
     material = c.fetchone()
     conn.close()
 
     if not material:
         abort(404)
 
-    file_path = os.path.join(
-        current_app.config["UPLOAD_FOLDER"],
-        material["filename"]
-    )
-
+    file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], material["filename"])
     if not os.path.exists(file_path):
         abort(404)
 
@@ -346,7 +347,7 @@ def stream_pdf(material_id):
         file_path,
         mimetype="application/pdf",
         as_attachment=False,
-        conditional=True  # 🔥 REQUIRED FOR PDF.js
+        conditional=True  # Required for PDF.js
     )
 
 # =====================
