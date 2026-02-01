@@ -13,7 +13,12 @@
         <select name="level" required>  
             <option value="400">400</option>  
         </select>  
-        <input type="password" name="password" placeholder="Password" required>  
+        <div class="password-wrapper" style="position: relative;">
+    <input type="password" name="password" id="password" placeholder="Enter your password" required>
+    <span class="toggle-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
+        👁️
+    </span>
+</div>  
         <button type="submit" class="btn">Register</button>  
     </form>  
     <p id="register-msg"></p>  
