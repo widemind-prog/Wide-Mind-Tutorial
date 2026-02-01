@@ -6,15 +6,22 @@
 
 <h2>{{ course.course_code }} - {{ course.course_title }}</h2>
 
+{# ===== COURSE OVERVIEW AS HERO CARD ===== #}
+{% if course.description %}
+  <div class="hero-description">
+    <h3>Course Overview 📘</h3>
+    <p>{{ course.description }}</p>
+  </div>
+{% endif %}
+
+{# ===== AUDIO LESSONS ===== #}
 {% if audios %}
   <h3>Audio Lessons 🎧</h3>
   <ul style="list-style: none; padding-left: 0;">
     {% for audio in audios %}
       <li style="margin-bottom: 15px;">
         <p>{{ audio.title or audio.filename }}</p>
-        <audio id="audio-{{ audio.id }}" controls
-               style="display: block; margin-left: 0; margin-right: auto;"
-               disablePictureInPicture>
+        <audio id="audio-{{ audio.id }}" controls disablePictureInPicture style="display:block; margin:0 auto;">
           <source src="/stream/audio/{{ audio.id }}" type="audio/mpeg">
           Your browser does not support the audio element.
         </audio>
@@ -23,6 +30,7 @@
   </ul>
 {% endif %}
 
+{# ===== PDF LESSONS ===== #}
 {% if pdfs %}
   <h3>PDF Lessons 📝</h3>
   <ul style="list-style: none; padding-left: 0;">
@@ -36,7 +44,7 @@
   </ul>
 {% endif %}
 
-<!-- Toast for messages -->
+{# ===== TOAST MESSAGES ===== #}
 <div id="toast" class="toast"></div>
 
 <script>
@@ -63,10 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Disable dragging
         audio.addEventListener("dragstart", e => e.preventDefault());
 
-        // Hide download button but allow playback speed
+        // Hide download button
         audio.setAttribute("controlsList", "nodownload");
-
-        // Disable Picture-in-Picture
         audio.setAttribute("disablePictureInPicture", "true");
 
         // Left-align audio player
