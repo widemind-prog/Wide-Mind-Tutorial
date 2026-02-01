@@ -340,6 +340,42 @@ main.content,
     }
 }
 
+/* ========================== PASSWORD FIELD WRAPPER ========================== */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Input padding to make room for the toggle icon */
+.password-wrapper input {
+    width: 100%;
+    padding-right: 40px; /* extra space for the icon */
+    box-sizing: border-box;
+}
+
+/* Toggle password icon (PNG/SVG) */
+.toggle-password-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 22px;    /* adjust size as needed */
+    height: 22px;   /* keep square for consistency */
+    user-select: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    opacity: 0.85;
+}
+
+/* Hover / active effects for better UX */
+.toggle-password-icon:hover {
+    transform: translateY(-50%) scale(1.1);
+    opacity: 1;
+}
+.toggle-password-icon:active {
+    transform: translateY(-50%) scale(1.05);
+}
+
 /* ========================== GLOBAL BUTTONS (except CTA) ========================== */
 button, .btn {
     background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);

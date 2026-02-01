@@ -15,10 +15,13 @@
         </select>  
         <div class="password-wrapper" style="position: relative;">
     <input type="password" name="password" id="password" placeholder="Enter your password" required>
-    <span class="toggle-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
-        👁️
-    </span>
-</div>  
+    
+    <!-- Eye icon (PNG/SVG) -->
+    <img src="/static/images/eye-skeleton.png" 
+         alt="Toggle password visibility" 
+         class="toggle-password-icon"
+         style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; width: 20px; height: 20px;">
+</div>
         <button type="submit" class="btn">Register</button>  
     </form>  
     <p id="register-msg"></p>  

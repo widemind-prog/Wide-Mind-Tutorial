@@ -343,6 +343,16 @@ main.content,
     text-align: center;
 }
 
+/* Optional: adapt to dark theme */
+[data-theme="dark"] .password-wrapper input {
+    color: #eee;
+    background-color: rgba(20, 20, 20, 0.9);
+    border: 1px solid #555;
+}
+
+[data-theme="dark"] .toggle-password-icon {
+    filter: brightness(0.9); /* subtle dim in dark mode */
+}
 /* ===================== HERO / HEADER POP & PRESENCE ===================== */
 [data-theme="dark"] .admin-dashboard .dashboard-title,
 [data-theme="dark"] .admin-dashboard h1 {
