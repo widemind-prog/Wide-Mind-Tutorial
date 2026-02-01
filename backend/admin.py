@@ -114,6 +114,25 @@ def bulk_delete_messages():
 def users():
     conn = get_db()
     c = conn.cursor()
+
+    # ---- USER STATS ----
+    c.execute("SELECT COUNT(*) AS total FROM users")
+    total_users = c.fetchone()["total"]
+
+    c.execute("""
+        SELECT COUNT(DISTINCT u.id) AS paid
+        FROM users u
+        JOIN payments p ON u.id = p.user_id
+        WHERE COALESCE(p.admin_override_status, p.status) = 'paid'
+    """)
+    paid_users = c.fetchone()["paid"]
+
+    c.execute("SELECT COUNT(*) AS suspended FROM users WHERE is_suspended = 1")
+    suspended_users = c.fetchone()["suspended"]
+
+    unpaid_users = total_users - paid_users
+
+    # ---- USER LIST ----
     c.execute("""
         SELECT
             u.id,
@@ -128,8 +147,17 @@ def users():
         ORDER BY u.id DESC
     """)
     users = c.fetchall()
+
     conn.close()
-    return render_template("admin/users.html", users=users)
+
+    return render_template(
+        "admin/users.html",
+        users=users,
+        total_users=total_users,
+        paid_users=paid_users,
+        unpaid_users=unpaid_users,
+        suspended_users=suspended_users
+    )
 
 @admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
 @admin_required

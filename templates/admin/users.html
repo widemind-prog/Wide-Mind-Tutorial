@@ -7,6 +7,27 @@
 
     <h1 class="dashboard-title">User Management</h1>
     <p class="dashboard-subtitle">View users, manage access, and handle payments.</p>
+    <div class="stats-grid">
+      <div class="stat-card">
+          <h3>Total Users</h3>
+          <p>{{ total_users }}</p>
+      </div>
+
+      <div class="stat-card paid">
+          <h3>Paid Users</h3>
+          <p>{{ paid_users }}</p>
+      </div>
+
+      <div class="stat-card unpaid">
+          <h3>Unpaid Users</h3>
+          <p>{{ unpaid_users }}</p>
+      </div>
+
+      <div class="stat-card suspended">
+          <h3>Suspended</h3>
+          <p>{{ suspended_users }}</p>
+      </div>
+    </div>
 
     <div class="admin-box">
 

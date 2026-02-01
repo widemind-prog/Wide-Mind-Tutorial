@@ -503,6 +503,16 @@ main.content,
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+/* ===================== ADMIN USER STATS (DARK) ===================== */
+[data-theme="dark"] .stat-card {
+    background: rgba(29, 34, 38, 0.95);
+    border: 1px solid #2a2f34;
+}
+
+[data-theme="dark"] .stat-card h3 {
+    color: #aaa;
+}
+
 /* ===================== FORMS ===================== */
 [data-theme="dark"] form {
     max-width: 340px;
