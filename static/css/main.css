@@ -192,6 +192,28 @@ body::before {
   will-change: top;
 }
 
+.password-wrapper .toggle-password-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px; /* adjust size */
+    color: #555;     /* light theme default */
+    opacity: 0.85;
+    transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+}
+
+[data-theme="dark"] .toggle-password-icon {
+    color: #eee;
+    opacity: 0.9;
+}
+
+.toggle-password-icon:hover {
+    transform: translateY(-50%) scale(1.1);
+    opacity: 1;
+}
+
 /* ===================== HEADER LOGO ===================== */
 .site-header .header-logo {
     display: block;

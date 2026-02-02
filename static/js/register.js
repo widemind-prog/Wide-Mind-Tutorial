@@ -29,3 +29,21 @@ registerForm.addEventListener("submit", async (e) => {
 });
 
 });
+    // -----------------------------
+    // PASSWORD VISIBILITY TOGGLE
+    // -----------------------------
+    const passwordInput = document.getElementById("password");
+    const toggleIcon = document.querySelector(".toggle-password-icon");
+
+    if (!passwordInput || !toggleIcon) return;
+
+    toggleIcon.addEventListener("click", () => {
+        const isHidden = passwordInput.type === "password";
+
+        passwordInput.type = isHidden ? "text" : "password";
+
+        toggleIcon.classList.toggle("fa-eye", !isHidden);
+        toggleIcon.classList.toggle("fa-eye-slash", isHidden);
+    });
+
+});
