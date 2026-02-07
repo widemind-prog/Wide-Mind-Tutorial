@@ -3,6 +3,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const audios = document.querySelectorAll("audio");
 
     audios.forEach(audio => {
+        const audioId = audio.getAttribute("id") || audio.src; // unique key for localStorage
+
+        // Load saved playback position
+        const savedTime = localStorage.getItem(`audioTime_${audioId}`);
+        if (savedTime) {
+            audio.currentTime = parseFloat(savedTime);
+        }
+
+        // Save playback position every second
+        audio.addEventListener("timeupdate", () => {
+            localStorage.setItem(`audioTime_${audioId}`, audio.currentTime);
+        });
+
+        // Optional: Remove saved time when audio ends
+        audio.addEventListener("ended", () => {
+            localStorage.removeItem(`audioTime_${audioId}`);
+        });
+
         // Prevent right-click on audio
         audio.addEventListener("contextmenu", e => e.preventDefault());
 
