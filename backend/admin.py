@@ -35,7 +35,11 @@ def dashboard():
 
 @admin_bp.route("/api/subscribe", methods=["POST"])
 def subscribe():
-    user_id = session.get("user_id")
+
+    if "user_id" not in session:
+        return jsonify({"error": "Not logged in"}), 401
+
+    user_id = session["user_id"]
     if not user_id:
         return jsonify({"error": "Not logged in"}), 401
 
@@ -144,18 +148,22 @@ def send_notification():
         # - user is offline
         # - OR notification is marked critical
 
-        is_offline = uid not in online_users
+        # Always push
+try:
+    send_push(uid, title, message, link)
+except Exception as e:
+    print("Push error:", e)
 
-        if email and (is_offline or is_critical):
-            try:
-                send_email(
-                    to_email=email,
-                    subject=title,
-                    body=message
-                )
-                print(f"Email sent to {email}")
-            except Exception as e:
-                print(f"Email failed for {email}:", e)
+# Email ONLY if critical
+if is_critical:
+    try:
+        send_email(
+            to_email=email,
+            subject=title,
+            body=message
+        )
+    except Exception as e:
+        print("Email failed:", e)
 
     conn.commit()
     conn.close()
