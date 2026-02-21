@@ -21,6 +21,7 @@ import hmac
 app = Flask(__name__)
 
 socketio.init_app(app)
+import backend.socket_events
 
 
 # =====================
