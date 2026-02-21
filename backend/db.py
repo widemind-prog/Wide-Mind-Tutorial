@@ -10,6 +10,7 @@ DB_PATH = os.environ.get(
     "/var/data/tutor.db"   # Render persistent disk
 )
 
+
 # -------------------------
 # GET DATABASE CONNECTION
 # -------------------------
@@ -26,7 +27,9 @@ def init_db():
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
+    # -------------------------
     # USERS
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +43,9 @@ def init_db():
         )
     """)
 
+    # -------------------------
     # COURSES
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +55,9 @@ def init_db():
         )
     """)
 
+    # -------------------------
     # MATERIALS
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +69,9 @@ def init_db():
         )
     """)
 
+    # -------------------------
     # PAYMENTS
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,7 +85,9 @@ def init_db():
         )
     """)
 
-    # CONTACT
+    # -------------------------
+    # CONTACT MESSAGES
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS contact_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,7 +100,9 @@ def init_db():
         )
     """)
 
+    # -------------------------
     # NOTIFICATIONS
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,21 +117,10 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-    # PUSH ENABLED COLUMN (if not exists)
-    c.execute("""
-       PRAGMA table_info(users)
-    """)
 
-    columns = [column[1] for column in c.fetchall()]
-
-    if "push_enabled" not in columns:
-    c.execute("""
-        ALTER TABLE users ADD COLUMN push_enabled INTEGER DEFAULT 0
-    """)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    # PUSH
+    # -------------------------
+    # PUSH SUBSCRIPTIONS
+    # -------------------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS push_subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,10 +128,27 @@ def init_db():
             endpoint TEXT NOT NULL,
             p256dh TEXT NOT NULL,
             auth TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
 
+    # -------------------------
+    # ADD push_enabled COLUMN IF NOT EXISTS
+    # -------------------------
+    c.execute("PRAGMA table_info(users)")
+    columns = [column[1] for column in c.fetchall()]
+
+    if "push_enabled" not in columns:
+        c.execute("""
+            ALTER TABLE users ADD COLUMN push_enabled INTEGER DEFAULT 0
+        """)
+
+# -------------------------
+# RUN INIT
+# -------------------------
+if __name__ == "__main__":
+    init_db()
     # -------------------------
     # DEMO USER
     # -------------------------
