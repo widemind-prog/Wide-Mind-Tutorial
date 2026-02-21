@@ -1,6 +1,10 @@
 from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, send_file, url_for, current_app
+from app import socketio, online_users
 from backend.db import get_db, is_admin
 from functools import wraps
+from pywebpush import webpush
+from backend.email_service import send_email
+import json
 import os
 from werkzeug.utils import secure_filename
 
@@ -30,6 +34,88 @@ def dashboard():
     conn.close()
     return render_template("admin/dashboard.html", unread=unread)
 
+# ---------------------
+# NOTIFICATIONS MANAGEMENT
+# ---------------------
+@admin_bp.route("/notifications/send", methods=["POST"])
+@admin_required
+def send_notification():
+
+    user_id = request.form.get("user_id")
+    title = request.form.get("title")
+    message = request.form.get("message")
+    link = request.form.get("link")
+    is_critical = request.form.get("is_critical") == "1"
+
+    if not user_id or not title or not message:
+        return jsonify({"error": "Missing fields"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+
+    # Insert notification
+    c.execute("""
+        INSERT INTO notifications (user_id, title, message, link, is_critical)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, title, message, link, int(is_critical)))
+
+    # Get user email
+    c.execute("SELECT email FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+
+    conn.commit()
+    conn.close()
+
+    # Real-time WebSocket
+    socketio.emit(
+        "new_notification",
+        {"title": title, "message": message, "link": link},
+        room=f"user_{user_id}"
+    )
+
+    # Offline detection
+    is_offline = int(user_id) not in online_users
+
+    # Email fallback
+    if user and (is_offline or is_critical):
+        send_email(user["email"], title, message)
+
+    # Push always
+    send_push(user_id, title, message, link)
+
+    return jsonify({"success": True})
+
+def send_push(user_id, title, message, link):
+
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM push_subscriptions WHERE user_id=?", (user_id,))
+    subs = c.fetchall()
+    conn.close()
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": {
+                        "p256dh": sub["p256dh"],
+                        "auth": sub["auth"]
+                    }
+                },
+                data=json.dumps({
+                    "title": title,
+                    "message": message,
+                    "link": link
+                }),
+                vapid_private_key=os.environ.get("VAPID_PRIVATE_KEY"),
+                vapid_claims={
+                    "sub": "mailto:wideminddevs@gmail.com"
+                }
+            )
+        except Exception as e:
+            print("Push failed:", e)
 # ---------------------
 # MESSAGES MANAGEMENT
 # ---------------------

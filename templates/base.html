@@ -65,7 +65,18 @@
         oncontextmenu="return false;"
     >
 </a>
-    </a>
+<div class="notification-wrapper">
+    <div id="notification-bell">
+        🔔 <span id="notif-count" class="notif-badge"></span>
+    </div>
+
+    <div id="notification-dropdown" class="notif-dropdown">
+        <div class="notif-header">
+            Notifications
+        </div>
+        <div id="notif-list"></div>
+    </div>
+</div>
 </header>
 
 <main class="content">
@@ -123,5 +134,16 @@
   <button id="scroll-bottom" title="Go to bottom">▼</button>
 </div>
 <script src="{{ url_for('static', filename='js/scroll-nav.js') }}"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const VAPID_PUBLIC_KEY = "{{ config['VAPID_PUBLIC_KEY'] }}";
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("/static/js/service-worker.js")
+    .then(() => console.log("Service Worker Registered"));
+}
+</script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 </body>
 </html>

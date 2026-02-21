@@ -6,6 +6,7 @@ from flask_cors import CORS
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_socketio import SocketIO, emit, join_room
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
@@ -18,12 +19,15 @@ import hmac
 
 app = Flask(__name__)
 
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 # =====================
 # CONFIG
 # =====================
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
 app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
+app.config["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY")
 
 # Persistent upload folder for files (safe on Render)
 UPLOAD_BASE = os.environ.get("UPLOAD_PATH", "/var/data/uploads")
@@ -53,9 +57,29 @@ app.register_blueprint(webhook_bp)
 # =====================
 init_db()
 
+online_users = set()
+@socketio.on("connect")
+def handle_connect():
+    if "user_id" in session:
+        user_id = session["user_id"]
+        online_users.add(user_id)
+        join_room(f"user_{user_id}")
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    if "user_id" in session:
+        online_users.discard(session["user_id"])
 # =====================
 # TEMPLATE CONTEXT
 # =====================
+@app.context_processor
+def inject_config():
+    return {
+        "config": {
+            "VAPID_PUBLIC_KEY": app.config["VAPID_PUBLIC_KEY"]
+        }
+    }
+    
 @app.context_processor
 def inject_now():
     return {"now": datetime.utcnow}
@@ -178,6 +202,31 @@ def my_courses():
 
     return jsonify({"courses": courses})
 
+@app.route("/api/subscribe", methods=["POST"])
+def subscribe():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json
+
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("""
+        INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+        VALUES (?, ?, ?, ?)
+    """, (
+        session["user_id"],
+        data["endpoint"],
+        data["keys"]["p256dh"],
+        data["keys"]["auth"]
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+    
 # =====================
 # COURSE PAGE
 # =====================
@@ -277,6 +326,42 @@ def pdf_viewer(course_id):
         material_id=material["id"]  # streamed PDF
     )
 
+# =====================
+# NOTIFICATIONS
+# =====================
+@app.route("/api/notifications")
+def get_notifications():
+    if "user_id" not in session:
+        return jsonify([])
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM notifications
+        WHERE user_id=? AND is_archived=0
+        ORDER BY created_at DESC
+    """, (session["user_id"],))
+    rows = c.fetchall()
+    conn.close()
+
+    return jsonify([dict(r) for r in rows])
+    
+@app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
+def mark_notification_read(notif_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE notifications
+        SET is_read=1
+        WHERE id=? AND user_id=?
+    """, (notif_id, session["user_id"]))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
 # =====================
 # STREAM FILES
 # =====================
@@ -410,4 +495,4 @@ def logout():
 # =====================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5002))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    socketio.run(app, host="0.0.0.0", port=port)
