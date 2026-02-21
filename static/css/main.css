@@ -214,20 +214,53 @@ body::before {
     opacity: 1;
 }
 
-/* ===================== HEADER LOGO ===================== */
-.site-header .header-logo {
-    display: block;
-    margin-left: 0 auto;         /* centers the logo */
-    max-width: 200px;       /* prevents it from being too wide */
-    width: 100%;             /* scales relative to the container */
-    height: auto;           /* keeps aspect ratio */
-    text-align: left;
-}
+/* ================= HEADER LAYOUT FIX ================= */
 
-.header-right {
-    margin-left: auto;
+.site-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    position: relative;
+}
+
+/* Logo clickable ONLY on image */
+.logo-link {
+    display: inline-block;
+}
+
+.header-logo {
+    display: block;
+    height: 55px;
+    width: auto;
+    cursor: pointer;
+}
+
+/* Right side container */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Notification Bell */
+#notification-bell {
+    font-size: 22px;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Badge */
+.notif-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: crimson;
+    color: white;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 50%;
+    display: none;
 }
 /* Responsive adjustments */
 @media (max-width: 768px) {
