@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, send_file, url_for, current_app
-from app import socketio, online_users
+from extensions import socketio
+from state import online_users
 from backend.db import get_db, is_admin
 from functools import wraps
 from pywebpush import webpush

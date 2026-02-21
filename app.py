@@ -6,7 +6,8 @@ from flask_cors import CORS
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_socketio import SocketIO, emit, join_room
+from extensions import socketio
+from state import online_users
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.admin import admin_bp
@@ -19,7 +20,8 @@ import hmac
 
 app = Flask(__name__)
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio.init_app(app)
+
 
 # =====================
 # CONFIG
@@ -57,18 +59,6 @@ app.register_blueprint(webhook_bp)
 # =====================
 init_db()
 
-online_users = set()
-@socketio.on("connect")
-def handle_connect():
-    if "user_id" in session:
-        user_id = session["user_id"]
-        online_users.add(user_id)
-        join_room(f"user_{user_id}")
-
-@socketio.on("disconnect")
-def handle_disconnect():
-    if "user_id" in session:
-        online_users.discard(session["user_id"])
 # =====================
 # TEMPLATE CONTEXT
 # =====================
