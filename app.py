@@ -20,10 +20,6 @@ import hmac
 
 app = Flask(__name__)
 
-socketio.init_app(app)
-import backend.socket_events
-
-
 # =====================
 # CONFIG
 # =====================
@@ -74,6 +70,40 @@ def inject_config():
 @app.context_processor
 def inject_now():
     return {"now": datetime.utcnow}
+
+
+@app.route("/api/subscribe", methods=["POST"])
+def subscribe():
+
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json
+
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("""
+        INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+        VALUES (?, ?, ?, ?)
+    """, (
+        session["user_id"],
+        data["endpoint"],
+        data["keys"]["p256dh"],
+        data["keys"]["auth"]
+    ))
+
+    # Enable push for user
+    c.execute("""
+        UPDATE users SET push_enabled = 1 WHERE id=?
+    """, (session["user_id"],))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+socketio.init_app(app)
+import backend.socket_events
 
 # =====================
 # PAGES
