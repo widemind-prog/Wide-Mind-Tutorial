@@ -22,7 +22,6 @@ def send_email(to_email, subject, body):
             subject=subject,
             html_content=f"""
             <div style="font-family: Arial; padding: 20px;">
-                <h2>{subject}</h2>
                 <p>{body}</p>
                 <hr>
                 <small>Wide Mind Tutorials</small>
