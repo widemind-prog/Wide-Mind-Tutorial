@@ -68,49 +68,80 @@ def send_notification():
     conn = get_db()
     c = conn.cursor()
 
+    # ---------------------
+    # DETERMINE TARGET USERS
+    # ---------------------
     if send_all:
-
         c.execute("SELECT id, email FROM users WHERE role != 'admin'")
         users = c.fetchall()
-
-        for user in users:
-            c.execute("""
-                INSERT INTO notifications (user_id, title, message, link, is_critical)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user["id"], title, message, link, int(is_critical)))
-
-            socketio.emit(
-                "new_notification",
-                {"title": title, "message": message, "link": link},
-                room=f"user_{user['id']}"
-            )
-
-            send_push(user["id"], title, message, link)
-
     else:
-
         if not user_id:
             flash("Select a user or choose send to all", "error")
+            conn.close()
             return redirect(url_for("admin_bp.notifications_page"))
 
+        c.execute("SELECT id, email FROM users WHERE id=?", (user_id,))
+        users = c.fetchall()
+
+    # ---------------------
+    # PROCESS EACH USER
+    # ---------------------
+    for user in users:
+
+        uid = int(user["id"])
+        email = user["email"]
+
+        # 1️⃣ Save notification in DB
         c.execute("""
             INSERT INTO notifications (user_id, title, message, link, is_critical)
             VALUES (?, ?, ?, ?, ?)
-        """, (user_id, title, message, link, int(is_critical)))
+        """, (uid, title, message, link, int(is_critical)))
 
+        # 2️⃣ Real-time WebSocket
         socketio.emit(
             "new_notification",
-            {"title": title, "message": message, "link": link},
-            room=f"user_{user_id}"
+            {
+                "title": title,
+                "message": message,
+                "link": link
+            },
+            room=f"user_{uid}"
         )
 
-        send_push(user_id, title, message, link)
+        # 3️⃣ Push Notification (always attempt)
+        try:
+            send_push(uid, title, message, link)
+        except Exception as e:
+            print("Push error:", e)
+
+        # 4️⃣ EMAIL FALLBACK LOGIC
+        # Send email if:
+        # - user is offline
+        # - OR notification is marked critical
+
+        is_offline = uid not in online_users
+
+        if email and (is_offline or is_critical):
+            try:
+                send_email(
+                    to_email=email,
+                    subject=title,
+                    body=message
+                )
+                print(f"Email sent to {email}")
+            except Exception as e:
+                print(f"Email failed for {email}:", e)
 
     conn.commit()
     conn.close()
 
     flash("Notification sent successfully", "success")
     return redirect(url_for("admin_bp.notifications_page"))
+
+
+# ---------------------
+# PUSH DELIVERY
+# ---------------------
 
 def send_push(user_id, title, message, link):
 
