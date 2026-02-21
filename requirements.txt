@@ -4,6 +4,6 @@ Werkzeug
 gunicorn
 requests
 flask-socketio
-gthread
+eventlet
 sendgrid
 pywebpush
