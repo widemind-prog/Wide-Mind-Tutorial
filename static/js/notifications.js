@@ -32,7 +32,12 @@ function loadNotifications() {
             notifList.appendChild(div);
         });
 
-        notifCount.textContent = unread || "";
+        if (unread > 0) {
+    notifCount.textContent = unread;
+    notifCount.style.display = "inline-block";
+} else {
+    notifCount.style.display = "none";
+}
     });
 }
 
@@ -68,3 +73,9 @@ function urlBase64ToUint8Array(base64String) {
     const rawData = atob(base64);
     return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
+
+document.addEventListener("click", function(event) {
+    if (!bell.contains(event.target)) {
+        dropdown.classList.remove("active");
+    }
+});

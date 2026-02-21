@@ -56,27 +56,30 @@
 <body>
 
 <header class="site-header">
+    
     <a href="{{ url_for('home') }}">
-    <img
-        src="{{ url_for('static', filename='images/logo.png') }}"
-        alt="Wide Mind Tutorials"
-        class="header-logo"
-        draggable="false"
-        oncontextmenu="return false;"
-    >
-</a>
-<div class="notification-wrapper">
-    <div id="notification-bell">
-        🔔 <span id="notif-count" class="notif-badge"></span>
+        <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="Wide Mind Tutorials"
+            class="header-logo"
+        >
+    </a>
+
+    <!-- PUSH BELL TO RIGHT -->
+    <div class="header-right">
+        <div class="notification-wrapper">
+            <div id="notification-bell">
+                <i class="fa-solid fa-bell"></i>
+                <span id="notif-count" class="notif-badge"></span>
+            </div>
+
+            <div id="notification-dropdown" class="notif-dropdown">
+                <div class="notif-header">Notifications</div>
+                <div id="notif-list"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="notification-dropdown" class="notif-dropdown">
-        <div class="notif-header">
-            Notifications
-        </div>
-        <div id="notif-list"></div>
-    </div>
-</div>
 </header>
 
 <main class="content">

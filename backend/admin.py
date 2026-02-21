@@ -38,6 +38,17 @@ def dashboard():
 # ---------------------
 # NOTIFICATIONS MANAGEMENT
 # ---------------------
+@admin_bp.route("/notifications")
+@admin_required
+def notifications_page():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, name, email FROM users WHERE role='student'")
+    users = c.fetchall()
+    conn.close()
+
+    return render_template("admin/send_notification.html", users=users)
+    
 @admin_bp.route("/notifications/send", methods=["POST"])
 @admin_required
 def send_notification():
