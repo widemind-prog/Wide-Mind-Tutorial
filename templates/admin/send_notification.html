@@ -1,12 +1,15 @@
-{% extends "admin/base.html" %}
+{% extends "base.html" %}
+
+{% block title %}Send Notification{% endblock %}
 
 {% block content %}
-<h3>Send Notification</h3>
+
+<h2>Send Notification</h2>
 
 <form method="POST" action="/admin/notifications/send">
-    
+
     <label>User</label>
-    <select name="user_id" class="form-control" required>
+    <select name="user_id" required>
         {% for user in users %}
             <option value="{{ user.id }}">
                 {{ user.name }} ({{ user.email }})
@@ -14,20 +17,27 @@
         {% endfor %}
     </select>
 
+    <br><br>
+
     <label>Title</label>
-    <input type="text" name="title" class="form-control" required>
+    <input type="text" name="title" required>
+
+    <br><br>
 
     <label>Message</label>
-    <textarea name="message" class="form-control" required></textarea>
+    <textarea name="message" required></textarea>
+
+    <br><br>
 
     <label>
         <input type="checkbox" name="is_critical" value="1">
-        Mark as Critical (Email if offline)
+        Critical (Email if offline)
     </label>
 
-    <button type="submit" class="btn btn-primary mt-3">
-        Send Notification
-    </button>
+    <br><br>
+
+    <button type="submit">Send</button>
+
 </form>
 
 {% endblock %}
