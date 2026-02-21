@@ -108,3 +108,20 @@ function urlBase64ToUint8Array(base64String) {
     const rawData = atob(base64);
     return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
+
+document.addEventListener("DOMContentLoaded", async () => {
+
+    if (!("serviceWorker" in navigator)) return;
+
+    // Only ask if permission not already granted
+    if (Notification.permission === "default") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+    }
+
+    // If granted, subscribe
+    if (Notification.permission === "granted") {
+        await subscribePush();
+    }
+
+});

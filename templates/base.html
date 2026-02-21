@@ -147,6 +147,8 @@ if ('serviceWorker' in navigator) {
     .then(() => console.log("Service Worker Registered"));
 }
 </script>
+{% if session.get("user_id") %}
 <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+{% endif %}
 </body>
 </html>

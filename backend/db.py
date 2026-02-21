@@ -104,7 +104,20 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
+    # PUSH ENABLED COLUMN (if not exists)
+    c.execute("""
+       PRAGMA table_info(users)
+    """)
 
+    columns = [column[1] for column in c.fetchall()]
+
+    if "push_enabled" not in columns:
+    c.execute("""
+        ALTER TABLE users ADD COLUMN push_enabled INTEGER DEFAULT 0
+    """)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
     # PUSH
     c.execute("""
         CREATE TABLE IF NOT EXISTS push_subscriptions (
