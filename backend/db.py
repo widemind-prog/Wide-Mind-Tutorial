@@ -22,12 +22,11 @@ def get_db():
 # INITIALIZE DATABASE
 # -------------------------
 def init_db():
-    conn = get_db()
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
-    # -------------------------
-    # USERS TABLE
-    # -------------------------
+    # USERS
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,9 +40,7 @@ def init_db():
         )
     """)
 
-    # -------------------------
-    # COURSES TABLE
-    # -------------------------
+    # COURSES
     c.execute("""
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,9 +50,7 @@ def init_db():
         )
     """)
 
-    # -------------------------
-    # MATERIALS TABLE
-    # -------------------------
+    # MATERIALS
     c.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,9 +62,7 @@ def init_db():
         )
     """)
 
-    # -------------------------
-    # PAYMENTS TABLE
-    # -------------------------
+    # PAYMENTS
     c.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,9 +76,7 @@ def init_db():
         )
     """)
 
-    # -------------------------
-    # CONTACT MESSAGES TABLE
-    # -------------------------
+    # CONTACT
     c.execute("""
         CREATE TABLE IF NOT EXISTS contact_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,10 +88,8 @@ def init_db():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # -------------------------
-    # NOTIFICATIONS TABLE
-    # -------------------------
+
+    # NOTIFICATIONS
     c.execute("""
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,8 +104,8 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-    
-    # PUSH SUBSCRIPTIONS
+
+    # PUSH
     c.execute("""
         CREATE TABLE IF NOT EXISTS push_subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,10 +117,8 @@ def init_db():
         )
     """)
 
-    conn.commit()
-    conn.close()
     # -------------------------
-    # CREATE DEMO STUDENT USER
+    # DEMO USER
     # -------------------------
     demo_email = "demo@widemind.test"
     demo_password = "demopassword"
@@ -139,55 +126,53 @@ def init_db():
     c.execute("SELECT id FROM users WHERE email=?", (demo_email,))
     if not c.fetchone():
         hashed_pw = generate_password_hash(demo_password)
-        c.execute(
-            """
-            INSERT INTO users (name, email, password, department, level, role, is_suspended)
-            VALUES (?, ?, ?, ?, ?, 'student', 0)
-            """,
-            ("Demo User", demo_email, hashed_pw, "Psychology", "400")
-        )
+
+        c.execute("""
+            INSERT INTO users (name, email, password, department, level, role)
+            VALUES (?, ?, ?, ?, ?, 'student')
+        """, ("Demo User", demo_email, hashed_pw, "Psychology", "400"))
+
         demo_user_id = c.lastrowid
 
-        # ₦1,500,000 (Paystack-compatible) with reference and timestamp
-        c.execute(
-            """
+        c.execute("""
             INSERT INTO payments (user_id, amount, status, reference, paid_at)
             VALUES (?, ?, 'paid', ?, datetime('now'))
-            """,
-            (demo_user_id, 2000000, "DEMO-REF-001")
-        )
+        """, (demo_user_id, 2000000, "DEMO-REF-001"))
 
     # -------------------------
-    # CREATE ADMIN USER
+    # ADMIN USER
     # -------------------------
     admin_email = "wideminddevs@gmail.com"
 
     admin_hashed_password = (
-        "scrypt:32768:8:1$AMDSiSevHwChJp23$083a029ff1370771a4afd5e72bcb3803"
-        "bafccdac058f559a997d6641084e6b955489fc4df1678bb19d857516c7c228446"
-        "01494c0c50e75a56ab90e1c25b46e8e"
+        "scrypt:32768:8:1$AMDSiSevHwJp23$083a029ff1370771a4afd5e72bcb3803"
     )
 
     c.execute("SELECT id FROM users WHERE email=?", (admin_email,))
     if not c.fetchone():
-        c.execute(
-            "INSERT INTO users (name, email, password, role, is_suspended) VALUES (?, ?, ?, 'admin', 0)",
-            ("Admin Wide", admin_email, admin_hashed_password)
-        )
+        c.execute("""
+            INSERT INTO users (name, email, password, role)
+            VALUES (?, ?, ?, 'admin')
+        """, ("Admin Wide", admin_email, admin_hashed_password))
 
     conn.commit()
     conn.close()
+
     print("✅ Database initialized successfully.")
 
 # -------------------------
 # CHECK IF ADMIN
 # -------------------------
 def is_admin(user_id):
-    conn = get_db()
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
+
     c.execute("SELECT role FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
+
     conn.close()
+
     return user and user["role"] == "admin"
 
 # -------------------------
