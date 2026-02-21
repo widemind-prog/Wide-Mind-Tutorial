@@ -197,32 +197,7 @@ def my_courses():
 
     return jsonify({"courses": courses})
 
-@admin_bp.route("/api/subscribe", methods=["POST"])
-def subscribe():
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"error": "Not logged in"}), 401
 
-    data = request.get_json()
-
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("""
-        INSERT OR REPLACE INTO push_subscriptions
-        (user_id, endpoint, p256dh, auth)
-        VALUES (?, ?, ?, ?)
-    """, (
-        user_id,
-        data["endpoint"],
-        data["keys"]["p256dh"],
-        data["keys"]["auth"]
-    ))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True})
     
 # =====================
 # COURSE PAGE
