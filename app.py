@@ -28,7 +28,6 @@ app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY")
 
-# Persistent upload folder for files (safe on Render)
 UPLOAD_BASE = os.environ.get("UPLOAD_PATH", "/var/data/uploads")
 os.makedirs(UPLOAD_BASE, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_BASE
@@ -40,54 +39,10 @@ if os.environ.get("ENV") == "production":
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=3600  # 1 hour
+    PERMANENT_SESSION_LIFETIME=3600
 )
 
 socketio.init_app(app)
-
-@app.route("/api/subscribe", methods=["POST"])
-def subscribe():
-
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    data = request.json
-
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("""
-        INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
-        VALUES (?, ?, ?, ?)
-    """, (
-        session["user_id"],
-        data["endpoint"],
-        data["keys"]["p256dh"],
-        data["keys"]["auth"]
-    ))
-
-    # Enable push for user
-    c.execute("""
-        UPDATE users SET push_enabled = 1 WHERE id=?
-    """, (session["user_id"],))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True})
-
-# =====================
-# REGISTER BLUEPRINTS
-# =====================
-app.register_blueprint(admin_bp)
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
-app.register_blueprint(payment_bp)
-app.register_blueprint(webhook_bp)
-
-# =====================
-# INITIALIZE DB
-# =====================
-init_db()
 
 # =====================
 # TEMPLATE CONTEXT
@@ -103,6 +58,38 @@ def inject_config():
 @app.context_processor
 def inject_now():
     return {"now": datetime.utcnow}
+
+
+
+# =====================
+# REGISTER BLUEPRINTS (MUST COME AFTER ROUTES)
+# =====================
+
+app.register_blueprint(admin_bp)
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(payment_bp)
+app.register_blueprint(webhook_bp)
+
+
+# =====================
+# INITIALIZE DB (LAST)
+# =====================
+
+init_db()
+
+
+@app.before_request
+def block_suspended_users():
+    if "user_id" in session:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
+        user = c.fetchone()
+        conn.close()
+        if user and user["is_suspended"]:
+            session.clear()
+            return redirect("/login-page")
+            
 
 # =====================
 # PAGES
@@ -149,18 +136,7 @@ def account_page():
         return redirect("/admin")
     return render_template("account.html")
 
-@app.before_request
-def block_suspended_users():
-    if "user_id" in session:
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("SELECT is_suspended FROM users WHERE id=?", (session["user_id"],))
-        user = c.fetchone()
-        conn.close()
-        if user and user["is_suspended"]:
-            session.clear()
-            return redirect("/login-page")
-            
+
 # =====================
 # REGISTER
 # =====================
@@ -391,23 +367,6 @@ def mark_notification_read(notif_id):
 
     return jsonify({"success": True})
 
-    
-@app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
-def mark_notification_read(notif_id):
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        UPDATE notifications
-        SET is_read=1
-        WHERE id=? AND user_id=?
-    """, (notif_id, session["user_id"]))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True})
 # =====================
 # STREAM FILES
 # =====================
