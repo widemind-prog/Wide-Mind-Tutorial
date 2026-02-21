@@ -43,34 +43,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=3600  # 1 hour
 )
 
-# =====================
-# REGISTER BLUEPRINTS
-# =====================
-app.register_blueprint(admin_bp)
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
-app.register_blueprint(payment_bp)
-app.register_blueprint(webhook_bp)
-
-# =====================
-# INITIALIZE DB
-# =====================
-init_db()
-
-# =====================
-# TEMPLATE CONTEXT
-# =====================
-@app.context_processor
-def inject_config():
-    return {
-        "config": {
-            "VAPID_PUBLIC_KEY": app.config["VAPID_PUBLIC_KEY"]
-        }
-    }
-    
-@app.context_processor
-def inject_now():
-    return {"now": datetime.utcnow}
-
+socketio.init_app(app)
 
 @app.route("/api/subscribe", methods=["POST"])
 def subscribe():
@@ -102,8 +75,34 @@ def subscribe():
     conn.close()
 
     return jsonify({"success": True})
-socketio.init_app(app)
-import backend.socket_events
+
+# =====================
+# REGISTER BLUEPRINTS
+# =====================
+app.register_blueprint(admin_bp)
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(payment_bp)
+app.register_blueprint(webhook_bp)
+
+# =====================
+# INITIALIZE DB
+# =====================
+init_db()
+
+# =====================
+# TEMPLATE CONTEXT
+# =====================
+@app.context_processor
+def inject_config():
+    return {
+        "config": {
+            "VAPID_PUBLIC_KEY": app.config["VAPID_PUBLIC_KEY"]
+        }
+    }
+    
+@app.context_processor
+def inject_now():
+    return {"now": datetime.utcnow}
 
 # =====================
 # PAGES
@@ -350,24 +349,48 @@ def pdf_viewer(course_id):
     )
 
 # =====================
-# NOTIFICATIONS
+# NOTIFICATIONS API
 # =====================
 @app.route("/api/notifications")
 def get_notifications():
+
     if "user_id" not in session:
         return jsonify([])
 
     conn = get_db()
     c = conn.cursor()
+
     c.execute("""
         SELECT * FROM notifications
         WHERE user_id=? AND is_archived=0
         ORDER BY created_at DESC
     """, (session["user_id"],))
+
     rows = c.fetchall()
     conn.close()
 
     return jsonify([dict(r) for r in rows])
+
+@app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
+def mark_notification_read(notif_id):
+
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("""
+        UPDATE notifications
+        SET is_read=1
+        WHERE id=? AND user_id=?
+    """, (notif_id, session["user_id"]))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
     
 @app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
 def mark_notification_read(notif_id):
