@@ -1,23 +1,31 @@
 {% extends "base.html" %}
-
 {% block title %}Send Notification{% endblock %}
 
 {% block content %}
 
 <h2>Send Notification</h2>
 
-<form method="POST" action="/admin/notifications/send">
+<form method="POST" action="{{ url_for('admin_bp.send_notification') }}">
 
-    <label>User</label>
-    <select name="user_id" required>
-        {% for user in users %}
-            <option value="{{ user.id }}">
-                {{ user.name }} ({{ user.email }})
-            </option>
-        {% endfor %}
-    </select>
+    <label>
+        <input type="checkbox" name="send_all" value="1" id="send_all_toggle">
+        Send to ALL users
+    </label>
 
     <br><br>
+
+    <div id="single_user_select">
+        <label>User</label>
+        <select name="user_id">
+            {% for user in users %}
+                <option value="{{ user.id }}">
+                    {{ user.name }} ({{ user.email }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <br>
 
     <label>Title</label>
     <input type="text" name="title" required>
@@ -29,6 +37,11 @@
 
     <br><br>
 
+    <label>Link (optional)</label>
+    <input type="text" name="link" placeholder="/dashboard">
+
+    <br><br>
+
     <label>
         <input type="checkbox" name="is_critical" value="1">
         Critical (Email if offline)
@@ -36,8 +49,15 @@
 
     <br><br>
 
-    <button type="submit">Send</button>
+    <button type="submit">Send Notification</button>
 
 </form>
+
+<script>
+document.getElementById("send_all_toggle").addEventListener("change", function() {
+    document.getElementById("single_user_select").style.display =
+        this.checked ? "none" : "block";
+});
+</script>
 
 {% endblock %}

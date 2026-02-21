@@ -38,64 +38,79 @@ def dashboard():
 # ---------------------
 # NOTIFICATIONS MANAGEMENT
 # ---------------------
+
 @admin_bp.route("/notifications")
 @admin_required
 def notifications_page():
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, name, email FROM users WHERE role='student'")
+    c.execute("SELECT id, name, email FROM users WHERE role != 'admin'")
     users = c.fetchall()
     conn.close()
-
     return render_template("admin/send_notification.html", users=users)
-    
+
+
 @admin_bp.route("/notifications/send", methods=["POST"])
 @admin_required
 def send_notification():
 
+    send_all = request.form.get("send_all")
     user_id = request.form.get("user_id")
     title = request.form.get("title")
     message = request.form.get("message")
-    link = request.form.get("link")
+    link = request.form.get("link") or "/"
     is_critical = request.form.get("is_critical") == "1"
 
-    if not user_id or not title or not message:
-        return jsonify({"error": "Missing fields"}), 400
+    if not title or not message:
+        flash("Missing title or message", "error")
+        return redirect(url_for("admin_bp.notifications_page"))
 
     conn = get_db()
     c = conn.cursor()
 
-    # Insert notification
-    c.execute("""
-        INSERT INTO notifications (user_id, title, message, link, is_critical)
-        VALUES (?, ?, ?, ?, ?)
-    """, (user_id, title, message, link, int(is_critical)))
+    if send_all:
 
-    # Get user email
-    c.execute("SELECT email FROM users WHERE id=?", (user_id,))
-    user = c.fetchone()
+        c.execute("SELECT id, email FROM users WHERE role != 'admin'")
+        users = c.fetchall()
+
+        for user in users:
+            c.execute("""
+                INSERT INTO notifications (user_id, title, message, link, is_critical)
+                VALUES (?, ?, ?, ?, ?)
+            """, (user["id"], title, message, link, int(is_critical)))
+
+            socketio.emit(
+                "new_notification",
+                {"title": title, "message": message, "link": link},
+                room=f"user_{user['id']}"
+            )
+
+            send_push(user["id"], title, message, link)
+
+    else:
+
+        if not user_id:
+            flash("Select a user or choose send to all", "error")
+            return redirect(url_for("admin_bp.notifications_page"))
+
+        c.execute("""
+            INSERT INTO notifications (user_id, title, message, link, is_critical)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, title, message, link, int(is_critical)))
+
+        socketio.emit(
+            "new_notification",
+            {"title": title, "message": message, "link": link},
+            room=f"user_{user_id}"
+        )
+
+        send_push(user_id, title, message, link)
 
     conn.commit()
     conn.close()
 
-    # Real-time WebSocket
-    socketio.emit(
-        "new_notification",
-        {"title": title, "message": message, "link": link},
-        room=f"user_{user_id}"
-    )
-
-    # Offline detection
-    is_offline = int(user_id) not in online_users
-
-    # Email fallback
-    if user and (is_offline or is_critical):
-        send_email(user["email"], title, message)
-
-    # Push always
-    send_push(user_id, title, message, link)
-
-    return jsonify({"success": True})
+    flash("Notification sent successfully", "success")
+    return redirect(url_for("admin_bp.notifications_page"))
 
 def send_push(user_id, title, message, link):
 

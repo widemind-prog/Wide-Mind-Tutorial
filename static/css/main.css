@@ -1027,35 +1027,37 @@ input, textarea, button, select {
 
 .notification-wrapper {
     position: relative;
+    margin-left: auto;
 }
 
 #notification-bell {
+    font-size: 20px;
     cursor: pointer;
     position: relative;
-    font-size: 20px;
 }
 
 .notif-badge {
     position: absolute;
     top: -6px;
     right: -8px;
-    background: red;
+    background: crimson;
     color: white;
-    border-radius: 50%;
-    font-size: 12px;
+    font-size: 11px;
     padding: 2px 6px;
+    border-radius: 50px;
 }
 
 .notif-dropdown {
-    position: absolute;
-    right: 0;
-    top: 40px;
-    width: 320px;
-    max-height: 400px;
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    width: 360px;
+    max-height: 500px;
     overflow-y: auto;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    z-index: 999999;
     transform: translateY(-10px);
     opacity: 0;
     pointer-events: none;
@@ -1066,6 +1068,32 @@ input, textarea, button, select {
     transform: translateY(0);
     opacity: 1;
     pointer-events: auto;
+}
+
+.notif-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.notif-item.unread {
+    background: #fff5f5;
+    border-left: 4px solid crimson;
+}
+
+.notif-item h4 {
+    margin: 0 0 4px;
+    font-size: 14px;
+}
+
+.notif-item p {
+    margin: 0 0 4px;
+    font-size: 13px;
+}
+
+.notif-item small {
+    color: #888;
+    font-size: 11px;
 }
 
 @media (max-width: 768px) {

@@ -67,18 +67,18 @@
 
     <!-- PUSH BELL TO RIGHT -->
     <div class="header-right">
-        <div class="notification-wrapper">
-            <div id="notification-bell">
-                <i class="fa-solid fa-bell"></i>
-                <span id="notif-count" class="notif-badge"></span>
-            </div>
+{% if session.get("user_id") and not session.get("is_admin") %}
+    <div class="notification-wrapper">
+        <i id="notification-bell" class="fa-regular fa-bell"></i>
+        <span class="notif-badge" id="notif-count" style="display:none;"></span>
 
-            <div id="notification-dropdown" class="notif-dropdown">
-                <div class="notif-header">Notifications</div>
-                <div id="notif-list"></div>
-            </div>
+        <div class="notif-dropdown" id="notif-dropdown">
+            <h3 style="padding:15px; margin:0;">Notifications</h3>
+            <div id="notif-list"></div>
         </div>
     </div>
+{% endif %}
+</div>
 
 </header>
 
