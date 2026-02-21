@@ -4,13 +4,11 @@ from state import online_users
 from backend.db import get_db, is_admin
 from functools import wraps
 from pywebpush import webpush
-from backend.email_service import send_email
 import json
 import os
 from werkzeug.utils import secure_filename
-
+from backend.email_service import send_email
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
-
 # ---------------------
 # ADMIN GUARD
 # ---------------------
@@ -174,6 +172,7 @@ def send_push(user_id, title, message, link):
             )
         except Exception as e:
             print("Push failed:", e)
+            
 # ---------------------
 # MESSAGES MANAGEMENT
 # ---------------------
