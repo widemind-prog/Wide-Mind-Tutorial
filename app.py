@@ -64,6 +64,7 @@ def inject_now():
 # =====================
 # REGISTER BLUEPRINTS (MUST COME AFTER ROUTES)
 # =====================
+app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
