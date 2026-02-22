@@ -137,34 +137,24 @@ def send_notification():
             room=f"user_{uid}"
         )
 
-        # 3️⃣ Push Notification (always attempt)
+        # 3️⃣ Push Notification
         try:
             send_push(uid, title, message, link)
         except Exception as e:
             print("Push error:", e)
 
-        # 4️⃣ EMAIL FALLBACK LOGIC
-        # Send email if:
-        # - user is offline
-        # - OR notification is marked critical
+        # 4️⃣ Email ONLY if critical
+        if is_critical:
+            try:
+                send_email(
+                    to_email=email,
+                    subject=title,
+                    body=message
+                )
+            except Exception as e:
+                print("Email failed:", e)
 
-        # Always push
-try:
-    send_push(uid, title, message, link)
-except Exception as e:
-    print("Push error:", e)
-
-# Email ONLY if critical
-if is_critical:
-    try:
-        send_email(
-            to_email=email,
-            subject=title,
-            body=message
-        )
-    except Exception as e:
-        print("Email failed:", e)
-
+    # Commit AFTER loop finishes
     conn.commit()
     conn.close()
 
