@@ -39,7 +39,7 @@ if os.environ.get("ENV") == "production":
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=3600
+    PERMANENT_SESSION_LIFETIME=timedelta(days=3)
 )
 
 socketio.init_app(app)
@@ -76,7 +76,10 @@ app.register_blueprint(webhook_bp)
 
 init_db()
 
-
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+    
 @app.before_request
 def block_suspended_users():
     if "user_id" in session:
