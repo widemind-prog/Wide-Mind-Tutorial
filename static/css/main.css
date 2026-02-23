@@ -216,7 +216,9 @@ body::before {
   display: block;
   height: auto;
   width: auto;
+  max-width: 200%;
   cursor: pointer;
+  margin-left: auto;
 }
 
 .header-right {
