@@ -120,7 +120,7 @@ html, body {
     font-family: 'Poppins', 'Nunito', 'Quicksand', sans-serif; /* rounded-friendly fonts */
     text-align: left;
     background-color: #fdf6e3; /* light background by default */
-    color: #222;               /* readable text color */
+    color: black;               /* readable text color */
     border-radius: 12px;       /* rounded edges for containers if applied */
 }
 
