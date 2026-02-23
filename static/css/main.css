@@ -213,12 +213,9 @@ body::before {
 }
 
 .header-logo {
-  display: block;
-  height: auto;
-  width: auto;
-  max-width: 200%;
-  cursor: pointer;
-  margin-left: auto;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: auto;
 }
 
 .header-right {
