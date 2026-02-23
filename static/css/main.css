@@ -1,1122 +1,213 @@
 /* ===================== GLOBAL BACKGROUND IMAGE ===================== */
+
 body {
-position: relative;
-min-height: 100vh;
+    position: relative;
+    min-height: 100vh;
 
-/* Background image */  
-background-image: url('../images/background-picture.png'); /* adjust path if needed */  
-background-size: contain;           /* scale the image down */  
-background-position: center top;    /* position nicely */  
-background-repeat: no-repeat;  
-background-attachment: fixed;  
+    background-image: url('../images/background-picture.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 
-/* VERY faded overlay for visibility */  
-background-color: rgba(255, 255, 255, 0.95); /* almost fully white for main theme */  
-background-blend-mode: lighten;
-
+    background-color: #fdf6e3;
+    background-blend-mode: lighten;
 }
 
-/* Make content slightly transparent so background can show faintly /
-main.content,
-.hero-description,
-.account-box,
-.courses-box,
-.dashboard-box,
-.admin-box,
-.message-box,
-.add-course,
-form {
-background-color: rgba(255, 255, 255, 0.92); / very faintly see-through /
-backdrop-filter: blur(2px);                 / subtle frosted effect */
-}
-
-/* ===================== DARK THEME OVERRIDE ===================== /
-[data-theme="dark"] body {
-background-color: rgba(20, 20, 20, 0.95); / almost fully dark */
-background-blend-mode: lighten;
-}
-
-[data-theme="dark"] main.content,
-[data-theme="dark"] .hero-description,
-[data-theme="dark"] .account-box,
-[data-theme="dark"] .courses-box,
-[data-theme="dark"] .dashboard-box,
-[data-theme="dark"] .admin-box,
-[data-theme="dark"] .message-box,
-[data-theme="dark"] .add-course,
-[data-theme="dark"] form {
-background-color: rgba(20, 20, 20, 0.90); /* very faintly see-through */
-backdrop-filter: blur(2px);
-}
-
-/* ===================== GLOBAL BACKGROUND IMAGE ===================== /
-body {
-background-image: url('../images/background-picture.png'); / adjust path if needed /
-background-size: cover;           / make it cover the whole screen /
-background-position: center;      / center the image /
-background-repeat: no-repeat;
-background-attachment: fixed;     / keeps it fixed while scrolling */
-position: relative;
-}
-
-/* Make main content and cards slightly translucent to see background /
-main.content,
-.hero-description,
-.account-box,
-.courses-box,
-.dashboard-box,
-.admin-box,
-.message-box,
-.add-course,
-form {
-background-color: rgba(255, 255, 255, 0.85); / white cards with transparency /
-backdrop-filter: blur(5px);                 / soft blur for "frosted glass" effect */
-}
-
-/* For dark theme override /
-[data-theme="dark"] main.content,
-[data-theme="dark"] .hero-description,
-[data-theme="dark"] .account-box,
-[data-theme="dark"] .courses-box,
-[data-theme="dark"] .dashboard-box,
-[data-theme="dark"] .admin-box,
-[data-theme="dark"] .message-box,
-[data-theme="dark"] .add-course,
-[data-theme="dark"] form {
-background-color: rgba(20, 20, 20, 0.75); / dark cards with some transparency */
-backdrop-filter: blur(5px);
-}
-
-/* ========================== SUBTLE FADED BACKGROUND IMAGE - LIGHT THEME ========================== /
+/* Background overlay */
 body::before {
-content: "";
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: url("../images/background-picture.png") no-repeat center center;
-background-size: cover;
-opacity: 0.08;           / adjust 0.05 - 0.15 for subtlety /
-z-index: -1;              / behind all content /
-pointer-events: none;     / so it doesn't block clicks /
-filter: brightness(1.1);  / slightly brightens for light theme */
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("../images/background-picture.png") no-repeat center center;
+    background-size: cover;
+    opacity: 0.08;
+    z-index: -1;
+    pointer-events: none;
+    filter: brightness(1.1);
 }
 
-/* Page Scroll Navigator */
-#page-scroll-nav {
-position: fixed;
-right: 12px;
-top: 50%;
-transform: translateY(-50%);
-height: 70vh;
-width: 36px;
-display: flex;
-flex-direction: column;
-align-items: center;
-z-index: 999;
-user-select: none;
-opacity: 0;
-transition: opacity 0.3s;
+/* ===================== CARD BACKGROUNDS ===================== */
+
+main.content,
+.hero-description,
+.account-box,
+.courses-box,
+.dashboard-box,
+.admin-box,
+.message-box,
+.add-course,
+form {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(5px);
 }
 
-#page-scroll-nav.show {
-opacity: 1;
+/* Dark Theme Cards */
+
+[data-theme="dark"] main.content,
+[data-theme="dark"] .hero-description,
+[data-theme="dark"] .account-box,
+[data-theme="dark"] .courses-box,
+[data-theme="dark"] .dashboard-box,
+[data-theme="dark"] .admin-box,
+[data-theme="dark"] .message-box,
+[data-theme="dark"] .add-course,
+[data-theme="dark"] form {
+    background-color: rgba(20, 20, 20, 0.75);
+    backdrop-filter: blur(5px);
 }
 
-#page-scroll-nav button {
-background: #222;
-color: #fff;
-border: none;
-width: 32px;
-height: 32px;
-border-radius: 50%;
-cursor: pointer;
-font-size: 14px;
-margin: 6px 0;
-}
+/* ===================== GLOBAL TEXT ALIGNMENT ===================== */
 
-#page-scroll-nav button:hover {
-background: #444;
-}
-
-#scroll-track {
-flex: 1;
-width: 6px;
-min-height: 120px;   /* ⭐ CRITICAL */
-background: rgba(0,0,0,0.15);
-border-radius: 6px;
-position: relative;
-margin: 6px 0;
-}
-
-#scroll-thumb {
-position: absolute;
-top: 0;
-left: 0;
-
-width: 100%;
-height: 40px;
-min-height: 32px;
-
-background: linear-gradient(
-180deg,
-#d6ad1a,
-#b28b00
-); /* rich dark-gold brand blend */
-
-border-radius: 6px;
-cursor: grab;
-
-box-shadow:
-0 0 0 1px rgba(0, 0, 0, 0.15),
-0 4px 10px rgba(178, 139, 0, 0.35);
-
-transition:
-top 0.25s cubic-bezier(0.25, 1, 0.5, 1),
-box-shadow 0.2s ease,
-transform 0.15s ease;
-}
-
-/* Hover feedback */
-#scroll-thumb:hover {
-transform: scaleX(1.1);
-}
-
-/* Active drag state */
-#scroll-thumb:active {
-cursor: grabbing;
-transform: scaleX(1.15);
-box-shadow:
-0 0 0 1px rgba(0, 0, 0, 0.25),
-0 6px 14px rgba(178, 139, 0, 0.5);
-will-change: top;
-}
-
-.password-wrapper .toggle-password-icon {
-position: absolute;
-right: 10px;
-top: 50%;
-transform: translateY(-50%);
-cursor: pointer;
-font-size: 18px; /* adjust size /
-color: #555;     / light theme default */
-opacity: 0.85;
-transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
-}
-
-[data-theme="dark"] .toggle-password-icon {
-color: #eee;
-opacity: 0.9;
-}
-
-.toggle-password-icon:hover {
-transform: translateY(-50%) scale(1.1);
-opacity: 1;
-}
-
-/* ================= HEADER LAYOUT FIX ================= */
-
-.site-header {
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding: 12px 18px;
-position: relative;
-}
-
-/* Logo clickable ONLY on image */
-.logo-link {
-display: inline-block;
-}
-
-.header-logo {
-display: block;
-height: 50px;
-width: auto;
-cursor: pointer;
-}
-
-/* Right side container */
-.header-right {
-display: flex;
-align-items: center;
-gap: 15px;
-}
-
-/* Notification Bell */
-#notification-bell {
-font-size: 22px;
-cursor: pointer;
-position: relative;
-}
-
-/* Badge /
-.notif-badge {
-position: absolute;
-top: -6px;
-right: -8px;
-background: crimson;
-color: white;
-font-size: 11px;
-padding: 3px 6px;
-border-radius: 50%;
-display: none;
-}
-/ Responsive adjustments */
-@media (max-width: 768px) {
-.site-header .header-logo {
-max-width: 150px;
-width: 60%;
-}
-}
-
-@media (max-width: 480px) {
-.site-header .header-logo {
-max-width: 120px;
-width: 70%;
-}
-}
-
-/* ========================== GLOBAL TEXT ALIGNMENT ========================== /
-/ Default everything to left /
 html, body {
-text-align: left; / base default */
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', 'Nunito', 'Quicksand', sans-serif;
+    text-align: left;
+    color: #222;
 }
 
-/* Keep headers centered */
+/* Headings */
 h1, h2, h3, h4, h5, h6 {
-text-align: center;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    margin-bottom: 0.5em;
+    text-align: center;
 }
 
-/* Hero section text remains centered */
-.hero, .hero h1, .hero p, .hero-description {
-text-align: center;
-}
-
-/* Cards: left-align paragraphs and lists inside them */
-.account-box p,
-.account-box ul,
-.account-box li,
-.courses-box p,
-.courses-box ul,
-.courses-box li,
-.dashboard-box p,
-.dashboard-box ul,
-.dashboard-box li,
-.admin-box p,
-.admin-box ul,
-.admin-box li,
-.message-box p,
-.message-box ul,
-.message-box li,
-.courses-list p,
-.courses-list ul,
-.courses-list li,
-.add-course p,
-.add-course ul,
-.add-course li {
-text-align: left;
-}
-
-/* ========================== GLOBAL STYLES ========================== /
-html, body {
-margin: 0;
-padding: 0;
-font-family: 'Poppins', 'Nunito', 'Quicksand', sans-serif; / rounded-friendly fonts /
-text-align: left;
-background-color: #fdf6e3; / light background by default /
-color: #222;               / readable text color /
-border-radius: 12px;       / rounded edges for containers if applied */
-}
-
-/* Apply global rounding for main containers /
-main.content,
-.account-box,
-.courses-box,
-.dashboard-box,
-.admin-box,
-.message-box,
-.courses-list,
-.add-course,
-.hero-description {
-border-radius: 18px; / smooth rounded corners for all cards */
-padding: 20px;
-box-sizing: border-box;
-}
-
-/* Optional: soft shadow for floating feel */
-main.content,
-.account-box,
-.courses-box,
-.dashboard-box,
-.admin-box,
-.message-box,
-.courses-list,
-.add-course,
-.hero-description {
-box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-}
+/* ===================== HERO IMAGE ===================== */
 
 .hero-image {
--webkit-user-drag: none;
-user-select: none;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    display: block;
+    margin: 0 auto 20px auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    -webkit-user-drag: none;
+    user-select: none;
 }
+
+/* ===================== HEADER LOGO ===================== */
 
 .header-logo {
-user-select: none;
--webkit-user-drag: none;
-pointer-events: auto;
+    display: block;
+    height: 50px;
+    width: auto;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: auto;
 }
 
-.badge {
-background: crimson;
-color: #fff;
-font-weight: 600;
-font-size: 12px;
-min-width: 20px;
-height: 20px;
-line-height: 20px;
-text-align: left;
-padding: 0 6px;
-border-radius: 999px;
-display: inline-block;
-}
+/* ===================== PASSWORD ICON ===================== */
 
-.hero-image {
-width: 100%;          /* image stretches to container width /
-max-width: 600px;     / prevents it from being huge on desktop /
-height: auto;         / maintains aspect ratio /
-display: block;
-margin: 0 auto 20px auto; / centers horizontally, adds spacing below /
-border-radius: 12px;  / optional: rounded edges for modern look /
-box-shadow: 0 8px 20px rgba(0,0,0,0.15); / optional: subtle shadow */
-}
-
-/* Responsive tweak for very small screens /
-@media (max-width: 480px) {
-.hero-image {
-max-width: 90%;   / almost full width on tiny screens */
-margin-bottom: 15px;
-}
-}
-
-/* ========================== PASSWORD FIELD WRAPPER ========================== */
 .password-wrapper {
-position: relative;
-width: 100%;
+    position: relative;
+    width: 100%;
 }
 
-/* Input padding to make room for the toggle icon /
 .password-wrapper input {
-width: 100%;
-padding-right: 40px; / extra space for the icon */
-box-sizing: border-box;
+    width: 100%;
+    padding-right: 40px;
+    box-sizing: border-box;
 }
 
-/* Toggle password icon (PNG/SVG) /
 .toggle-password-icon {
-position: absolute;
-right: 10px;
-top: 50%;
-transform: translateY(-50%);
-cursor: pointer;
-width: 22px;    / adjust size as needed /
-height: 22px;   / keep square for consistency */
-user-select: none;
-transition: transform 0.2s ease, opacity 0.2s ease;
-opacity: 0.85;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 22px;
+    height: 22px;
+    user-select: none;
+    opacity: 0.85;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-/* Hover / active effects for better UX */
 .toggle-password-icon:hover {
-transform: translateY(-50%) scale(1.1);
-opacity: 1;
-}
-.toggle-password-icon:active {
-transform: translateY(-50%) scale(1.05);
+    transform: translateY(-50%) scale(1.1);
+    opacity: 1;
 }
 
-/* ========================== GLOBAL BUTTONS (except CTA) ========================== */
+/* ===================== BUTTONS ===================== */
+
 button, .btn {
-background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-color: #fff;
-font-weight: 600;
-border: none;
-border-radius: 6px;
-padding: 10px 20px;
-transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
-background-size: 200% 200%;
-cursor: pointer;
+    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    background-size: 200% 200%;
+    transition: transform 0.25s ease, box-shadow 0.4s ease;
+    cursor: pointer;
 }
 
 button:hover, .btn:hover {
-transform: scale(1.04);
-box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-background-position: 100% 0;
+    transform: scale(1.04);
 }
 
-button:active, .btn:active {
-transform: scale(0.98);
-box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* ========================== HEADERS STYLING ========================== */
-h1, h2, h3, h4, h5, h6 {
-font-weight: 700;
-text-transform: uppercase;
-letter-spacing: 1px;
-color: #222;
-line-height: 1.2;
-margin-bottom: 0.5em;
-font-family: 'Poppins', sans-serif;
-text-align: center;
-}
-
-h1 { font-size: 2.2em; }
-h2 { font-size: 1.9em; }
-h3 { font-size: 1.6em; }
-h4 { font-size: 1.3em; }
-h5 { font-size: 1.1em; }
-h6 { font-size: 1em; }
-
-/* ========================== HERO / HEADER POP & PRESENCE ========================== */
-.admin-dashboard .dashboard-title, .admin-dashboard h1 {
-font-size: 2.2em;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 2px;
-color: #fff;
-margin-bottom: 15px;
-text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(255, 235, 180, 0.4);
-animation: header-glow 3s ease-in-out infinite;
-}
-
-@keyframes header-glow {
-0%, 100% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255, 235, 180, 0.3); }
-50% { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 25px rgba(255, 235, 180, 0.6); }
-}
-
-.admin-dashboard .dashboard-subtitle {
-font-size: 1.2em;
-font-weight: 700;
-text-transform: uppercase;
-color: #fff;
-opacity: 0.9;
-margin-bottom: 25px;
-letter-spacing: 1px;
-}
-
-.message-box h3, .dashboard-box h3 {
-font-size: 1.5em;
-font-weight: 800;
-text-transform: uppercase;
-color: #333;
-margin-bottom: 10px;
-position: relative;
-z-index: 2;
-background: linear-gradient(45deg, #f0e6d2, #8B7500);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
-}
-
-.message-box h3:hover, .dashboard-box h3:hover {
-color: #8B7500;
-text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-transform: scale(1.02);
-transition: all 0.25s ease-in-out;
-}
-
-/* ========================== MAIN CONTENT ========================== */
-main.content {
-padding: 24px 18px;
-max-width: 420px;
-width: 95%;
-margin: 0 auto;
-box-sizing: border-box;
-
-background: linear-gradient(  
-    180deg,  
-    rgba(255, 248, 220, 0.35),  
-    rgba(255, 255, 255, 0.85)  
-);  
-border-radius: 18px;  
-
-box-shadow:  
-    0 10px 30px rgba(0, 0, 0, 0.08),  
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);  
-
-animation: content-fade-in 0.9s ease-out both;
-
-}
+/* ===================== HERO ANIMATIONS ===================== */
 
 @keyframes content-fade-in {
-from {
-opacity: 0;
-transform: translateY(14px);
-}
-to {
-opacity: 1;
-transform: translateY(0);
-}
-}
-
-/* ========================== HERO ========================== */
-.hero {
-text-align: center;
-padding: 20px 10px 10px;
-margin-bottom: 20px;
-}
-
-/* HERO TITLE */
-.hero h1 {
-font-size: 2.6em;
-margin-bottom: 12px;
-font-weight: 900;
-letter-spacing: 1.5px;
-
-background: linear-gradient(  
-    135deg,  
-    #3c2f1f,  
-    #8B7500,  
-    #3c2f1f  
-);  
--webkit-background-clip: text;  
--webkit-text-fill-color: transparent;  
-
-animation: hero-glow 6s ease-in-out infinite;
-
-}
-
-@keyframes hero-glow {
-0%, 100% { filter: drop-shadow(0 0 2px rgba(139, 117, 0, 0.25)); }
-50% { filter: drop-shadow(0 0 6px rgba(139, 117, 0, 0.45)); }
-}
-
-/* HERO DESCRIPTION CARD */
-.hero-description {
-background: linear-gradient(
-145deg,
-#fffaf0,
-#f0e6d2
-);
-padding: 26px 28px;
-max-width: 480px;
-margin: 0 auto;
-border-radius: 18px;
-
-box-shadow:  
-    0 14px 35px rgba(0, 0, 0, 0.12),  
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);  
-
-font-size: 1.05em;  
-line-height: 1.75;  
-color: #3c2f1f;  
-
-transition: transform 0.4s ease, box-shadow 0.4s ease;
-
-}
-
-.hero-description:hover {
-transform: translateY(-4px);
-box-shadow:
-0 20px 45px rgba(0, 0, 0, 0.15),
-inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.hero p {
-font-size: 1.15em;
-margin-bottom: 0;
-opacity: 0.9;
-}
-
-/* ========================== CTA BUTTONS ========================== */
-.cta-buttons {
-margin-top: 15px;
-display: flex;
-flex-wrap: wrap;
-justify-content: center;
-gap: 10px;
-}
-
-.cta-buttons .btn {
-display: inline-flex;
-align-items: center;
-justify-content: center;
-gap: 8px;
-padding: 18px 36px;
-font-size: 1.3em;
-font-weight: 700;
-border-radius: 12px;
-text-decoration: none;
-cursor: pointer;
-position: relative;
-overflow: hidden;
-
-background-size: 300% 300%;  
-animation: gradient-flow 10s linear infinite, pop-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;  
-
-transition: transform 0.25s ease, box-shadow 0.4s ease, background-position 0.5s ease;
-
-}
-
-.cta-buttons .btn.primary {
-background: linear-gradient(135deg, #2a6b2a, #3c9c3c, #2a6b2a);
-color: #f0e6d2;
-}
-
-.cta-buttons .btn.secondary {
-background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-color: #fff;
-}
-
-/* Icon animation */
-.btn-icon {
-display: inline-block;
-transition: transform 0.3s ease;
-}
-
-.cta-buttons .btn:hover .btn-icon {
-transform: translateX(6px) rotate(10deg);
-}
-
-/* ========================== KEYFRAMES ========================== */
-@keyframes pop-in {
-0% { transform: scale(0.85); opacity: 0; }
-60% { transform: scale(1.08); opacity: 1; }
-100% { transform: scale(1); }
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes gradient-flow {
-0% { background-position: 0% 50%; }
-50% { background-position: 100% 50%; }
-100% { background-position: 0% 50%; }
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* ========================== RESPONSIVE ========================== */
-@media (max-width: 480px) {
-.cta-buttons .btn { padding: 14px 28px; font-size: 1.1em; }
-.hero h1 { font-size: 1.8em; }
-.hero p { font-size: 0.95em; }
+@keyframes hero-glow {
+    0%,100% { filter: drop-shadow(0 0 2px rgba(139,117,0,0.25)); }
+    50% { filter: drop-shadow(0 0 6px rgba(139,117,0,0.45)); }
 }
 
-/* ========================== PAY NOW BUTTON ========================== */
-.btn-pay-now {
-background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-color: #2b1e00;
-font-weight: 600;
-letter-spacing: 0.5px;
-border-radius: 8px;
-box-shadow: 0 6px 18px rgba(212,175,55,0.35);
-
-background-size: 300% 300%;  
-animation: gradient-flow 6s ease infinite, payNowPop 0.6s ease-out both;  
-
-transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;  
-
-cursor: pointer;  
-position: relative;  
-z-index: 1;
-
-}
-
-.btn-pay-now:hover {
-transform: translateY(-2px) scale(1.04);
-box-shadow: 0 10px 28px rgba(212,175,55,0.45);
-filter: brightness(1.05);
-}
-
-.btn-pay-now:active {
-transform: scale(0.98);
-box-shadow: 0 4px 12px rgba(212,175,55,0.3);
-}
-
-.unpaid .btn-pay-now {
-animation-delay: 0.15s;
-}
-
-@keyframes payNowPop {
-from { opacity: 0; transform: scale(0.92); }
-to { opacity: 1; transform: scale(1); }
-}
-
-.btn-pay-now::after {
-content: '';
-position: absolute;
-top: 0;
-left: -75%;
-width: 50%;
-height: 100%;
-background: rgba(255,255,255,0.25);
-transform: skewX(-20deg);
-transition: left 0.5s;
-pointer-events: none;
-}
-
-.btn-pay-now:active::after {
-left: 125%;
-}
-
-/* ========================== FORMS ========================== */
-form {
-max-width: 340px;
-width: 95%;
-margin: 15px auto;
-background: white;
-padding: 20px;
-border-radius: 8px;
-box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-box-sizing: border-box;
-}
-
-input, textarea, button, select {
-width: 100%;
-padding: 10px;
-margin-bottom: 10px;
-border-radius: 5px;
-border: 1px solid #ccc;
-font-family: 'Poppins', sans-serif;
-box-sizing: border-box;
-}
-
-.back-login-btn {
-display: inline-block;
-padding: 10px 20px;
-background: black;
-color: white;
-text-decoration: none;
-border-radius: 5px;
-margin-top: 10px;
-transition: background 0.3s, transform 0.2s;
-}
-
-.back-login-btn:hover {
-background: #8B7500;
-transform: scale(1.05);
-}
-
-/* ========================== ACCOUNT SECTION ========================== */
-.account-section {
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 15px;
-margin-top: 15px;
-width: 100%;
-}
-
-.account-box, .courses-box {
-background: #f0e6d2;
-padding: 20px;
-border-radius: 12px;
-box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-width: 95%;
-max-width: 340px;
-text-align: center;
-}
-
-.profile-avatar {
-width: 100px;
-height: 100px;
-border-radius: 50%;
-object-fit: cover;
-margin-bottom: 15px;
-}
-
-.courses-box ul, .courses-list ul, .admin-list {
-list-style: none;
-padding: 0;
-margin: 0;
-}
-
-.courses-box li, .courses-list li, .admin-list li {
-padding: 10px 0;
-border-bottom: 1px solid #eee;
-}
-
-.courses-box li:last-child, .courses-list li:last-child, .admin-list li:last-child {
-border-bottom: none;
-}
-
-/* ========================== ADMIN DASHBOARD ========================== */
-.admin-dashboard {
-text-align: center;
-margin-top: 20px;
-}
-
-.dashboard-title {
-font-size: 1.8em;
-margin-bottom: 5px;
-}
-
-.dashboard-subtitle {
-font-size: 0.95em;
-margin-bottom: 20px;
-opacity: 0.85;
-}
-
-.dashboard-boxes {
-display: flex;
-flex-direction: column;
-gap: 15px;
-}
-
-.dashboard-box {
-background: white;
-color: #222;
-padding: 20px;
-border-radius: 14px;
-box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-text-decoration: none;
-text-align: left;
-transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dashboard-box:hover {
-transform: translateY(-2px);
-box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-}
-
-.admin-box {
-background: white;
-padding: 20px;
-border-radius: 12px;
-box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-margin-bottom: 20px;
-}
-
-/* ===================== ADMIN USER STATS ===================== */
-.stats-grid {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-gap: 14px;
-margin-bottom: 25px;
-}
-
-.stat-card {
-background: rgba(255, 255, 255, 0.85);
-border: 1px solid rgba(0,0,0,0.08);
-border-radius: 14px;
-padding: 16px;
-text-align: center;
-backdrop-filter: blur(4px);
-}
-
-.stat-card h3 {
-font-size: 13px;
-margin: 0;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-color: #666;
-}
-
-.stat-card p {
-margin: 6px 0 0;
-font-size: 26px;
-font-weight: 800;
-}
-
-/* Status colors */
-.stat-card.paid p {
-color: #2ecc71;
-}
-
-.stat-card.unpaid p {
-color: #e74c3c;
-}
-
-.stat-card.suspended p {
-color: #f39c12;
-}
-
-/* ========================== ADMIN COURSES PAGE ========================== */
-.courses-list, .add-course {
-background: #fff;
-padding: 20px;
-border-radius: 12px;
-box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-margin-bottom: 20px;
-max-width: 480px;
-width: 75%;
-margin-left: auto;
-margin-right: auto;
-}
-
-.add-course form textarea {
-resize: vertical;
-}
-
-#form-feedback {
-margin-top: 10px;
-font-weight: bold;
-}
-
-/* ========================== FOOTER ========================== */
-.site-footer {
-background: #8B7500;
-color: #f0e6d2;
-padding: 15px 10px;
-text-align: center;
-max-width: 360px;
-margin: 0 auto;
-border-radius: 0 0 8px 8px;
-}
-
-.footer-nav {
-display: flex;
-flex-direction: column;
-gap: 5px;
-margin-bottom: 10px;
-}
-
-.footer-nav a {
-color: #f0e6d2;
-text-decoration: none;
-}
-
-/* ========================== RESPONSIVE ADJUSTMENTS ========================== */
-@media (max-width: 768px) {
-.site-header .header-logo { max-width: 300px; }
-.account-box, .courses-box, form { width: 95%; padding: 15px; }
-main.content { padding: 15px; }
-.cta-buttons .btn { padding: 8px 15px; }
-.hero h1 { font-size: 1.8em; }
-.hero p { font-size: 0.95em; }
-}
-
-/* ========================== TOAST ========================== */
-.toast {
-position: fixed;
-top: 20px;
-left: 50%;
-transform: translateX(-50%);
-
-background-color: #333;  
-color: #fff;  
-
-padding: 10px 18px;  
-border-radius: 8px;  
-
-opacity: 0;  
-transition: opacity 0.3s ease, transform 0.3s ease;  
-
-max-width: 90%;  
-word-wrap: break-word;  
-
-z-index: 1000;  
-
-pointer-events: none;
-
-}
-
-.toast.show {
-opacity: 1;
-transform: translateX(-50%) translateY(0);
-}
-
-.toast,
-.admin-toast {
-pointer-events: none;
-}
-
-/* ========================== MESSAGE BOX ========================== */
-.message-box {
-background: #fff;
-padding: 15px;
-border-radius: 10px;
-margin-bottom: 15px;
-}
-
-.message-box.unread {
-border-left: 5px solid crimson;
-background: #fff6f6;
-}
-
-.notification-wrapper {
-position: relative;
-margin-left: auto;
-}
-
-#notification-bell {
-font-size: 20px;
-cursor: pointer;
-position: relative;
-}
+/* ===================== NOTIFICATION BADGE ===================== */
 
 .notif-badge {
-position: absolute;
-top: -6px;
-right: -8px;
-background: crimson;
-color: white;
-font-size: 11px;
-padding: 2px 6px;
-border-radius: 50px;
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: crimson;
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 50%;
+    display: none;
 }
 
+/* ===================== NOTIFICATION DROPDOWN ===================== */
+
 .notif-dropdown {
-position: fixed;
-top: 70px;
-right: 20px;
-width: 360px;
-max-height: 500px;
-overflow-y: auto;
-background: white;
-border-radius: 14px;
-box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-z-index: 999999;
-transform: translateY(-10px);
-opacity: 0;
-pointer-events: none;
-transition: all 0.25s ease;
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    width: 360px;
+    max-height: 500px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    z-index: 999999;
+    transform: translateY(-10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s ease;
 }
 
 .notif-dropdown.active {
-transform: translateY(0);
-opacity: 1;
-pointer-events: auto;
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
 }
-
-.notif-item {
-padding: 12px;
-border-bottom: 1px solid #eee;
-cursor: pointer;
-}
-
-.notif-item.unread {
-background: #fff5f5;
-border-left: 4px solid crimson;
-}
-
-.notif-item h4 {
-margin: 0 0 4px;
-font-size: 14px;
-}
-
-.notif-item p {
-margin: 0 0 4px;
-font-size: 13px;
-}
-
-.notif-item small {
-color: #888;
-font-size: 11px;
-}
-
-@media (max-width: 768px) {
-.notif-dropdown {
-position: fixed;
-right: 0;
-top: 0;
-height: 100vh;
-width: 85%;
-border-radius: 0;
-transform: translateX(100%);
-}
-
-.notif-dropdown.active {  
-    transform: translateX(0);  
-}
-
-}
-
