@@ -9,6 +9,7 @@ def send_email(to_email, subject, body):
 
     api_key = os.environ.get("SENDGRID_API_KEY")
     from_email = os.environ.get("EMAIL_FROM", "no-reply@widemindtutorial.com")
+    from_name = "Wide Mind Tutorial"
 
     if not api_key:
         print("SENDGRID_API_KEY missing")
@@ -18,7 +19,7 @@ def send_email(to_email, subject, body):
         sg = SendGridAPIClient(api_key)
 
         message = Mail(
-            from_email=Wide Mind Tutorial,
+            from_email=from_name,
             to_emails=to_email,
             subject=subject,
             html_content=f"""
