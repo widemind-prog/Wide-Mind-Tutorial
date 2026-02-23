@@ -213,6 +213,15 @@ body::before {
 }
 
 .header-logo {
+    display: block;
+    margin-left: 0 auto;         /* centers the logo */
+    max-width: 200px;       /* prevents it from being too wide */
+    width: 100%;             /* scales relative to the container */
+    height: auto;           /* keeps aspect ratio */
+    text-align: left;
+}
+
+.header-logo {
     user-select: none;
     -webkit-user-drag: none;
     pointer-events: auto;
