@@ -11,19 +11,19 @@
 </p>
 
 <form id="contact-form">
+    <div>
     <input type="text" name="name" placeholder="Your Name" required>
     <input type="email" name="email" placeholder="Your Email" required>
     <input type="text" name="subject" placeholder="Subject (optional)">
     <textarea name="message" placeholder="Your Message" required></textarea>
     <button type="submit">Send Message</button>
+    </div>
 </form>
 
 <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
   Please ensure your email address is correct so we can respond to you.
 </p>
 
-<!-- Toast container for messages -->
-<div id="toast" class="toast"></div>
 
 <script>
 const toast = document.getElementById("toast");
