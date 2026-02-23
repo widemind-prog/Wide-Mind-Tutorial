@@ -18,7 +18,7 @@ def send_email(to_email, subject, body):
         sg = SendGridAPIClient(api_key)
 
         message = Mail(
-            from_email=from_email,
+            from_email=Wide Mind Tutorial,
             to_emails=to_email,
             subject=subject,
             html_content=f"""
@@ -39,13 +39,6 @@ def send_email(to_email, subject, body):
       <img src="https://www.widemindtutorial.com/static/images/logo.png"
            alt="Wide Mind Tutorial"
            style="max-width:130px;margin-bottom:12px;">
-
-      <h2 style="color:#f0e6d2;
-                 margin:0;
-                 font-size:22px;
-                 letter-spacing:1px;">
-        Wide Mind Tutorial
-      </h2>
 
     </div>
 
