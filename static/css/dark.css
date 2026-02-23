@@ -237,3 +237,112 @@
     from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ===================== DARK THEME NOTIFICATIONS ===================== */
+
+[data-theme="dark"] .notification-wrapper {
+    position: relative;
+    margin-left: auto;
+}
+
+[data-theme="dark"] #notification-bell {
+    font-size: 20px;
+    cursor: pointer;
+    position: relative;
+    color: #e8e8e8;
+}
+
+/* Badge */
+[data-theme="dark"] .notif-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: #b91c1c; /* deeper crimson for dark */
+    color: #ffffff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 50px;
+    box-shadow: 0 0 0 2px #0f1113; /* blends with dark bg */
+}
+
+/* Dropdown Panel */
+[data-theme="dark"] .notif-dropdown {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    width: 360px;
+    max-height: 500px;
+    overflow-y: auto;
+    background: #1d2226;
+    border: 1px solid #2a2f34;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    z-index: 999999;
+    transform: translateY(-10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s ease;
+}
+
+/* Active state */
+[data-theme="dark"] .notif-dropdown.active {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Notification Items */
+[data-theme="dark"] .notif-item {
+    padding: 12px;
+    border-bottom: 1px solid #2a2f34;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+[data-theme="dark"] .notif-item:hover {
+    background: #23282d;
+}
+
+/* Unread state */
+[data-theme="dark"] .notif-item.unread {
+    background: #2a1414; /* subtle dark red tint */
+    border-left: 4px solid #b91c1c;
+}
+
+/* Title */
+[data-theme="dark"] .notif-item h4 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    color: #f2f2f2;
+}
+
+/* Message */
+[data-theme="dark"] .notif-item p {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: #d0d0d0;
+}
+
+/* Timestamp */
+[data-theme="dark"] .notif-item small {
+    color: #9a9a9a;
+    font-size: 11px;
+}
+
+/* ===================== MOBILE ===================== */
+
+@media (max-width: 768px) {
+    [data-theme="dark"] .notif-dropdown {
+        position: fixed;
+        right: 0;
+        top: 0;
+        height: 100vh;
+        width: 85%;
+        border-radius: 0;
+        transform: translateX(100%);
+    }
+
+    [data-theme="dark"] .notif-dropdown.active {
+        transform: translateX(0);
+    }
+}
