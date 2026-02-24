@@ -718,7 +718,8 @@ input, textarea, button, select {
   margin-bottom: 10px;
   border-radius: 5px;
   border: 1px solid #ccc;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', 'Nunito', 'Quicksand', sans-serif;
+  text-align: center;
   box-sizing: border-box;
 }
 
