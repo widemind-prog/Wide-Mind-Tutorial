@@ -107,11 +107,6 @@ def home():
 def home_redirect():
     return redirect("/")
 
-@app.route("/admin/secure-export/<path:filename>")
-def secure_export(filename):
-    if "user_id" not in session or not is_admin(session["user_id"]):
-        abort(403)
-    return send_file(f"/var/data/{filename}", as_attachment=True)
 
 @app.route("/about")
 def about_page():
