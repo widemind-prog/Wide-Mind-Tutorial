@@ -42,24 +42,31 @@
 <!-- ADD PDF -->
 <div class="admin-box">
     <h3>Add PDF Material</h3>
-    <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}" enctype="multipart/form-data">
+    <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}">
         <label>Title:</label>
-        <input type="text" name="title" placeholder="Enter PDF title" required>
-        <input type="file" name="pdf" accept=".pdf" required>
-        <button type="submit">Upload PDF</button>
+        <input type="text" name="title" placeholder="e.g. Psy405 Notes" required>
+        <label>Filename (e.g. Psy405_WideMindNotes.pdf):</label>
+        <input type="text" name="filename" placeholder="Psy405_WideMindNotes.pdf" required>
+        <label>Google Drive URL:</label>
+        <input type="text" name="drive_url" placeholder="https://drive.google.com/uc?export=download&id=..." required>
+        <button type="submit">Add PDF</button>
     </form>
 </div>
 
 <!-- ADD AUDIO -->
 <div class="admin-box">
     <h3>Add Audio Material</h3>
-    <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}" enctype="multipart/form-data">
+    <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}">
         <label>Title:</label>
-        <input type="text" name="title" placeholder="Enter Audio title" required>
-        <input type="file" name="audio" accept="audio/*" required>
-        <button type="submit">Upload Audio</button>
+        <input type="text" name="title" placeholder="e.g. Sessions 1-5" required>
+        <label>Filename (e.g. Psy429_Session_1-5.mp3):</label>
+        <input type="text" name="filename" placeholder="Psy429_Session_1-5.mp3" required>
+        <label>Google Drive URL:</label>
+        <input type="text" name="drive_url" placeholder="https://drive.google.com/uc?export=download&id=..." required>
+        <button type="submit">Add Audio</button>
     </form>
 </div>
+
 
 <a href="/admin/courses" class="back-login-btn">← Back to Courses</a>
 <!-- Toast for admin actions -->

@@ -478,26 +478,31 @@ def delete_course(course_id):
 @admin_bp.route("/courses/material/add/<file_type>/<int:course_id>", methods=["POST"])
 @admin_required
 def add_material(file_type, course_id):
-    file = request.files.get(file_type)
-    title = request.form.get("title")
-    if not file or not title or title.strip() == "":
-        return "Error: File and title are required.", 400
-    filename = secure_filename(file.filename)
-    if filename == "":
-        return "Error: Invalid file name.", 400
+    drive_url = request.form.get("drive_url", "").strip()
+    title = request.form.get("title", "").strip()
+    filename = request.form.get("filename", "").strip()
+
+    if not drive_url or not title or not filename:
+        flash("Title, filename and Google Drive URL are all required.", "error")
+        return redirect(f"/admin/courses/edit/{course_id}")
+
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT id FROM materials WHERE course_id=? AND filename=?", (course_id, filename))
     if c.fetchone():
         conn.close()
-        return f"Error: Material '{filename}' already exists for this course.", 400
-    os.makedirs(current_app.config["UPLOAD_FOLDER"], exist_ok=True)
-    file.save(os.path.join(current_app.config["UPLOAD_FOLDER"], filename))
-    c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)", 
-              (course_id, filename, file_type, title))
+        flash(f"A material with that filename already exists for this course.", "error")
+        return redirect(f"/admin/courses/edit/{course_id}")
+
+    c.execute(
+        "INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
+        (course_id, filename, file_type, title)
+    )
     conn.commit()
     conn.close()
+    flash("Material added successfully!", "success")
     return redirect(f"/admin/courses/edit/{course_id}")
+
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
 @admin_required

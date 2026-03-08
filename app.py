@@ -347,25 +347,35 @@ def mark_notification_read(notif_id):
     return jsonify({"success": True})
 
 # =====================
+# GOOGLE DRIVE DIRECT URL HELPER
+# =====================
+def get_drive_url(filename):
+    # Map filenames to Google Drive direct download URLs
+    DRIVE_FILES = {
+        "Psy429_Session_1-5.mp3": "https://drive.google.com/uc?export=download&id=1RXd9303Gbrx4coiV4C0bpU0vyw6ruuoj",
+        "Psy494_WideMindNotes.pdf": "https://drive.google.com/uc?export=download&id=1R_NgrHh4ImHj2VJyNT77foRQl5y1iaEz",
+        "Psy429_WideMindNotes.pdf": "https://drive.google.com/uc?export=download&id=1Rcfpzwt6No9C9RCeiD5J1cl_8vIXnmov",
+        "Psy405_WideMindNotes.pdf": "https://drive.google.com/uc?export=download&id=1Rc4XDkidKvVnnbjuqW5ncZq_-yCyX1WY",
+    }
+    return DRIVE_FILES.get(filename)
+
+# =====================
 # STREAM FILES
 # =====================
 
-# --- AUDIO STREAM (unchanged) ---
+# --- AUDIO STREAM ---
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
     if "user_id" not in session:
         abort(403)
-
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
-
     admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
-
     c.execute("""
         SELECT m.filename
         FROM materials m
@@ -374,36 +384,29 @@ def stream_audio(material_id):
     """, (material_id,))
     material = c.fetchone()
     conn.close()
-
     if not material:
         abort(404)
-
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], material["filename"])
-
+    drive_url = get_drive_url(material["filename"])
+    if not drive_url:
+        abort(404)
+    return redirect(drive_url)
 
 # --- PDF STREAM ---
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     if "user_id" not in session:
         abort(403)
-
     conn = get_db()
     c = conn.cursor()
-
-    # Fetch latest payment for user
     c.execute(
         "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
         (session["user_id"],)
     )
     payment = c.fetchone()
-
-    # Admin override check
     admin_override = payment["admin_override_status"] if payment else None
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
-
-    # Get PDF filename from materials table
     c.execute("""
         SELECT m.filename
         FROM materials m
@@ -412,20 +415,12 @@ def stream_pdf(material_id):
     """, (material_id,))
     material = c.fetchone()
     conn.close()
-
     if not material:
         abort(404)
-
-    file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], material["filename"])
-    if not os.path.exists(file_path):
+    drive_url = get_drive_url(material["filename"])
+    if not drive_url:
         abort(404)
-
-    return send_file(
-        file_path,
-        mimetype="application/pdf",
-        as_attachment=False,
-        conditional=True  # Required for PDF.js
-    )
+    return redirect(drive_url)
 
 # =====================
 # PAYMENT SUCCESS
