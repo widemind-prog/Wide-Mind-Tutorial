@@ -3,6 +3,7 @@ Flask-Cors
 Werkzeug
 gunicorn
 requests
+eventlet
 flask-socketio
 sendgrid
 pywebpush
