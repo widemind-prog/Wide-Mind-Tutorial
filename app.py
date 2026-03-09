@@ -4,7 +4,7 @@ from flask import (
 )
 from flask_cors import CORS
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import socketio
 from state import online_users
@@ -13,7 +13,6 @@ from backend.auth import auth_bp
 from backend.admin import admin_bp
 from backend.payment import payment_bp
 from backend.webhook import webhook_bp
-from datetime import timedelta
 
 import requests
 import hashlib
@@ -46,6 +45,19 @@ app.config.update(
 socketio.init_app(app)
 
 # =====================
+# REGISTER BLUEPRINTS
+# =====================
+app.register_blueprint(admin_bp)
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(payment_bp)
+app.register_blueprint(webhook_bp)
+
+# =====================
+# INITIALIZE DB
+# =====================
+init_db()
+
+# =====================
 # TEMPLATE CONTEXT
 # =====================
 @app.context_processor
@@ -55,32 +67,18 @@ def inject_config():
             "VAPID_PUBLIC_KEY": app.config["VAPID_PUBLIC_KEY"]
         }
     }
-    
+
 @app.context_processor
 def inject_now():
     return {"now": datetime.utcnow}
 
-
-
 # =====================
-# REGISTER BLUEPRINTS (MUST COME AFTER ROUTES)
+# BEFORE REQUEST
 # =====================
-app.register_blueprint(admin_bp)
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
-app.register_blueprint(payment_bp)
-app.register_blueprint(webhook_bp)
-
-
-# =====================
-# INITIALIZE DB (LAST)
-# =====================
-
-init_db()
-
 @app.before_request
 def make_session_permanent():
     session.permanent = True
-    
+
 @app.before_request
 def block_suspended_users():
     if "user_id" in session:
@@ -92,7 +90,6 @@ def block_suspended_users():
         if user and user["is_suspended"]:
             session.clear()
             return redirect("/login-page")
-            
 
 # =====================
 # PAGES
@@ -106,7 +103,6 @@ def home():
 @app.route("/home")
 def home_redirect():
     return redirect("/")
-
 
 @app.route("/about")
 def about_page():
@@ -139,7 +135,6 @@ def account_page():
     if is_admin(session["user_id"]):
         return redirect("/admin")
     return render_template("account.html")
-
 
 # =====================
 # REGISTER
@@ -202,8 +197,6 @@ def my_courses():
 
     return jsonify({"courses": courses})
 
-
-    
 # =====================
 # COURSE PAGE
 # =====================
@@ -215,7 +208,6 @@ def course_page(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    # fetch latest payment
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
 
@@ -239,19 +231,18 @@ def course_page(course_id):
     conn.close()
 
     return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
+
 # =====================
 # PDF VIEWER
 # =====================
 @app.route("/course/<int:course_id>/pdf")
 def pdf_viewer(course_id):
-    # Require login
     if "user_id" not in session:
         return redirect("/login-page")
 
     conn = get_db()
     c = conn.cursor()
 
-    # Get latest payment for user
     c.execute(
         """
         SELECT status, admin_override_status
@@ -264,7 +255,6 @@ def pdf_viewer(course_id):
     )
     payment = c.fetchone()
 
-    # Enforce payment or admin override
     if not payment or (
         payment["status"] != "paid"
         and payment["admin_override_status"] != "paid"
@@ -272,17 +262,15 @@ def pdf_viewer(course_id):
         conn.close()
         return "<h3>Payment required to access PDF</h3>", 403
 
-    # Fetch course
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
 
-    # Fetch first PDF material for course
     c.execute(
         """
-        SELECT id
+        SELECT id, filename
         FROM materials
         WHERE course_id=? AND file_type='pdf'
         ORDER BY id ASC
@@ -296,55 +284,16 @@ def pdf_viewer(course_id):
     if not material:
         abort(404)
 
-    # Render PDF viewer
+    supabase_url = get_material_url(material["filename"])
+    if not supabase_url:
+        abort(404)
+
     return render_template(
         "pdf_viewer.html",
-        course_id=course_id,        # needed for Close button fallback
-        material_id=material["id"]  # streamed PDF
+        course_id=course_id,
+        material_id=material["id"],
+        supabase_url=supabase_url
     )
-
-# =====================
-# NOTIFICATIONS API
-# =====================
-@app.route("/api/notifications")
-def get_notifications():
-
-    if "user_id" not in session:
-        return jsonify([])
-
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("""
-        SELECT * FROM notifications
-        WHERE user_id=? AND is_archived=0
-        ORDER BY created_at DESC
-    """, (session["user_id"],))
-
-    rows = c.fetchall()
-    conn.close()
-
-    return jsonify([dict(r) for r in rows])
-
-@app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
-def mark_notification_read(notif_id):
-
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("""
-        UPDATE notifications
-        SET is_read=1
-        WHERE id=? AND user_id=?
-    """, (notif_id, session["user_id"]))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True})
 
 # =====================
 # SUPABASE URL HELPER
@@ -367,14 +316,17 @@ def get_material_url(filename):
 def stream_audio(material_id):
     if "user_id" not in session:
         abort(403)
+
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
     admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         abort(403)
+
     c.execute("""
         SELECT m.filename
         FROM materials m
@@ -383,65 +335,89 @@ def stream_audio(material_id):
     """, (material_id,))
     material = c.fetchone()
     conn.close()
+
     if not material:
         abort(404)
+
     url = get_material_url(material["filename"])
     if not url:
         abort(404)
+
     return redirect(url)
 
 # --- PDF STREAM ---
-@app.route("/course/<int:course_id>/pdf")
-def pdf_viewer(course_id):
+@app.route("/stream/pdf/<int:material_id>")
+def stream_pdf(material_id):
     if "user_id" not in session:
-        return redirect("/login-page")
+        abort(403)
+
     conn = get_db()
     c = conn.cursor()
     c.execute(
-        """
-        SELECT status, admin_override_status
-        FROM payments
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 1
-        """,
+        "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
         (session["user_id"],)
     )
     payment = c.fetchone()
-    if not payment or (
-        payment["status"] != "paid"
-        and payment["admin_override_status"] != "paid"
-    ):
+    admin_override = payment["admin_override_status"] if payment else None
+
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
-        return "<h3>Payment required to access PDF</h3>", 403
-    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
-    course = c.fetchone()
-    if not course:
-        conn.close()
-        abort(404)
-    c.execute(
-        """
-        SELECT id, filename
-        FROM materials
-        WHERE course_id=? AND file_type='pdf'
-        ORDER BY id ASC
-        LIMIT 1
-        """,
-        (course_id,)
-    )
+        abort(403)
+
+    c.execute("""
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
+        WHERE m.id=? AND m.file_type='pdf'
+    """, (material_id,))
     material = c.fetchone()
     conn.close()
+
     if not material:
         abort(404)
-    supabase_url = get_material_url(material["filename"])
-    if not supabase_url:
+
+    url = get_material_url(material["filename"])
+    if not url:
         abort(404)
-    return render_template(
-        "pdf_viewer.html",
-        course_id=course_id,
-        material_id=material["id"],
-        supabase_url=supabase_url
-    )
+
+    return redirect(url)
+
+# =====================
+# NOTIFICATIONS API
+# =====================
+@app.route("/api/notifications")
+def get_notifications():
+    if "user_id" not in session:
+        return jsonify([])
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM notifications
+        WHERE user_id=? AND is_archived=0
+        ORDER BY created_at DESC
+    """, (session["user_id"],))
+    rows = c.fetchall()
+    conn.close()
+
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
+def mark_notification_read(notif_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE notifications
+        SET is_read=1
+        WHERE id=? AND user_id=?
+    """, (notif_id, session["user_id"]))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
 
 # =====================
 # PAYMENT SUCCESS
