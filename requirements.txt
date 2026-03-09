@@ -4,7 +4,6 @@ Werkzeug
 gunicorn
 requests
 flask-socketio
-eventlet
 sendgrid
 pywebpush
 libsql-experimental
