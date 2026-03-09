@@ -18,7 +18,7 @@ def send_email(to_email, subject, body):
         sg = SendGridAPIClient(api_key)
 
         message = Mail(
-            from_email=from_name,
+            from_email=(from_email, from_name),
             to_emails=to_email,
             subject=subject,
             html_content=f"""
