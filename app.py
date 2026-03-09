@@ -347,17 +347,16 @@ def mark_notification_read(notif_id):
     return jsonify({"success": True})
 
 # =====================
-# GOOGLE DRIVE DIRECT URL HELPER
+# SUPABASE URL HELPER
 # =====================
-def get_drive_url(filename):
-    # Map filenames to Google Drive direct download URLs
-    DRIVE_FILES = {
-        "Psy429_Session_1-5.mp3": "https://drive.google.com/uc?export=download&id=1RXd9303Gbrx4coiV4C0bpU0vyw6ruuoj",
-        "Psy494_WideMindNotes.pdf": "https://drive.google.com/uc?export=download&id=1R_NgrHh4ImHj2VJyNT77foRQl5y1iaEz",
-        "Psy429_WideMindNotes.pdf": "https://drive.google.com/uc?export=download&id=1Rcfpzwt6No9C9RCeiD5J1cl_8vIXnmov",
-        "Psy405_WideMindNotes.pdf": "https://drive.google.com/uc?export=download&id=1Rc4XDkidKvVnnbjuqW5ncZq_-yCyX1WY",
+def get_material_url(filename):
+    SUPABASE_FILES = {
+        "Psy405_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy405_WideMindNotes%20(1).pdf",
+        "Psy429_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy429_WideMindNotes%20(1).pdf",
+        "Psy494_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy494_WideMindNotes%20(1).pdf",
+        "Psy429_Session_1-5.mp3": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy429-Session-1-5.MP3",
     }
-    return DRIVE_FILES.get(filename)
+    return SUPABASE_FILES.get(filename)
 
 # =====================
 # STREAM FILES
@@ -386,41 +385,63 @@ def stream_audio(material_id):
     conn.close()
     if not material:
         abort(404)
-    drive_url = get_drive_url(material["filename"])
-    if not drive_url:
+    url = get_material_url(material["filename"])
+    if not url:
         abort(404)
-    return redirect(drive_url)
+    return redirect(url)
 
 # --- PDF STREAM ---
-@app.route("/stream/pdf/<int:material_id>")
-def stream_pdf(material_id):
+@app.route("/course/<int:course_id>/pdf")
+def pdf_viewer(course_id):
     if "user_id" not in session:
-        abort(403)
+        return redirect("/login-page")
     conn = get_db()
     c = conn.cursor()
     c.execute(
-        "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        """
+        SELECT status, admin_override_status
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
         (session["user_id"],)
     )
     payment = c.fetchone()
-    admin_override = payment["admin_override_status"] if payment else None
-    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
+    if not payment or (
+        payment["status"] != "paid"
+        and payment["admin_override_status"] != "paid"
+    ):
         conn.close()
-        abort(403)
-    c.execute("""
-        SELECT m.filename
-        FROM materials m
-        JOIN courses c ON m.course_id = c.id
-        WHERE m.id=? AND m.file_type='pdf'
-    """, (material_id,))
+        return "<h3>Payment required to access PDF</h3>", 403
+    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
+    course = c.fetchone()
+    if not course:
+        conn.close()
+        abort(404)
+    c.execute(
+        """
+        SELECT id, filename
+        FROM materials
+        WHERE course_id=? AND file_type='pdf'
+        ORDER BY id ASC
+        LIMIT 1
+        """,
+        (course_id,)
+    )
     material = c.fetchone()
     conn.close()
     if not material:
         abort(404)
-    drive_url = get_drive_url(material["filename"])
-    if not drive_url:
+    supabase_url = get_material_url(material["filename"])
+    if not supabase_url:
         abort(404)
-    return redirect(drive_url)
+    return render_template(
+        "pdf_viewer.html",
+        course_id=course_id,
+        material_id=material["id"],
+        supabase_url=supabase_url
+    )
 
 # =====================
 # PAYMENT SUCCESS
