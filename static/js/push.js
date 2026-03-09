@@ -11,64 +11,56 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-async function subscribeToPush() {
-    // Only run if service worker and push are supported
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-        console.log("Push not supported");
-        return;
-    }
+function pushLog(msg) {
+    console.log(msg);
+    var el = document.getElementById("push-debug");
+    if (el) el.innerHTML += msg + "<br>";
+}
 
-    // Only subscribe if VAPID key is available (means user is on a page that has it)
-    if (!window.VAPID_PUBLIC_KEY) {
-        console.log("No VAPID key, skipping push setup");
-        return;
-    }
+async function subscribeToPush() {
+    pushLog("SW supported: " + ("serviceWorker" in navigator));
+    pushLog("Push supported: " + ("PushManager" in window));
+    pushLog("VAPID: " + (typeof VAPID_PUBLIC_KEY !== "undefined" && VAPID_PUBLIC_KEY ? "present" : "MISSING"));
+    pushLog("Permission: " + Notification.permission);
+
+    if (!("serviceWorker" in navigator)) { pushLog("STOP: no SW"); return; }
+    if (!("PushManager" in window)) { pushLog("STOP: no PushManager"); return; }
+    if (typeof VAPID_PUBLIC_KEY === "undefined" || !VAPID_PUBLIC_KEY) { pushLog("STOP: no VAPID"); return; }
 
     try {
+        pushLog("Waiting for SW...");
         const registration = await navigator.serviceWorker.ready;
+        pushLog("SW ready: " + registration.scope);
 
-        // Check existing subscription first
         const existing = await registration.pushManager.getSubscription();
-        if (existing) {
-            console.log("Already subscribed to push");
-            return;
-        }
+        pushLog("Existing sub: " + (existing ? "YES" : "none"));
+        if (existing) { pushLog("Already subscribed"); return; }
 
-        // Request permission
+        pushLog("Requesting permission...");
         const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-            console.log("Push permission denied");
-            return;
-        }
+        pushLog("Permission: " + permission);
 
-        // Subscribe
+        if (permission !== "granted") { pushLog("STOP: not granted"); return; }
+
+        pushLog("Subscribing...");
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(window.VAPID_PUBLIC_KEY)
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
+        pushLog("Subscribed: " + subscription.endpoint.substring(0, 40) + "...");
 
-        // Send subscription to server
         const res = await fetch("/api/subscribe", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify(subscription)
         });
-
-        if (res.ok) {
-            console.log("Push subscription saved successfully");
-        } else {
-            console.log("Failed to save subscription:", res.status);
-        }
+        pushLog("Server: " + res.status);
 
     } catch (err) {
-        console.log("Push subscription error:", err);
+        pushLog("ERROR: " + err.message);
     }
 }
 
-// Only run if user is logged in (page will have VAPID key set)
-if (typeof VAPID_PUBLIC_KEY !== "undefined" && VAPID_PUBLIC_KEY) {
-    window.VAPID_PUBLIC_KEY = VAPID_PUBLIC_KEY;
-    // Small delay to let service worker register first
-    setTimeout(subscribeToPush, 2000);
-}
+window.VAPID_PUBLIC_KEY = typeof VAPID_PUBLIC_KEY !== "undefined" ? VAPID_PUBLIC_KEY : null;
+setTimeout(subscribeToPush, 2000);
