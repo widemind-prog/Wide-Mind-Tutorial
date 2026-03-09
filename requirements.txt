@@ -7,3 +7,4 @@ flask-socketio
 eventlet
 sendgrid
 pywebpush
+libsql-experimental
