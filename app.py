@@ -122,6 +122,14 @@ def login_page():
         return redirect("/admin" if is_admin(session["user_id"]) else "/account")
     return render_template("login.html")
 
+@app.route("/forgot-password-page")
+def forgot_password_page():
+    return render_template("forgot_password.html")
+
+@app.route("/reset-password")
+def reset_password_page():
+    return render_template("reset_password.html")
+
 @app.route("/register-page")
 def register_page():
     if "user_id" in session:

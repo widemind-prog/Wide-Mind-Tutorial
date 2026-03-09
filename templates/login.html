@@ -2,18 +2,19 @@
 {% block title %}Login{% endblock %}
 {% block content %}
 
-<h2>Login to Your Account</h2>  
-<form id="login-form">  
-    <input type="email" name="email" placeholder="Email" required>  
+<h2>Login to Your Account</h2>
+<form id="login-form">
+    <input type="email" name="email" placeholder="Email" required>
     <div class="password-wrapper" style="position: relative;">
-    <div class="password-wrapper">
-    <input type="password" name="password" id="password" placeholder="Enter your password" required>
-    <i class="fa-regular fa-eye toggle-password-icon"></i>
-</div>
-    <button type="submit">Login</button>  
-</form>  
-<p id="login-msg" style="color:red;"></p>  
-<a href="/register-page">Register Now!</a>  
-<script src="/static/js/auth.js"></script>  
-{% endblock %}
+        <input type="password" name="password" id="password" placeholder="Enter your password" required>
+        <i class="fa-regular fa-eye toggle-password-icon"></i>
+    </div>
+    <button type="submit">Login</button>
+</form>
+<p id="login-msg" style="color:red;"></p>
+<a href="/register-page">Register Now!</a>
+<br><br>
+<a href="/forgot-password-page" style="font-size:13px;color:#8B7500;">Forgot your password?</a>
 
+<script src="/static/js/auth.js"></script>
+{% endblock %}
