@@ -119,24 +119,19 @@
 <div id="toast" class="toast"></div>
 <div id="admin-toast" class="admin-toast"></div>
 
-<!-- PAGE-SPECIFIC SCRIPTS -->
-{% block scripts %}{% endblock %}
-
 <!-- THEME SCRIPT -->
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
-<script src="{{ url_for('static', filename='js/scroll-nav.js') }}"></script>
 <!-- Page Scroll Navigator -->
 <div id="page-scroll-nav">
   <button id="scroll-top" title="Go to top">▲</button>
-
   <div id="scroll-track">
     <div id="scroll-thumb"></div>
   </div>
-
   <button id="scroll-bottom" title="Go to bottom">▼</button>
 </div>
 <script src="{{ url_for('static', filename='js/scroll-nav.js') }}"></script>
+
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
 const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
@@ -144,11 +139,6 @@ const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
 
 <script src="/static/js/push.js"></script>
 <script>
-    // Debug logs
-    console.log("SW:", navigator.serviceWorker);
-    console.log("Permission:", Notification.permission);
-
-    // Register service worker
     if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/static/js/service-worker.js")
         .then(function(reg) {
@@ -159,8 +149,13 @@ const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
         });
     }
 </script>
+
 {% if session.get("user_id") %}
 <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 {% endif %}
+
+<!-- PAGE-SPECIFIC SCRIPTS -->
+{% block scripts %}{% endblock %}
+
 </body>
 </html>
