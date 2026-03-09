@@ -28,7 +28,7 @@ app.config["PAYSTACK_SECRET_KEY"] = os.environ.get("PAYSTACK_SECRET_KEY")
 app.config["PAYSTACK_PUBLIC_KEY"] = os.environ.get("PAYSTACK_PUBLIC_KEY")
 app.config["VAPID_PUBLIC_KEY"] = os.environ.get("VAPID_PUBLIC_KEY")
 
-UPLOAD_BASE = os.environ.get("UPLOAD_PATH", "/var/data/uploads")
+UPLOAD_BASE = os.environ.get("UPLOAD_PATH", "/tmp/uploads")
 os.makedirs(UPLOAD_BASE, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_BASE
 
