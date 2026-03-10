@@ -49,7 +49,7 @@ async function subscribeToPush() {
         });
         pushLog("Subscribed: " + subscription.endpoint.substring(0, 40) + "...");
 
-        const res = await fetch("/api/subscribe", {
+        const res = await fetch("/admin/api/subscribe", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
