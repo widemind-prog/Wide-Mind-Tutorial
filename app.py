@@ -144,6 +144,10 @@ def account_page():
         return redirect("/admin")
     return render_template("account.html")
 
+@app.route("/service-worker.js")
+def service_worker():
+    return send_from_directory("static/js", "service-worker.js",
+                               mimetype="application/javascript")
 # =====================
 # REGISTER
 # =====================
