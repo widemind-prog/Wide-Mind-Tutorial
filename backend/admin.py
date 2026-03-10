@@ -175,8 +175,14 @@ def send_push(user_id, title, message, link):
     subs = c.fetchall()
     conn.close()
 
+    print(f"send_push: user={user_id}, subs found={len(subs)}")
+
     for sub in subs:
         try:
+            private_key = os.environ.get("VAPID_PRIVATE_KEY")
+            print(f"VAPID_PRIVATE_KEY present: {bool(private_key)}")
+            print(f"Endpoint: {sub['endpoint'][:60]}")
+
             webpush(
                 subscription_info={
                     "endpoint": sub["endpoint"],
@@ -190,13 +196,15 @@ def send_push(user_id, title, message, link):
                     "message": message,
                     "link": link
                 }),
-                vapid_private_key=os.environ.get("VAPID_PRIVATE_KEY"),
+                vapid_private_key=private_key,
                 vapid_claims={
                     "sub": "mailto:wideminddevs@gmail.com"
                 }
             )
+            print("Push sent successfully!")
         except Exception as e:
-            print("Push failed:", e)
+            print(f"Push failed: {type(e).__name__}: {e}")
+
             
 # ---------------------
 # MESSAGES MANAGEMENT
