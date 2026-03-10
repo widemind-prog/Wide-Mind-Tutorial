@@ -1,4 +1,4 @@
-// v2
+// v3
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -33,17 +33,15 @@ async function subscribeToPush() {
         const registration = await navigator.serviceWorker.ready;
         pushLog("SW ready: " + registration.scope);
 
+        // Force unsubscribe any existing subscription first
         const existing = await registration.pushManager.getSubscription();
-        pushLog("Existing sub: " + (existing ? "YES" : "none"));
-        if (existing) { pushLog("Already subscribed"); return; }
+        if (existing) {
+            pushLog("Clearing old subscription...");
+            await existing.unsubscribe();
+            pushLog("Old subscription cleared");
+        }
 
-        pushLog("Requesting permission...");
-        const permission = await Notification.requestPermission();
-        pushLog("Permission: " + permission);
-
-        if (permission !== "granted") { pushLog("STOP: not granted"); return; }
-
-        pushLog("Subscribing...");
+        pushLog("Subscribing fresh...");
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -57,6 +55,12 @@ async function subscribeToPush() {
             body: JSON.stringify(subscription)
         });
         pushLog("Server: " + res.status);
+
+        if (res.ok) {
+            pushLog("SUCCESS - push subscription saved!");
+        } else {
+            pushLog("FAILED - server rejected subscription");
+        }
 
     } catch (err) {
         pushLog("ERROR: " + err.message);
