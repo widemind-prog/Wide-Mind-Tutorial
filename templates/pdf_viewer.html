@@ -363,12 +363,15 @@ function renderPage(num, firstLoad = false) {
     pdfDoc.getPage(num).then(page => {
       // Responsive scale — fit to screen width
       const maxWidth = Math.min(window.innerWidth * 0.95, 900);
+      const dpr      = window.devicePixelRatio || 1;
       const unscaled = page.getViewport({ scale: 1 });
-      const scale    = maxWidth / unscaled.width;
+      const scale    = (maxWidth / unscaled.width) * dpr;
       const viewport = page.getViewport({ scale });
 
       canvas.width  = viewport.width;
       canvas.height = viewport.height;
+      canvas.style.width  = (viewport.width / dpr) + "px";
+      canvas.style.height = (viewport.height / dpr) + "px";
 
       page.render({ canvasContext: ctx, viewport }).promise.then(() => {
         pageCache[num] = canvas.toDataURL(); // cache rendered page
