@@ -391,7 +391,7 @@ def toggle_payment(user_id):
         c.execute("""
             INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at)
             VALUES (?, ?, 'unpaid', 'paid', datetime('now'))
-        """, (user_id, 2000000))
+        """, (user_id, 1800000))
         new_status = "paid"
     else:
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
