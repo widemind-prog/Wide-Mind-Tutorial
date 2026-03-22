@@ -311,13 +311,18 @@ def pdf_viewer(course_id):
 # SUPABASE URL HELPER
 # =====================
 def get_material_url(filename):
-    SUPABASE_FILES = {
+    # Check hardcoded legacy files first (old uploads with renamed filenames)
+    LEGACY_FILES = {
         "Psy405_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy405_WideMindNotes%20(1).pdf",
         "Psy429_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy429_WideMindNotes%20(1).pdf",
         "Psy494_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy494_WideMindNotes%20(1).pdf",
         "Psy429_Session_1-5.mp3": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy429-Session-1-5.MP3",
     }
-    return SUPABASE_FILES.get(filename)
+    if filename in LEGACY_FILES:
+        return LEGACY_FILES[filename]
+    # For all new files, construct URL directly from filename
+    from urllib.parse import quote
+    return f"https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/{quote(filename)}"
 
 # =====================
 # STREAM FILES
