@@ -1,161 +1,72 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% extends "base.html" %}
+{% block title %}Edit Course{% endblock %}
 
-    <title>{% block title %}Wide Mind Tutorials{% endblock %}</title>
+{% block content %}
+<h1 class="dashboard-title">Edit Course</h1>
 
-    <!-- MAIN STYLES -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p+...your_hash..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+<!-- COURSE DETAILS -->
+<form method="POST" class="admin-box">
+    <label>Course Code</label>
+    <input type="text" name="course_code" value="{{ course.course_code }}" required>
 
-    <!-- SHARED UI STYLES -->
-    <style>
-        /* TOAST NOTIFICATIONS */
-        .toast, .admin-toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #333;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 8px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 1000;
-            pointer-events: none;
-        }
+    <label>Course Title</label>
+    <input type="text" name="course_title" value="{{ course.course_title }}" required>
 
-        .toast.show,
-        .admin-toast.show {
-            opacity: 1;
-        }
+    <label>Description</label>
+    <textarea name="description" rows="4">{{ course.description }}</textarea>
 
-        /* FLASH MESSAGES */
-        .flash {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            padding: 10px 20px;
-            border-radius: 8px;
-            color: #fff;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+    <button type="submit">Save Changes</button>
+</form>
 
-        .flash.show { opacity: 1; }
-        .flash.success { background-color: darkgreen; }
-        .flash.error   { background-color: crimson; }
-        .flash.info    { background-color: #8B7500; }
-    </style>
-</head>
-
-<body>
-
-<header class="site-header">
-    
-    <a href="{{ url_for('home') }}">
-        <img
-            src="{{ url_for('static', filename='images/logo.png') }}"
-            alt="Wide Mind Tutorials"
-            class="header-logo"
-        >
-    </a>
-
-    <!-- PUSH BELL TO RIGHT -->
-    <div class="header-right">
-{% if session.get("user_id") and not session.get("is_admin") %}
-    <div class="notification-wrapper">
-        <i id="notification-bell" class="fa-regular fa-bell"></i>
-        <span class="notif-badge" id="notif-count" style="display:none;"></span>
-
-        <div class="notif-dropdown" id="notif-dropdown">
-            <h3 style="padding:15px; margin:0;">Notifications</h3>
-            <div id="notif-list"></div>
-        </div>
-    </div>
-{% endif %}
+<!-- EXISTING MATERIALS -->
+<div class="admin-box">
+    <h3>Existing Materials</h3>
+    {% if materials %}
+    <ul>
+        {% for material in materials %}
+        <li>
+            <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
+            <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
+                <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
+                    Delete
+                </button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No materials uploaded yet.</p>
+    {% endif %}
 </div>
 
-</header>
-
-<main class="content">
-
-    <!-- FLASH MESSAGES -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div id="flash-container">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }} show">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
-
-</main>
-
-<footer class="site-footer">
-    <nav class="footer-nav">
-        <a href="/home">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-        <a href="/privacy">Privacy</a>
-
-        <!-- Dark theme toggle -->
-        <a href="#" onclick="toggleTheme(); return false;">Toggle Dark Mode</a>
-    </nav>
-
-    <p>&copy; {{ now().year }} Wide Mind Tutorials</p>
-</footer>
-
-<!-- SHARED TOAST CONTAINERS -->
-<div id="toast" class="toast"></div>
-<div id="admin-toast" class="admin-toast"></div>
-
-<!-- THEME SCRIPT -->
-<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-
-<!-- Page Scroll Navigator -->
-<div id="page-scroll-nav">
-  <button id="scroll-top" title="Go to top">▲</button>
-  <div id="scroll-track">
-    <div id="scroll-thumb"></div>
-  </div>
-  <button id="scroll-bottom" title="Go to bottom">▼</button>
+<!-- ADD PDF -->
+<div class="admin-box">
+    <h3>Add PDF Material</h3>
+    <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}"
+          enctype="multipart/form-data">
+        <label>Title:</label>
+        <input type="text" name="title" placeholder="e.g. Psy405 Notes" required>
+        <label>PDF File:</label>
+        <input type="file" name="file" accept=".pdf" required>
+        <button type="submit">Upload PDF</button>
+    </form>
 </div>
-<script src="{{ url_for('static', filename='js/scroll-nav.js') }}"></script>
 
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-<script>
-const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
-</script>
+<!-- ADD AUDIO -->
+<div class="admin-box">
+    <h3>Add Audio Material</h3>
+    <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}"
+          enctype="multipart/form-data">
+        <label>Title:</label>
+        <input type="text" name="title" placeholder="e.g. Sessions 1-5" required>
+        <label>Audio File (MP3):</label>
+        <input type="file" name="file" accept=".mp3,audio/*" required>
+        <button type="submit">Upload Audio</button>
+    </form>
+</div>
 
-<script src="/static/js/push.js"></script>
-<script>
-    if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/service-worker.js")
-        .then(function(reg) {
-            console.log("Service Worker registered:", reg.scope);
-        })
-        .catch(function(err) {
-            console.log("Service Worker failed:", err);
-        });
-    }
-</script>
+<a href="/admin/courses" class="back-login-btn">← Back to Courses</a>
+<div id="admin-toast" class="toast"></div>
+<script src="/static/js/admin.js"></script>
 
-{% if session.get("user_id") %}
-<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
-{% endif %}
-
-<!-- PAGE-SPECIFIC SCRIPTS -->
-{% block scripts %}{% endblock %}
-
-</body>
-</html>
+{% endblock %}
