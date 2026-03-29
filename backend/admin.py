@@ -63,7 +63,7 @@ def subscribe():
     conn.close()
 
     return jsonify({"success": True})
-    
+
 # ---------------------
 # NOTIFICATIONS MANAGEMENT
 # ---------------------
@@ -205,7 +205,7 @@ def send_push(user_id, title, message, link):
         except Exception as e:
             print(f"Push failed: {type(e).__name__}: {e}")
 
-            
+
 # ---------------------
 # MESSAGES MANAGEMENT
 # ---------------------
@@ -357,7 +357,16 @@ def toggle_suspend_user(user_id):
 def delete_user(user_id):
     conn = get_db()
     c = conn.cursor()
+
+    # Delete all related records first
+    c.execute("DELETE FROM payments WHERE user_id=?", (user_id,))
+    c.execute("DELETE FROM notifications WHERE user_id=?", (user_id,))
+    c.execute("DELETE FROM push_subscriptions WHERE user_id=?", (user_id,))
+    c.execute("DELETE FROM password_resets WHERE user_id=?", (user_id,))
+
+    # Now delete the user
     c.execute("DELETE FROM users WHERE id=?", (user_id,))
+
     conn.commit()
     conn.close()
     flash("User deleted", "success")
@@ -486,13 +495,14 @@ def delete_course(course_id):
 @admin_bp.route("/courses/material/add/<file_type>/<int:course_id>", methods=["POST"])
 @admin_required
 def add_material(file_type, course_id):
-    drive_url = request.form.get("drive_url", "").strip()
     title = request.form.get("title", "").strip()
-    filename = request.form.get("filename", "").strip()
+    file = request.files.get("file")
 
-    if not drive_url or not title or not filename:
-        flash("Title, filename and Google Drive URL are all required.", "error")
+    if not title or not file or file.filename == "":
+        flash("Title and file are required.", "error")
         return redirect(f"/admin/courses/edit/{course_id}")
+
+    filename = secure_filename(file.filename)
 
     conn = get_db()
     c = conn.cursor()
@@ -502,13 +512,40 @@ def add_material(file_type, course_id):
         flash(f"A material with that filename already exists for this course.", "error")
         return redirect(f"/admin/courses/edit/{course_id}")
 
+    # Upload to Supabase Storage
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    bucket = "materials"
+
+    file_bytes = file.read()
+    content_type = "application/pdf" if file_type == "pdf" else "audio/mpeg"
+
+    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": content_type,
+        "x-upsert": "true"
+    }
+
+    import requests as req
+    response = req.post(upload_url, headers=headers, data=file_bytes)
+
+    if response.status_code not in (200, 201):
+        flash(f"Upload to Supabase failed: {response.text}", "error")
+        conn.close()
+        return redirect(f"/admin/courses/edit/{course_id}")
+
+    # Build public URL
+    file_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
+
+    # Save to Turso
     c.execute(
-        "INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
-        (course_id, filename, file_type, title)
+        "INSERT INTO materials (course_id, filename, file_type, title, file_url) VALUES (?, ?, ?, ?, ?)",
+        (course_id, filename, file_type, title, file_url)
     )
     conn.commit()
     conn.close()
-    flash("Material added successfully!", "success")
+    flash("Material uploaded successfully!", "success")
     return redirect(f"/admin/courses/edit/{course_id}")
 
 
@@ -522,9 +559,18 @@ def delete_material(material_id):
     if not material:
         conn.close()
         abort(404)
-    filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], material["filename"])
-    if os.path.exists(filepath):
-        os.remove(filepath)
+
+    # Delete from Supabase Storage
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    if supabase_url and supabase_key:
+        import requests as req
+        delete_url = f"{supabase_url}/storage/v1/object/materials/{material['filename']}"
+        req.delete(delete_url, headers={
+            "Authorization": f"Bearer {supabase_key}"
+        })
+
+    # Delete from Turso
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))
     conn.commit()
     conn.close()
