@@ -76,6 +76,12 @@ def inject_now():
 # BEFORE REQUEST
 # =====================
 @app.before_request
+def force_custom_domain():
+    host = request.host
+    if "onrender.com" in host:
+        return redirect("https://www.widemindtutorial.com" + request.full_path, 301)
+
+@app.before_request
 def make_session_permanent():
     session.permanent = True
 
