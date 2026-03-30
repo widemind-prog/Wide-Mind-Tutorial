@@ -18,7 +18,7 @@ def init_payment():
     if is_admin(user_id):
         return jsonify({"status": True, "message": "Admin does not require payment"}), 200
 
-    amount = 10246.32 * 100  # 10000 kobo
+    amount = 10263.75 * 100  # 10000 kobo
 
     conn = get_db()
     c = conn.cursor()
@@ -86,7 +86,7 @@ def payment_callback():
     email = data["data"]["customer"]["email"]
     amount = data["data"]["amount"]
 
-    if amount != 1024632:
+    if amount != 1026375:
         return redirect("/account?payment=invalid_amount")
 
     conn = get_db()
@@ -176,7 +176,7 @@ def payment_status():
     payment_data = dict(payment) if payment else {
         "id": None,
         "user_id": user_id,
-        "amount": 1024632,
+        "amount": 1026375,
         "status": "unpaid",
         "reference": None,
         "paid_at": None,
