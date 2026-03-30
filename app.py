@@ -182,7 +182,7 @@ def register():
     if not c.fetchone():
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (user_id, 1024632, "unpaid")
+            (user_id, 1026375, "unpaid")
         )
 
     conn.commit()
