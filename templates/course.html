@@ -6,17 +6,17 @@
 
 <h2>{{ course.course_code }} - {{ course.course_title }}</h2>
 
-{# ===== COURSE OVERVIEW AS HERO CARD ===== #}
+{# ===== COURSE OVERVIEW ===== #}
 {% if course.description %}
   <div class="hero-description">
-    <h3>Course Overview 📘</h3>
+    <h3><i class="fa-solid fa-book" style="margin-right:8px;"></i>Course Overview</h3>
     <p>{{ course.description }}</p>
   </div>
 {% endif %}
 
 {# ===== AUDIO LESSONS ===== #}
 {% if audios %}
-  <h3>Audio Lessons 🎧</h3>
+  <h3><i class="fa-solid fa-headphones" style="margin-right:8px;"></i>Audio Lessons</h3>
   <ul style="list-style: none; padding-left: 0;">
     {% for audio in audios %}
       <li style="margin-bottom: 15px;">
@@ -30,13 +30,14 @@
   </ul>
 {% else %}
   <div class="hero-description" style="text-align:center; margin-top: 15px;">
-    <p><strong>No audio lessons yet. Materials will be uploaded soon! 🎧</strong></p>
+    <p><i class="fa-solid fa-headphones" style="margin-right:6px; color:#8B7500;"></i>
+    <strong>No audio lessons yet. Materials will be uploaded soon!</strong></p>
   </div>
 {% endif %}
 
 {# ===== PDF LESSONS ===== #}
 {% if pdfs %}
-  <h3>PDF Lessons 📝</h3>
+  <h3><i class="fa-solid fa-file-lines" style="margin-right:8px;"></i>PDF Lessons</h3>
   <ul style="list-style: none; padding-left: 0;">
     {% for pdf in pdfs %}
       <li style="margin-bottom: 12px;">
@@ -55,20 +56,22 @@
                   font-weight: 600;
                   box-shadow: 0 2px 8px rgba(139,117,0,0.25);
                   transition: opacity 0.2s;">
-          <span style="font-size:22px;">📄</span>
+          <i class="fa-solid fa-file-pdf" style="font-size:20px;"></i>
           <span>{{ pdf.title or pdf.filename }}</span>
-          <span style="margin-left:auto; font-size:12px; opacity:0.85;">Tap to open →</span>
+          <span style="margin-left:auto; font-size:12px; opacity:0.85;">
+            Tap to open <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i>
+          </span>
         </a>
       </li>
     {% endfor %}
   </ul>
 {% else %}
   <div class="hero-description" style="text-align:center; margin-top: 15px;">
-    <p><strong>No PDF lessons yet. Materials will be uploaded soon! 📝</strong></p>
+    <p><i class="fa-solid fa-file-lines" style="margin-right:6px; color:#8B7500;"></i>
+    <strong>No PDF lessons yet. Materials will be uploaded soon!</strong></p>
   </div>
 {% endif %}
 
-{# ===== TOAST MESSAGES ===== #}
 <div id="toast" class="toast"></div>
 
 <script>
@@ -86,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("audio").forEach(audio => {
         audio.addEventListener("contextmenu", e => {
             e.preventDefault();
-            showToast("Right-click disabled on audio 🎧", true);
+            showToast("Right-click disabled on audio", true);
         });
         audio.addEventListener("dragstart", e => e.preventDefault());
         audio.setAttribute("controlsList", "nodownload");
