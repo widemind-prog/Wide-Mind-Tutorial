@@ -203,6 +203,22 @@ def register():
 
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
+@app.route("/courses")
+def courses_page():
+    if "user_id" not in session:
+        return redirect("/login-page")
+    if is_admin(session["user_id"]):
+        return redirect("/admin")
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, course_code, course_title, description FROM courses ORDER BY id DESC")
+    courses = c.fetchall()
+    conn.close()
+
+    return render_template("courses.html", courses=courses)
+
+
 # =====================
 # COURSES FOR USERS
 # =====================
