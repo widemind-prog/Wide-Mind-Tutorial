@@ -373,6 +373,59 @@ def delete_user(user_id):
     return redirect(url_for("admin_bp.users"))
 
 # ---------------------
+# USER FILTER PAGES
+# ---------------------
+
+def get_user_list(filter_type):
+    conn = get_db()
+    c = conn.cursor()
+
+    base_query = """
+        SELECT
+            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
+            COALESCE(p.admin_override_status, p.status) AS payment_status
+        FROM users u
+        LEFT JOIN payments p ON u.id = p.user_id
+        WHERE u.role != 'admin'
+    """
+
+    if filter_type == "paid":
+        c.execute(base_query + " AND COALESCE(p.admin_override_status, p.status) = 'paid' ORDER BY u.id DESC")
+    elif filter_type == "unpaid":
+        c.execute(base_query + " AND (COALESCE(p.admin_override_status, p.status) != 'paid' OR p.id IS NULL) ORDER BY u.id DESC")
+    elif filter_type == "suspended":
+        c.execute(base_query + " AND u.is_suspended = 1 ORDER BY u.id DESC")
+    else:  # all
+        c.execute(base_query + " ORDER BY u.id DESC")
+
+    users = c.fetchall()
+    conn.close()
+    return users
+
+
+@admin_bp.route("/users/all")
+@admin_required
+def users_all():
+    return render_template("admin/total.html", users=get_user_list("all"))
+
+
+@admin_bp.route("/users/paid")
+@admin_required
+def users_paid():
+    return render_template("admin/paid.html", users=get_user_list("paid"))
+
+
+@admin_bp.route("/users/unpaid")
+@admin_required
+def users_unpaid():
+    return render_template("admin/unpaid.html", users=get_user_list("unpaid"))
+
+
+@admin_bp.route("/users/suspended")
+@admin_required
+def users_suspended():
+    return render_template("admin/suspended.html", users=get_user_list("suspended"))
+# ---------------------
 # TOGGLE PAYMENT (FIXED)
 # ---------------------
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
