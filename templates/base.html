@@ -11,9 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p+...your_hash..." crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <!-- SHARED UI STYLES -->
     <style>
-        /* TOAST NOTIFICATIONS */
         .toast, .admin-toast {
             position: fixed;
             top: 20px;
@@ -27,13 +25,8 @@
             z-index: 1000;
             pointer-events: none;
         }
+        .toast.show, .admin-toast.show { opacity: 1; }
 
-        .toast.show,
-        .admin-toast.show {
-            opacity: 1;
-        }
-
-        /* FLASH MESSAGES */
         .flash {
             position: fixed;
             top: 80px;
@@ -45,84 +38,134 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-
-        .flash.show { opacity: 1; }
+        .flash.show    { opacity: 1; }
         .flash.success { background-color: darkgreen; }
         .flash.error   { background-color: crimson; }
         .flash.info    { background-color: #8B7500; }
+
+        /* space for tab bar */
+        {% if session.get("user_id") and not session.get("is_admin") %}
+        body { padding-bottom: 70px; }
+        {% endif %}
+
+        .bottom-tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 62px;
+            background: #fff;
+            border-top: 1px solid #e8e0c8;
+            display: flex;
+            align-items: stretch;
+            z-index: 500;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            text-decoration: none;
+            color: #aaa;
+            font-size: 10px;
+            font-weight: 500;
+            transition: color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        .tab-item i {
+            font-size: 20px;
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        .tab-item.active { color: #8B7500; }
+        .tab-item.active i { transform: translateY(-2px); }
+
+        body.dark .bottom-tab-bar {
+            background: #1a1a1a;
+            border-top-color: #333;
+        }
+        body.dark .tab-item { color: #666; }
+        body.dark .tab-item.active { color: #d4af37; }
+
+        .settings-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 30px;
+        }
     </style>
 </head>
 
 <body>
 
 <header class="site-header">
-    
     <a href="{{ url_for('home') }}">
-        <img
-            src="{{ url_for('static', filename='images/logo.png') }}"
-            alt="Wide Mind Tutorials"
-            class="header-logo"
-        >
+        <img src="{{ url_for('static', filename='images/logo.png') }}"
+             alt="Wide Mind Tutorials" class="header-logo">
     </a>
-
-    <!-- PUSH BELL TO RIGHT -->
     <div class="header-right">
 {% if session.get("user_id") and not session.get("is_admin") %}
     <div class="notification-wrapper">
         <i id="notification-bell" class="fa-regular fa-bell"></i>
         <span class="notif-badge" id="notif-count" style="display:none;"></span>
-
         <div class="notif-dropdown" id="notif-dropdown">
             <h3 style="padding:15px; margin:0;">Notifications</h3>
             <div id="notif-list"></div>
         </div>
     </div>
 {% endif %}
-</div>
-
+    </div>
 </header>
 
 <main class="content">
-
-    <!-- FLASH MESSAGES -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div id="flash-container">
                 {% for category, message in messages %}
-                    <div class="flash {{ category }} show">
-                        {{ message }}
-                    </div>
+                    <div class="flash {{ category }} show">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
 
     {% block content %}{% endblock %}
-
 </main>
 
-<footer class="site-footer">
-    <nav class="footer-nav">
-        <a href="/home">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-        <a href="/privacy">Privacy</a>
+{% if session.get("user_id") and not session.get("is_admin") %}
+<nav class="bottom-tab-bar">
 
-        <!-- Dark theme toggle -->
-        <a href="#" onclick="toggleTheme(); return false;">Toggle Dark Mode</a>
-    </nav>
+    <a href="/account" class="tab-item {% if request.path == '/account' %}active{% endif %}">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+    </a>
 
-    <p>&copy; {{ now().year }} Wide Mind Tutorials</p>
-</footer>
+    <a href="/account" class="tab-item {% if '/course' in request.path and request.path != '/account' %}active{% endif %}">
+        <i class="fa-solid fa-book-open"></i>
+        <span>Courses</span>
+    </a>
 
-<!-- SHARED TOAST CONTAINERS -->
+    <a href="/settings" class="tab-item {% if request.path == '/settings' %}active{% endif %}">
+        <i class="fa-solid fa-gear"></i>
+        <span>Settings</span>
+    </a>
+
+</nav>
+{% endif %}
+
 <div id="toast" class="toast"></div>
 <div id="admin-toast" class="admin-toast"></div>
 
-<!-- THEME SCRIPT -->
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
-<!-- Page Scroll Navigator -->
 <div id="page-scroll-nav">
   <button id="scroll-top" title="Go to top">▲</button>
   <div id="scroll-track">
@@ -140,13 +183,9 @@ const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
 <script src="/static/js/push.js"></script>
 <script>
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/static/js/service-worker.js")
-        .then(function(reg) {
-            console.log("Service Worker registered:", reg.scope);
-        })
-        .catch(function(err) {
-            console.log("Service Worker failed:", err);
-        });
+        navigator.serviceWorker.register("/service-worker.js")
+        .then(function(reg) { console.log("SW registered:", reg.scope); })
+        .catch(function(err) { console.log("SW failed:", err); });
     }
 </script>
 
@@ -154,7 +193,6 @@ const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
 <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 {% endif %}
 
-<!-- PAGE-SPECIFIC SCRIPTS -->
 {% block scripts %}{% endblock %}
 
 </body>
