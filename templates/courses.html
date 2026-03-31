@@ -12,27 +12,26 @@
 <div style="display:grid; gap:14px;">
     {% for course in courses %}
     <a href="/course/{{ course.id }}"
+       class="course-card-link"
+       data-course-id="{{ course.id }}"
        style="text-decoration:none; display:block; border-radius:14px; overflow:hidden;
               border:1px solid #e6d8b5; background:#fff;
               box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
        ontouchstart="this.style.opacity='0.85'"
        ontouchend="this.style.opacity='1'">
 
-        <!-- TOP ACCENT BAR — colour based on course id so it's always consistent -->
         {% set colors = ['#8B7500','#2e6da4','#a44b2e','#2e8b57','#6a2e8b','#8b2e5a'] %}
         <div style="height:5px; background:{{ colors[course.id % 6] }};"></div>
 
         <div style="padding:16px;">
             <div style="display:flex; align-items:flex-start; gap:12px;">
 
-                <!-- ICON -->
                 <div style="width:42px; height:42px; border-radius:10px; flex-shrink:0;
                             background:linear-gradient(135deg,#8B7500,#d4af37);
                             display:flex; align-items:center; justify-content:center;">
                     <i class="fa-solid fa-book-open" style="color:#fff; font-size:17px;"></i>
                 </div>
 
-                <!-- INFO -->
                 <div style="flex:1; min-width:0;">
                     <p style="margin:0 0 1px; font-size:11px; font-weight:700;
                                color:#8B7500; letter-spacing:0.5px; text-transform:uppercase;">
@@ -66,6 +65,42 @@
     <p style="font-size:15px;">No courses available yet.</p>
 </div>
 {% endif %}
-<script src="/static/js/account.js"></script>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var toastEl = document.getElementById("toast");
+
+    function showToast(msg) {
+        if (!toastEl) return;
+        toastEl.textContent = msg;
+        toastEl.classList.remove("show");
+        void toastEl.offsetWidth;
+        toastEl.classList.add("show");
+        setTimeout(function() { toastEl.classList.remove("show"); }, 3000);
+    }
+
+    document.querySelectorAll(".course-card-link").forEach(function(link) {
+        link.addEventListener("click", async function(e) {
+            e.preventDefault();
+            var courseId = this.dataset.courseId;
+
+            try {
+                var res = await fetch("/api/payment/status", { credentials: "same-origin" });
+                var payment = await res.json();
+
+                if (payment.status === "paid" || payment.status === "admin") {
+                    window.location.href = "/course/" + courseId;
+                } else {
+                    showToast("Payment required to access this course");
+                }
+            } catch (err) {
+                showToast("Could not verify payment. Please try again.");
+            }
+        });
+    });
+})();
+</script>
 {% endblock %}
