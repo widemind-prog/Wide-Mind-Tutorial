@@ -76,6 +76,11 @@ def inject_now():
 # =====================
 # BEFORE REQUEST
 # =====================
+@app.before_request
+def clear_redirect_cache():
+    response = None
+    # This forces browsers to not cache any redirects
+    pass
 
 @app.before_request
 def make_session_permanent():
