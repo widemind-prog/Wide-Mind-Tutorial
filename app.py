@@ -10,6 +10,7 @@ from extensions import socketio
 from state import online_users
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
+from backend.email_service import send_welcome_email
 from backend.admin import admin_bp
 from backend.payment import payment_bp
 from backend.webhook import webhook_bp
@@ -188,11 +189,17 @@ def register():
     if not c.fetchone():
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (user_id, 1026375, "unpaid")
+            (user_id, 1024632, "unpaid")
         )
 
     conn.commit()
     conn.close()
+
+    # Send welcome email
+    try:
+        send_welcome_email(email, name)
+    except Exception as e:
+        print("Welcome email failed:", e)
 
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
@@ -480,6 +487,27 @@ def submit_contact():
     conn.close()
 
     return jsonify({"message": "Message sent successfully"}), 201
+
+# =====================
+# SETTINGS PAGE
+# =====================
+@app.route("/settings")
+def settings():
+    if "user_id" not in session:
+        return redirect("/login-page")
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, name, email, level FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+    c.execute("""
+        SELECT COALESCE(p.admin_override_status, p.status) AS status
+        FROM payments p WHERE p.user_id=?
+        ORDER BY p.id DESC LIMIT 1
+    """, (session["user_id"],))
+    payment = c.fetchone()
+    conn.close()
+    payment_status = payment["status"] if payment else "unpaid"
+    return render_template("settings.html", user=user, payment_status=payment_status)
 
 # =====================
 # LOGOUT
