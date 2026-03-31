@@ -345,4 +345,158 @@
     [data-theme="dark"] .notif-dropdown.active {
         transform: translateX(0);
     }
+}/* ===================== BOTTOM TAB BAR ===================== */
+
+[data-theme="dark"] .bottom-tab-bar {
+    background: #1a1a1a;
+    border-top-color: #2a2f34;
+}
+
+[data-theme="dark"] .tab-item {
+    color: #666;
+}
+
+[data-theme="dark"] .tab-item.active {
+    color: #d4af37;
+}
+
+/* ===================== LOGIN DRAWER ===================== */
+
+[data-theme="dark"] .login-drawer {
+    background: #1d2226;
+    border-top: 1px solid #2a2f34;
+}
+
+[data-theme="dark"] .login-drawer h3 {
+    color: #d4af37;
+}
+
+[data-theme="dark"] .login-drawer p {
+    color: #aaa;
+}
+
+[data-theme="dark"] .drawer-handle {
+    background: #444;
+}
+
+/* ===================== SETTINGS PAGE ===================== */
+
+/* Profile card */
+[data-theme="dark"] [style*="background:#fffaf0"],
+[data-theme="dark"] [style*="background: #fffaf0"] {
+    background: #1d2226 !important;
+    border-color: #2a2f34 !important;
+}
+
+/* Menu rows */
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: #fff"] {
+    background: #1d2226 !important;
+    border-color: #2a2f34 !important;
+}
+
+[data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #f0e6d2"] {
+    border-bottom-color: #2a2f34 !important;
+}
+
+/* All inline dark text — make readable on dark backgrounds */
+[data-theme="dark"] [style*="color:#3c2f1f"],
+[data-theme="dark"] [style*="color: #3c2f1f"] {
+    color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] [style*="color:#555"],
+[data-theme="dark"] [style*="color: #555"] {
+    color: #aaa !important;
+}
+
+[data-theme="dark"] [style*="color:#777"],
+[data-theme="dark"] [style*="color: #777"] {
+    color: #888 !important;
+}
+
+[data-theme="dark"] [style*="color:#888"],
+[data-theme="dark"] [style*="color: #888"] {
+    color: #777 !important;
+}
+
+[data-theme="dark"] [style*="color:#aaa"],
+[data-theme="dark"] [style*="color: #aaa"] {
+    color: #666 !important;
+}
+
+/* Chevron arrows */
+[data-theme="dark"] [style*="color:#ccc"],
+[data-theme="dark"] [style*="color: #ccc"] {
+    color: #444 !important;
+}
+
+/* ===================== COURSES PAGE CARDS ===================== */
+
+[data-theme="dark"] [style*="background:#fff;"],
+[data-theme="dark"] [style*="background: #fff;"],
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: #ffffff"] {
+    background: #1d2226 !important;
+    border-color: #2a2f34 !important;
+}
+
+[data-theme="dark"] [style*="color:#3c2f1f"] {
+    color: #e0e0e0 !important;
+}
+
+/* ===================== USER CARD (admin pages) ===================== */
+
+[data-theme="dark"] .user-card {
+    background: #1d2226;
+    border: 1px solid #2a2f34;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .user-card strong,
+[data-theme="dark"] .user-card small {
+    color: #e0e0e0;
+}
+
+/* ===================== STAT CARDS (clickable links) ===================== */
+
+[data-theme="dark"] a.stat-card {
+    background: #1d2226;
+    border-color: #2a2f34;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] a.stat-card h3 {
+    color: #aaa;
+}
+
+/* ===================== SETTINGS FOOTER ===================== */
+
+[data-theme="dark"] .settings-footer {
+    color: #555;
+}
+
+/* ===================== INLINE BORDER COLORS ===================== */
+
+[data-theme="dark"] [style*="border:1px solid #e6d8b5"],
+[data-theme="dark"] [style*="border: 1px solid #e6d8b5"] {
+    border-color: #2a2f34 !important;
+}
+
+[data-theme="dark"] [style*="border-top:1px solid #e6d8b5"],
+[data-theme="dark"] [style*="border-top: 1px solid #e6d8b5"] {
+    border-top-color: #2a2f34 !important;
+}
+
+/* ===================== PROFILE CARD INNER BORDER ===================== */
+
+[data-theme="dark"] [style*="border-top:1px solid #e6d8b5"] {
+    border-top-color: #2a2f34 !important;
+}
+
+/* ===================== NOTIF DROPDOWN ON DARK ===================== */
+
+[data-theme="dark"] .notif-dropdown {
+    background: #1d2226;
 }
