@@ -7,7 +7,7 @@ from pywebpush import webpush
 import json
 import os
 from werkzeug.utils import secure_filename
-from backend.email_service import send_email
+from backend.email_service import send_email, send_new_material_email
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
 # ---------------------
 # ADMIN GUARD
@@ -373,59 +373,6 @@ def delete_user(user_id):
     return redirect(url_for("admin_bp.users"))
 
 # ---------------------
-# USER FILTER PAGES
-# ---------------------
-
-def get_user_list(filter_type):
-    conn = get_db()
-    c = conn.cursor()
-
-    base_query = """
-        SELECT
-            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
-            COALESCE(p.admin_override_status, p.status) AS payment_status
-        FROM users u
-        LEFT JOIN payments p ON u.id = p.user_id
-        WHERE u.role != 'admin'
-    """
-
-    if filter_type == "paid":
-        c.execute(base_query + " AND COALESCE(p.admin_override_status, p.status) = 'paid' ORDER BY u.id DESC")
-    elif filter_type == "unpaid":
-        c.execute(base_query + " AND (COALESCE(p.admin_override_status, p.status) != 'paid' OR p.id IS NULL) ORDER BY u.id DESC")
-    elif filter_type == "suspended":
-        c.execute(base_query + " AND u.is_suspended = 1 ORDER BY u.id DESC")
-    else:  # all
-        c.execute(base_query + " ORDER BY u.id DESC")
-
-    users = c.fetchall()
-    conn.close()
-    return users
-
-
-@admin_bp.route("/users/all")
-@admin_required
-def users_all():
-    return render_template("admin/total.html", users=get_user_list("all"))
-
-
-@admin_bp.route("/users/paid")
-@admin_required
-def users_paid():
-    return render_template("admin/paid.html", users=get_user_list("paid"))
-
-
-@admin_bp.route("/users/unpaid")
-@admin_required
-def users_unpaid():
-    return render_template("admin/unpaid.html", users=get_user_list("unpaid"))
-
-
-@admin_bp.route("/users/suspended")
-@admin_required
-def users_suspended():
-    return render_template("admin/suspended.html", users=get_user_list("suspended"))
-# ---------------------
 # TOGGLE PAYMENT (FIXED)
 # ---------------------
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
@@ -453,7 +400,7 @@ def toggle_payment(user_id):
         c.execute("""
             INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at)
             VALUES (?, ?, 'unpaid', 'paid', datetime('now'))
-        """, (user_id, 1026375))
+        """, (user_id, 1000000))
         new_status = "paid"
     else:
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
@@ -598,6 +545,32 @@ def add_material(file_type, course_id):
     )
     conn.commit()
     conn.close()
+    # Send new material email to all paid users
+    try:
+        conn2 = get_db()
+        c2 = conn2.cursor()
+        c2.execute("SELECT * FROM courses WHERE id=?", (course_id,))
+        course = c2.fetchone()
+        c2.execute("""
+            SELECT u.name, u.email FROM users u
+            JOIN payments p ON u.id = p.user_id
+            WHERE u.role != 'admin'
+            AND COALESCE(p.admin_override_status, p.status) = 'paid'
+        """)
+        paid_users = c2.fetchall()
+        conn2.close()
+        for u in paid_users:
+            send_new_material_email(
+                to_email=u["email"],
+                name=u["name"],
+                material_title=title,
+                course_title=course["course_title"] if course else "your course",
+                file_type=file_type,
+                course_id=course_id
+            )
+    except Exception as e:
+        print("New material email failed:", e)
+
     flash("Material uploaded successfully!", "success")
     return redirect(f"/admin/courses/edit/{course_id}")
 
