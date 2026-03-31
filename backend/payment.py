@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, session, redirect, request
 import requests
 import os
 from backend.db import get_db, is_admin
+from backend.email_service import send_payment_success_email
 
 payment_bp = Blueprint("payment_bp", __name__)
 
@@ -18,7 +19,7 @@ def init_payment():
     if is_admin(user_id):
         return jsonify({"status": True, "message": "Admin does not require payment"}), 200
 
-    amount = 10263.75 * 100  # 10000 kobo
+    amount = 10263.75 * 100
 
     conn = get_db()
     c = conn.cursor()
@@ -37,7 +38,7 @@ def init_payment():
     payload = {
         "email": user["email"],
         "amount": amount,
-        "callback_url": "https://wide-mind-tutorial-gptu.onrender.com/payment/callback"
+        "callback_url": "https://www.widemindtutorial.com/payment/callback"
     }
 
     try:
@@ -92,26 +93,22 @@ def payment_callback():
     conn = get_db()
     c = conn.cursor()
 
-    # Fetch user
-    c.execute("SELECT id FROM users WHERE email=?", (email,))
+    c.execute("SELECT id, name FROM users WHERE email=?", (email,))
     user = c.fetchone()
     if not user:
         conn.close()
         return redirect("/account?payment=user_not_found")
 
     user_id = user["id"]
+    user_name = user["name"]
 
-    # Fetch latest payment row
     c.execute("""
-        SELECT *
-        FROM payments
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 1
+        SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
     """, (user_id,))
     payment = c.fetchone()
 
-    # Apply rules
+    already_paid = False
+
     if not payment:
         c.execute("""
             INSERT INTO payments (user_id, amount, status, reference, paid_at)
@@ -123,25 +120,30 @@ def payment_callback():
         return redirect("/account?payment=blocked")
 
     elif payment.get("admin_override_status") == "paid":
-        conn.close()
-        return redirect("/account?payment=success")
+        already_paid = True
 
     elif payment["status"] == "unpaid":
         c.execute("""
-            UPDATE payments
-            SET status='paid',
-                reference=?,
-                paid_at=datetime('now')
-            WHERE id=?
+            UPDATE payments SET status='paid', reference=?, paid_at=datetime('now') WHERE id=?
         """, (reference, payment["id"]))
+    else:
+        already_paid = True
 
     conn.commit()
     conn.close()
+
+    # Send payment success email
+    if not already_paid:
+        try:
+            send_payment_success_email(email, user_name)
+        except Exception as e:
+            print("Payment email failed:", e)
+
     return redirect("/account?payment=success")
 
 
 # ------------------------------------
-# PAYMENT STATUS (USED BY account.js)
+# PAYMENT STATUS
 # ------------------------------------
 @payment_bp.route("/api/payment/status", methods=["GET"])
 def payment_status():
@@ -150,68 +152,46 @@ def payment_status():
 
     user_id = session["user_id"]
 
-    # Admins are always paid
     if is_admin(user_id):
         return jsonify({
-            "status": "admin",
-            "amount": 0,
-            "reference": None,
-            "paid_at": None
+            "status": "admin", "amount": 0, "reference": None, "paid_at": None
         }), 200
 
     conn = get_db()
     c = conn.cursor()
 
-    # Fetch latest payment row
     c.execute("""
-        SELECT *
-        FROM payments
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 1
+        SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
     """, (user_id,))
     payment = c.fetchone()
 
-    # Ensure payment_data always has keys to prevent IndexError
     payment_data = dict(payment) if payment else {
-        "id": None,
-        "user_id": user_id,
-        "amount": 1026375,
-        "status": "unpaid",
-        "reference": None,
-        "paid_at": None,
-        "admin_override_status": None
+        "id": None, "user_id": user_id, "amount": 1026375,
+        "status": "unpaid", "reference": None,
+        "paid_at": None, "admin_override_status": None
     }
 
-    # ADMIN OVERRIDE (ABSOLUTE)
     if payment_data.get("admin_override_status") in ("paid", "unpaid"):
         payment_data["status"] = payment_data["admin_override_status"]
         conn.close()
         return jsonify(payment_data), 200
 
-    # Verify Paystack ONLY if unpaid
     if payment_data.get("reference") and payment_data["status"] == "unpaid":
         headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
         try:
             resp = requests.get(
                 f"https://api.paystack.co/transaction/verify/{payment_data['reference']}",
-                headers=headers,
-                timeout=10
+                headers=headers, timeout=10
             )
             resp.raise_for_status()
             data = resp.json()
-
             if data.get("status") and data["data"]["status"] == "success":
                 c.execute("""
-                    UPDATE payments
-                    SET status='paid',
-                        paid_at=datetime('now')
-                    WHERE id=?
+                    UPDATE payments SET status='paid', paid_at=datetime('now') WHERE id=?
                 """, (payment_data["id"],))
                 conn.commit()
                 payment_data["status"] = "paid"
                 payment_data["paid_at"] = data["data"].get("paid_at")
-
         except requests.RequestException:
             pass
 
