@@ -3,6 +3,7 @@ import hmac
 import hashlib
 import os
 from backend.db import get_db
+from backend.email_service import send_payment_success_email
 
 webhook_bp = Blueprint("webhook_bp", __name__)
 
@@ -25,13 +26,11 @@ def paystack_webhook():
         return "Unauthorized", 401
 
     event = request.json
-
     if event.get("event") != "charge.success":
         return jsonify({"status": "ignored"}), 200
 
     data = event.get("data", {})
     customer = data.get("customer", {})
-
     email = customer.get("email")
     reference = data.get("reference")
     amount = data.get("amount")
@@ -47,29 +46,28 @@ def paystack_webhook():
         conn.close()
         return jsonify({"status": "duplicate"}), 200
 
-    c.execute("SELECT id FROM users WHERE email = ?", (email,))
+    c.execute("SELECT id, name FROM users WHERE email = ?", (email,))
     user = c.fetchone()
-
     if not user:
         conn.close()
         return jsonify({"status": "user_not_found"}), 200
 
     user_id = user["id"]
+    user_name = user["name"]
 
     c.execute("""
-        SELECT *
-        FROM payments
-        WHERE user_id = ?
-        ORDER BY id DESC
-        LIMIT 1
+        SELECT * FROM payments WHERE user_id = ? ORDER BY id DESC LIMIT 1
     """, (user_id,))
     payment = c.fetchone()
+
+    paid_now = False
 
     if not payment:
         c.execute("""
             INSERT INTO payments (user_id, amount, status, reference, paid_at)
             VALUES (?, ?, 'paid', ?, datetime('now'))
         """, (user_id, amount, reference))
+        paid_now = True
 
     elif payment["admin_override_status"] == "unpaid":
         conn.close()
@@ -81,14 +79,18 @@ def paystack_webhook():
 
     elif payment["status"] == "unpaid":
         c.execute("""
-            UPDATE payments
-            SET status='paid',
-                reference=?,
-                paid_at=datetime('now')
+            UPDATE payments SET status='paid', reference=?, paid_at=datetime('now')
             WHERE user_id=? AND status='unpaid'
         """, (reference, user_id))
+        paid_now = True
 
     conn.commit()
     conn.close()
+
+    if paid_now:
+        try:
+            send_payment_success_email(email, user_name)
+        except Exception as e:
+            print("Webhook payment email failed:", e)
 
     return jsonify({"status": "ok"}), 200
