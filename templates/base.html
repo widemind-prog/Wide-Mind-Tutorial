@@ -6,7 +6,6 @@
 
     <title>{% block title %}Wide Mind Tutorials{% endblock %}</title>
 
-    <!-- MAIN STYLES -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark.css') }}">
@@ -44,11 +43,22 @@
         .flash.error   { background-color: crimson; }
         .flash.info    { background-color: #8B7500; }
 
-        /* space for tab bar */
         {% if session.get("user_id") and not session.get("is_admin") %}
         body { padding-bottom: 70px; }
         {% endif %}
 
+        /* LOGO — no click, just zoom on hover/tap */
+        .header-logo {
+            cursor: default;
+            transition: transform 0.3s ease;
+            display: block;
+        }
+        .header-logo:hover,
+        .header-logo.tapped {
+            transform: scale(1.12);
+        }
+
+        /* BOTTOM TAB BAR */
         .bottom-tab-bar {
             position: fixed;
             bottom: 0;
@@ -103,16 +113,53 @@
             color: #aaa;
             margin-top: 30px;
         }
+
+        /* LOGGED-OUT LOGIN DRAWER */
+        .login-drawer {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px 36px;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+            z-index: 900;
+            transition: bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .login-drawer.open { bottom: 0; }
+
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 899;
+        }
+        .drawer-overlay.open { display: block; }
+
+        .drawer-handle {
+            width: 40px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 4px;
+            margin: 0 auto 20px;
+        }
+
+        body.dark .login-drawer {
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
     </style>
 </head>
 
 <body>
 
 <header class="site-header">
-    <a href="{{ url_for('home') }}">
-        <img src="{{ url_for('static', filename='images/logo.png') }}"
-             alt="Wide Mind Tutorials" class="header-logo">
-    </a>
+    <img src="{{ url_for('static', filename='images/logo.png') }}"
+         alt="Wide Mind Tutorials"
+         class="header-logo"
+         id="site-logo">
     <div class="header-right">
 {% if session.get("user_id") and not session.get("is_admin") %}
     <div class="notification-wrapper">
@@ -143,23 +190,42 @@
 
 {% if session.get("user_id") and not session.get("is_admin") %}
 <nav class="bottom-tab-bar">
-
     <a href="/account" class="tab-item {% if request.path == '/account' %}active{% endif %}">
         <i class="fa-solid fa-house"></i>
         <span>Home</span>
     </a>
-
     <a href="/courses" class="tab-item {% if '/course' in request.path %}active{% endif %}">
         <i class="fa-solid fa-book-open"></i>
         <span>Courses</span>
     </a>
-
     <a href="/settings" class="tab-item {% if request.path == '/settings' %}active{% endif %}">
         <i class="fa-solid fa-gear"></i>
         <span>Settings</span>
     </a>
-
 </nav>
+{% endif %}
+
+{% if not session.get("user_id") %}
+<!-- LOGIN DRAWER — shown when logged-out user taps logo -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="login-drawer" id="loginDrawer">
+    <div class="drawer-handle"></div>
+    <h3 style="margin:0 0 4px; color:#3c2f1f;">Welcome Back</h3>
+    <p style="margin:0 0 20px; font-size:13px; color:#888;">Sign in to access your courses</p>
+
+    <a href="/login-page"
+       style="display:block; text-align:center; background:linear-gradient(135deg,#8B7500,#d4af37);
+              color:#fff; padding:14px; border-radius:10px; font-weight:600;
+              font-size:15px; text-decoration:none; margin-bottom:10px;">
+        <i class="fa-solid fa-right-to-bracket" style="margin-right:8px;"></i>Login
+    </a>
+    <a href="/register-page"
+       style="display:block; text-align:center; background:#fffaf0;
+              border:1px solid #e6d8b5; color:#8B7500; padding:14px;
+              border-radius:10px; font-weight:600; font-size:15px; text-decoration:none;">
+        <i class="fa-solid fa-user-plus" style="margin-right:8px;"></i>Create Account
+    </a>
+</div>
 {% endif %}
 
 <div id="toast" class="toast"></div>
@@ -193,6 +259,33 @@ const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
 {% if session.get("user_id") %}
 <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 {% endif %}
+
+<script>
+// Logo tap — zoom effect + open drawer if logged out
+var logo = document.getElementById("site-logo");
+if (logo) {
+    logo.addEventListener("click", function() {
+        // Zoom effect
+        logo.classList.add("tapped");
+        setTimeout(function() { logo.classList.remove("tapped"); }, 400);
+
+        {% if not session.get("user_id") %}
+        // Open login drawer for logged-out users
+        openDrawer();
+        {% endif %}
+    });
+}
+
+function openDrawer() {
+    document.getElementById("loginDrawer").classList.add("open");
+    document.getElementById("drawerOverlay").classList.add("open");
+}
+
+function closeDrawer() {
+    document.getElementById("loginDrawer").classList.remove("open");
+    document.getElementById("drawerOverlay").classList.remove("open");
+}
+</script>
 
 {% block scripts %}{% endblock %}
 
