@@ -77,10 +77,10 @@ def inject_now():
 # BEFORE REQUEST
 # =====================
 @app.before_request
-def clear_redirect_cache():
-    response = None
-    # This forces browsers to not cache any redirects
-    pass
+def force_custom_domain():
+    host = request.host
+    if "onrender.com" in host:
+        return redirect("https://www.widemindtutorial.com" + request.full_path, 301)
 
 @app.before_request
 def make_session_permanent():
