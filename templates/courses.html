@@ -1,720 +1,159 @@
-from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, send_file, url_for, current_app
-from extensions import socketio
-from state import online_users
-from backend.db import get_db, is_admin
-from functools import wraps
-from pywebpush import webpush
-import json
-import os
-from werkzeug.utils import secure_filename
-from backend.email_service import send_email, send_new_material_email
-
-admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
-
-# ------------------
-# ADMIN GUARD
-# ------------------
-def admin_required(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if "user_id" not in session or not is_admin(session["user_id"]):
-            return redirect("/login-page")
-        return func(*args, **kwargs)
-    return wrapper
-
-# ------------------
-# DASHBOARD
-# ------------------
-@admin_bp.route("/")
-@admin_required
-def dashboard():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) AS unread FROM contact_messages WHERE is_read = 0")
-    unread = c.fetchone()["unread"]
-    conn.close()
-    return render_template("admin/dashboard.html", unread=unread)
-
-# ------------------
-# PUSH SUBSCRIBE
-# ------------------
-@admin_bp.route("/api/subscribe", methods=["POST"])
-def subscribe():
-    if "user_id" not in session:
-        return jsonify({"error": "Not logged in"}), 401
-    user_id = session["user_id"]
-    data = request.get_json()
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        INSERT OR REPLACE INTO push_subscriptions
-        (user_id, endpoint, p256dh, auth)
-        VALUES (?, ?, ?, ?)
-    """, (
-        user_id,
-        data["endpoint"],
-        data["keys"]["p256dh"],
-        data["keys"]["auth"]
-    ))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
-
-# ------------------
-# NOTIFICATIONS
-# ------------------
-@admin_bp.route("/notifications")
-@admin_required
-def notifications_page():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT id, name, email FROM users WHERE role != 'admin'")
-    users = c.fetchall()
-    conn.close()
-    return render_template("admin/send_notification.html", users=users)
-
-@admin_bp.route("/notifications/send", methods=["POST"])
-@admin_required
-def send_notification():
-    send_all = request.form.get("send_all")
-    user_id = request.form.get("user_id")
-    title = request.form.get("title")
-    message = request.form.get("message")
-    link = request.form.get("link") or "/"
-    is_critical = request.form.get("is_critical") == "1"
-
-    if not title or not message:
-        flash("Missing title or message", "error")
-        return redirect(url_for("admin_bp.notifications_page"))
-
-    conn = get_db()
-    c = conn.cursor()
-
-    if send_all:
-        c.execute("SELECT id, email FROM users WHERE role != 'admin'")
-        users = c.fetchall()
-    else:
-        if not user_id:
-            flash("Select a user or choose send to all", "error")
-            conn.close()
-            return redirect(url_for("admin_bp.notifications_page"))
-        c.execute("SELECT id, email FROM users WHERE id=?", (user_id,))
-        users = c.fetchall()
-
-    for user in users:
-        uid = int(user["id"])
-        email = user["email"]
-
-        c.execute("""
-            INSERT INTO notifications (user_id, title, message, link, is_critical)
-            VALUES (?, ?, ?, ?, ?)
-        """, (uid, title, message, link, int(is_critical)))
-
-        socketio.emit("new_notification", {
-            "title": title,
-            "message": message,
-            "link": link
-        }, room=f"user_{uid}")
-
-        try:
-            send_push(uid, title, message, link)
-        except Exception as e:
-            print("Push error:", e)
-
-        if is_critical:
-            try:
-                send_email(to_email=email, subject=title, body=message)
-            except Exception as e:
-                print("Email failed:", e)
-
-    conn.commit()
-    conn.close()
-    flash("Notification sent successfully", "success")
-    return redirect(url_for("admin_bp.notifications_page"))
-
-# ------------------
-# PUSH DELIVERY
-# ------------------
-def send_push(user_id, title, message, link):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT * FROM push_subscriptions WHERE user_id=?", (user_id,))
-    subs = c.fetchall()
-    conn.close()
-
-    for sub in subs:
-        try:
-            private_key = os.environ.get("VAPID_PRIVATE_KEY")
-            webpush(
-                subscription_info={
-                    "endpoint": sub["endpoint"],
-                    "keys": {
-                        "p256dh": sub["p256dh"],
-                        "auth": sub["auth"]
-                    }
-                },
-                data=json.dumps({"title": title, "message": message, "link": link}),
-                vapid_private_key=private_key,
-                vapid_claims={"sub": "mailto:wideminddevs@gmail.com"}
-            )
-        except Exception as e:
-            print(f"Push failed: {type(e).__name__}: {e}")
-
-# ------------------
-# MESSAGES
-# ------------------
-@admin_bp.route("/messages")
-@admin_required
-def messages():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        SELECT id, name, email, subject, message, created_at, is_read
-        FROM contact_messages
-        ORDER BY created_at DESC
-    """)
-    messages = c.fetchall()
-    conn.close()
-    return render_template("admin/messages.html", messages=messages)
-
-@admin_bp.route("/messages/unread-count")
-@admin_required
-def unread_messages_count():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) AS unread FROM contact_messages WHERE is_read=0")
-    unread = c.fetchone()["unread"]
-    conn.close()
-    return jsonify({"unread": unread})
-
-@admin_bp.route("/messages/read/<int:msg_id>", methods=["POST"])
-@admin_required
-def mark_message_read(msg_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE contact_messages SET is_read = 1 WHERE id = ?", (msg_id,))
-    conn.commit()
-    conn.close()
-    flash("Message marked as read", "success")
-    return redirect(url_for("admin_bp.messages"))
-
-@admin_bp.route("/messages/unread/<int:msg_id>", methods=["POST"])
-@admin_required
-def mark_message_unread(msg_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE contact_messages SET is_read = 0 WHERE id = ?", (msg_id,))
-    conn.commit()
-    conn.close()
-    flash("Message marked as unread", "success")
-    return redirect(url_for("admin_bp.messages"))
-
-@admin_bp.route("/messages/delete/<int:msg_id>", methods=["POST"])
-@admin_required
-def delete_message(msg_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("DELETE FROM contact_messages WHERE id = ?", (msg_id,))
-    conn.commit()
-    conn.close()
-    flash("Message deleted", "success")
-    return redirect(url_for("admin_bp.messages"))
-
-@admin_bp.route("/messages/delete-bulk", methods=["POST"])
-@admin_required
-def bulk_delete_messages():
-    ids = request.form.getlist("message_ids")
-    if not ids:
-        flash("No messages selected", "error")
-        return redirect(url_for("admin_bp.messages"))
-    conn = get_db()
-    c = conn.cursor()
-    placeholders = ",".join("?" for _ in ids)
-    c.execute(f"DELETE FROM contact_messages WHERE id IN ({placeholders})", ids)
-    conn.commit()
-    conn.close()
-    flash(f"{len(ids)} message(s) deleted", "success")
-    return redirect(url_for("admin_bp.messages"))
-
-# ------------------
-# USERS MANAGEMENT
-# ------------------
-@admin_bp.route("/users")
-@admin_required
-def users():
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("SELECT COUNT(*) AS total FROM users")
-    total_users = c.fetchone()["total"]
-
-    c.execute("""
-        SELECT COUNT(DISTINCT u.id) AS paid
-        FROM users u
-        JOIN payments p ON u.id = p.user_id
-        WHERE COALESCE(p.admin_override_status, p.status) = 'paid'
-    """)
-    paid_users = c.fetchone()["paid"]
-
-    c.execute("SELECT COUNT(*) AS suspended FROM users WHERE is_suspended = 1")
-    suspended_users = c.fetchone()["suspended"]
-
-    unpaid_users = total_users - paid_users
-
-    # NEW: count by level
-    c.execute("""
-        SELECT level, COUNT(*) as cnt FROM users
-        WHERE role != 'admin'
-        GROUP BY level
-    """)
-    level_counts = {str(r["level"]): r["cnt"] for r in c.fetchall()}
-
-    c.execute("""
-        SELECT
-            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
-            COALESCE(p.admin_override_status, p.status) AS payment_status
-        FROM users u
-        LEFT JOIN payments p ON u.id = p.user_id
-        ORDER BY u.id DESC
-    """)
-    users = c.fetchall()
-    conn.close()
-
-    return render_template(
-        "admin/users.html",
-        users=users,
-        total_users=total_users,
-        paid_users=paid_users,
-        unpaid_users=unpaid_users,
-        suspended_users=suspended_users,
-        level_counts=level_counts
-    )
-
-@admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
-@admin_required
-def toggle_suspend_user(user_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        UPDATE users
-        SET is_suspended = CASE WHEN is_suspended = 1 THEN 0 ELSE 1 END
-        WHERE id = ?
-    """, (user_id,))
-    conn.commit()
-    c.execute("SELECT is_suspended FROM users WHERE id = ?", (user_id,))
-    user = c.fetchone()
-    conn.close()
-    flash("User has been suspended" if user["is_suspended"] else "User has been unsuspended", "success")
-    return redirect(url_for("admin_bp.users"))
-
-@admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
-@admin_required
-def delete_user(user_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("DELETE FROM payments WHERE user_id=?", (user_id,))
-    c.execute("DELETE FROM notifications WHERE user_id=?", (user_id,))
-    c.execute("DELETE FROM push_subscriptions WHERE user_id=?", (user_id,))
-    c.execute("DELETE FROM password_resets WHERE user_id=?", (user_id,))
-    c.execute("DELETE FROM level_unlocks WHERE user_id=?", (user_id,))   # NEW: clean up unlocks too
-    c.execute("DELETE FROM users WHERE id=?", (user_id,))
-    conn.commit()
-    conn.close()
-    flash("User deleted", "success")
-    return redirect(url_for("admin_bp.users"))
-
-# ------------------
-# USER FILTER PAGES
-# ------------------
-def get_user_list(filter_type):
-    conn = get_db()
-    c = conn.cursor()
-    base_query = """
-        SELECT
-            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
-            COALESCE(p.admin_override_status, p.status) AS payment_status
-        FROM users u
-        LEFT JOIN payments p ON u.id = p.user_id
-        WHERE u.role != 'admin'
-    """
-    if filter_type == "paid":
-        c.execute(base_query + " AND COALESCE(p.admin_override_status, p.status) = 'paid' ORDER BY u.id DESC")
-    elif filter_type == "unpaid":
-        c.execute(base_query + " AND (COALESCE(p.admin_override_status, p.status) != 'paid' OR p.id IS NULL) ORDER BY u.id DESC")
-    elif filter_type == "suspended":
-        c.execute(base_query + " AND u.is_suspended = 1 ORDER BY u.id DESC")
-    else:
-        c.execute(base_query + " ORDER BY u.id DESC")
-    users = c.fetchall()
-    conn.close()
-    return users
-
-@admin_bp.route("/users/all")
-@admin_required
-def users_all():
-    return render_template("admin/total.html", users=get_user_list("all"))
-
-@admin_bp.route("/users/paid")
-@admin_required
-def users_paid():
-    return render_template("admin/paid.html", users=get_user_list("paid"))
-
-@admin_bp.route("/users/unpaid")
-@admin_required
-def users_unpaid():
-    return render_template("admin/unpaid.html", users=get_user_list("unpaid"))
-
-@admin_bp.route("/users/suspended")
-@admin_required
-def users_suspended():
-    return render_template("admin/suspended.html", users=get_user_list("suspended"))
-
-# NEW: filter by level
-@admin_bp.route("/users/level/<int:level>")
-@admin_required
-def users_by_level(level):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        SELECT
-            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
-            COALESCE(p.admin_override_status, p.status) AS payment_status
-        FROM users u
-        LEFT JOIN payments p ON u.id = p.user_id
-        WHERE u.role != 'admin' AND u.level = ?
-        ORDER BY u.id DESC
-    """, (str(level),))
-    users = c.fetchall()
-    conn.close()
-    return render_template("admin/total.html", users=users, page_title=f"Level {level} Users")
-
-# ------------------
-# TOGGLE PAYMENT
-# ------------------
-@admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
-@admin_required
-def toggle_payment(user_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT role FROM users WHERE id=?", (user_id,))
-    user = c.fetchone()
-    if not user or user["role"] == "admin":
-        conn.close()
-        flash("Cannot modify admin payment", "error")
-        return redirect(url_for("admin_bp.users"))
-
-    c.execute("""
-        SELECT id, status, admin_override_status
-        FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
-    """, (user_id,))
-    payment = c.fetchone()
-
-    if not payment:
-        c.execute("""
-            INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at)
-            VALUES (?, ?, 'unpaid', 'paid', datetime('now'))
-        """, (user_id, 1026375))
-        new_status = "paid"
-    else:
-        current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
-        new_status = "unpaid" if current == "paid" else "paid"
-        c.execute("""
-            UPDATE payments
-            SET admin_override_status=?, paid_at=datetime('now')
-            WHERE id=?
-        """, (new_status, payment["id"]))
-
-    conn.commit()
-    conn.close()
-    flash(f"Payment marked as {new_status}", "success")
-    return redirect(url_for("admin_bp.users"))
-
-# NEW: Admin toggle level unlock for a user
-@admin_bp.route("/users/toggle-unlock/<int:user_id>/<int:target_level>", methods=["POST"])
-@admin_required
-def toggle_level_unlock(user_id, target_level):
-    if target_level not in [200, 300]:
-        flash("Invalid target level", "error")
-        return redirect(url_for("admin_bp.users"))
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        SELECT id, status, admin_override_status
-        FROM level_unlocks
-        WHERE user_id=? AND target_level=?
-        ORDER BY id DESC LIMIT 1
-    """, (user_id, target_level))
-    unlock = c.fetchone()
-
-    if not unlock:
-        # Create a new admin-granted unlock
-        c.execute("""
-            INSERT INTO level_unlocks (user_id, target_level, amount, status, admin_override_status, paid_at)
-            VALUES (?, ?, 0, 'unpaid', 'paid', datetime('now'))
-        """, (user_id, target_level))
-        new_status = "paid"
-    else:
-        current = unlock["admin_override_status"] if unlock["admin_override_status"] else unlock["status"]
-        new_status = "unpaid" if current == "paid" else "paid"
-        c.execute("""
-            UPDATE level_unlocks
-            SET admin_override_status=?, paid_at=datetime('now')
-            WHERE id=?
-        """, (new_status, unlock["id"]))
-
-    conn.commit()
-    conn.close()
-    flash(f"Level {target_level} unlock marked as {new_status}", "success")
-    return redirect(url_for("admin_bp.users"))
-
-# ------------------
-# COURSES MANAGEMENT
-# ------------------
-@admin_bp.route("/courses")
-@admin_required
-def courses():
-    conn = get_db()
-    c = conn.cursor()
-    # Order by level then id so courses group visually
-    c.execute("SELECT * FROM courses ORDER BY level ASC, id DESC")
-    courses = c.fetchall()
-    conn.close()
-    return render_template("admin/courses.html", courses=courses)
-
-@admin_bp.route("/courses/add", methods=["POST"])
-@admin_required
-def add_course():
-    course_code = request.form.get("course_code", "").strip()
-    course_title = request.form.get("course_title", "").strip()
-    description = request.form.get("description", "").strip()
-    level = request.form.get("level", "400").strip()   # NEW: level field
-
-    if not course_code or not course_title:
-        flash("Course code and title are required.", "error")
-        return redirect(url_for("admin_bp.courses"))
-
-    if level not in ["200", "300", "400"]:
-        flash("Invalid level selected.", "error")
-        return redirect(url_for("admin_bp.courses"))
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
-    if c.fetchone():
-        conn.close()
-        flash(f"Course code '{course_code}' already exists.", "error")
-        return redirect(url_for("admin_bp.courses"))
-
-    c.execute(
-        "INSERT INTO courses (course_code, course_title, description, level) VALUES (?, ?, ?, ?)",
-        (course_code, course_title, description, int(level))
-    )
-    conn.commit()
-    conn.close()
-    flash("Course added successfully!", "success")
-    return redirect(url_for("admin_bp.courses"))
-
-@admin_bp.route("/courses/edit/<int:course_id>", methods=["GET", "POST"])
-@admin_required
-def edit_course(course_id):
-    conn = get_db()
-    c = conn.cursor()
-
-    if request.method == "POST":
-        course_code = request.form.get("course_code", "").strip()
-        course_title = request.form.get("course_title", "").strip()
-        description = request.form.get("description", "").strip()
-        level = request.form.get("level", "400").strip()   # NEW
-
-        if not course_code or not course_title:
-            flash("Course code and title are required.", "error")
-            return redirect(f"/admin/courses/edit/{course_id}")
-
-        if level not in ["200", "300", "400"]:
-            flash("Invalid level selected.", "error")
-            return redirect(f"/admin/courses/edit/{course_id}")
-
-        c.execute("SELECT id FROM courses WHERE course_code=? AND id != ?", (course_code, course_id))
-        if c.fetchone():
-            flash(f"Course code '{course_code}' already exists.", "error")
-            return redirect(f"/admin/courses/edit/{course_id}")
-
-        c.execute(
-            "UPDATE courses SET course_code=?, course_title=?, description=?, level=? WHERE id=?",
-            (course_code, course_title, description, int(level), course_id)
-        )
-        conn.commit()
-        flash("Course updated successfully!", "success")
-
-    c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
-    course = c.fetchone()
-    c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course_id,))
-    materials = c.fetchall()
-    conn.close()
-    return render_template("admin/edit_course.html", course=course, materials=materials)
-
-@admin_bp.route("/courses/delete/<int:course_id>", methods=["POST"])
-@admin_required
-def delete_course(course_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("DELETE FROM courses WHERE id=?", (course_id,))
-    conn.commit()
-    conn.close()
-    flash("Course deleted", "success")
-    return redirect(url_for("admin_bp.courses"))
-
-# ------------------
-# MATERIALS MANAGEMENT
-# ------------------
-@admin_bp.route("/courses/material/add/<file_type>/<int:course_id>", methods=["POST"])
-@admin_required
-def add_material(file_type, course_id):
-    title = request.form.get("title", "").strip()
-    file = request.files.get("file")
-
-    if not title or not file or file.filename == "":
-        flash("Title and file are required.", "error")
-        return redirect(f"/admin/courses/edit/{course_id}")
-
-    filename = secure_filename(file.filename)
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT id FROM materials WHERE course_id=? AND filename=?", (course_id, filename))
-    if c.fetchone():
-        conn.close()
-        flash("A material with that filename already exists for this course.", "error")
-        return redirect(f"/admin/courses/edit/{course_id}")
-
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    bucket = "materials"
-    file_bytes = file.read()
-    content_type = "application/pdf" if file_type == "pdf" else "audio/mpeg"
-    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
-    headers = {
-        "Authorization": f"Bearer {supabase_key}",
-        "Content-Type": content_type,
-        "x-upsert": "true"
-    }
-
-    import requests as req
-    response = req.post(upload_url, headers=headers, data=file_bytes)
-    if response.status_code not in (200, 201):
-        flash(f"Upload to Supabase failed: {response.text}", "error")
-        conn.close()
-        return redirect(f"/admin/courses/edit/{course_id}")
-
-    file_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
-    c.execute(
-        "INSERT INTO materials (course_id, filename, file_type, title, file_url) VALUES (?, ?, ?, ?, ?)",
-        (course_id, filename, file_type, title, file_url)
-    )
-    conn.commit()
-    conn.close()
-
-    # Notify paid users who have access to this course's level
-    try:
-        conn2 = get_db()
-        c2 = conn2.cursor()
-        c2.execute("SELECT * FROM courses WHERE id=?", (course_id,))
-        course = c2.fetchone()
-        course_level = int(course["level"]) if course else 400
-
-        # Get users who can access this level: their own level >= course_level AND paid,
-        # OR they have a paid unlock for that level
-        c2.execute("""
-            SELECT DISTINCT u.name, u.email
-            FROM users u
-            JOIN payments p ON u.id = p.user_id
-            WHERE u.role != 'admin'
-            AND COALESCE(p.admin_override_status, p.status) = 'paid'
-            AND CAST(u.level AS INTEGER) >= ?
-        """, (course_level,))
-        direct_users = set((r["email"],) for r in c2.fetchall())
-
-        # Also users with a paid unlock for that level
-        if course_level < 400:
-            c2.execute("""
-                SELECT DISTINCT u.name, u.email
-                FROM users u
-                JOIN level_unlocks lu ON u.id = lu.user_id
-                WHERE u.role != 'admin'
-                AND lu.target_level = ?
-                AND COALESCE(lu.admin_override_status, lu.status) = 'paid'
-            """, (course_level,))
-            unlock_users = c2.fetchall()
-        else:
-            unlock_users = []
-
-        # Merge and notify
-        notified = set()
-        all_users = list(c2.execute("""
-            SELECT DISTINCT u.name, u.email FROM users u
-            WHERE u.role != 'admin'
-        """).fetchall())
-
-        # Re-fetch properly with names
-        c2.execute("""
-            SELECT DISTINCT u.name, u.email
-            FROM users u
-            JOIN payments p ON u.id = p.user_id
-            WHERE u.role != 'admin'
-            AND COALESCE(p.admin_override_status, p.status) = 'paid'
-            AND CAST(u.level AS INTEGER) >= ?
-        """, (course_level,))
-        paid_users = c2.fetchall()
-
-        for u in paid_users:
-            if u["email"] not in notified:
-                notified.add(u["email"])
-                send_new_material_email(
-                    to_email=u["email"],
-                    name=u["name"],
-                    material_title=title,
-                    course_title=course["course_title"] if course else "your course",
-                    file_type=file_type,
-                    course_id=course_id
-                )
-
-        for u in unlock_users:
-            if u["email"] not in notified:
-                notified.add(u["email"])
-                send_new_material_email(
-                    to_email=u["email"],
-                    name=u["name"],
-                    material_title=title,
-                    course_title=course["course_title"] if course else "your course",
-                    file_type=file_type,
-                    course_id=course_id
-                )
-        conn2.close()
-    except Exception as e:
-        print("New material email failed:", e)
-
-    flash("Material uploaded successfully!", "success")
-    return redirect(f"/admin/courses/edit/{course_id}")
-
-@admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
-@admin_required
-def delete_material(material_id):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT filename, course_id FROM materials WHERE id=?", (material_id,))
-    material = c.fetchone()
-    if not material:
-        conn.close()
-        abort(404)
-
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    if supabase_url and supabase_key:
-        import requests as req
-        delete_url = f"{supabase_url}/storage/v1/object/materials/{material['filename']}"
-        req.delete(delete_url, headers={"Authorization": f"Bearer {supabase_key}"})
-
-    c.execute("DELETE FROM materials WHERE id=?", (material_id,))
-    conn.commit()
-    conn.close()
-    return redirect(f"/admin/courses/edit/{material['course_id']}")
+{% if not request.headers.get('X-Requested-With') %}
+{% extends "base.html" %}
+{% block title %}Courses | Wide Mind Tutorials{% endblock %}
+{% block content %}
+{% endif %}
+
+<div id="toast" class="toast"></div>
+
+<div style="padding: 8px 0 16px;">
+  <h2 style="margin:0 0 4px;">Courses</h2>
+  <p style="color:#888; font-size:13px; margin:0;">
+    {{ courses|length }} course{{ 's' if courses|length != 1 }} available
+    {% if user_level %}· Level {{ user_level }} access{% endif %}
+  </p>
+</div>
+
+{% if courses %}
+
+  {# Group courses by level for clean display #}
+  {% set levels_seen = [] %}
+
+  {% for course in courses %}
+    {% set clevel = course.level | int %}
+
+    {# Insert a section header the first time we see each level #}
+    {% if clevel not in levels_seen %}
+      {% if levels_seen.append(clevel) %}{% endif %}
+      <p style="
+        font-size:11px; font-weight:700; color:#8B7500;
+        text-transform:uppercase; letter-spacing:1px;
+        margin: {{ '0 0 8px' if loop.first else '18px 0 8px' }};
+      ">
+        {% if clevel == user_level | int %}
+          Level {{ clevel }} — Your Courses
+        {% else %}
+          Level {{ clevel }} — Unlocked Content
+        {% endif %}
+      </p>
+    {% endif %}
+
+    <a href="/course/{{ course.id }}"
+       class="course-card-link"
+       data-course-id="{{ course.id }}"
+       data-course-level="{{ course.level }}"
+       style="text-decoration:none; display:block; border-radius:14px; overflow:hidden;
+              border:1px solid #e6d8b5; background:#fff;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom:14px;"
+       ontouchstart="this.style.opacity='0.85'"
+       ontouchend="this.style.opacity='1'">
+
+      {% set colors = ['#8B7500','#2e6da4','#a44b2e','#2e8b57','#6a2e8b','#8b2e5a'] %}
+      <div style="height:5px; background:{{ colors[course.id % 6] }};"></div>
+
+      <div style="padding:16px;">
+        <div style="display:flex; align-items:flex-start; gap:12px;">
+
+          <div style="width:42px; height:42px; border-radius:10px; flex-shrink:0;
+                      background:linear-gradient(135deg,#8B7500,#d4af37);
+                      display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-book-open" style="color:#fff; font-size:17px;"></i>
+          </div>
+
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:1px;">
+              <p style="margin:0; font-size:11px; font-weight:700;
+                         color:#8B7500; letter-spacing:0.5px; text-transform:uppercase;">
+                {{ course.course_code }}
+              </p>
+              {# Level badge — only show if it differs from user's own level #}
+              {% if course.level | int != user_level | int %}
+                <span style="
+                  font-size:9px; font-weight:700;
+                  background:#2e6da4; color:#fff;
+                  border-radius:4px; padding:1px 6px;
+                  letter-spacing:0.3px; text-transform:uppercase;
+                ">L{{ course.level }}</span>
+              {% endif %}
+            </div>
+
+            <p style="margin:0 0 6px; font-size:15px; font-weight:600;
+                       color:#3c2f1f; line-height:1.3;">
+              {{ course.course_title }}
+            </p>
+
+            {% if course.description %}
+              <p style="margin:0; font-size:12px; color:#888; line-height:1.5;
+                         overflow:hidden; display:-webkit-box;
+                         -webkit-line-clamp:2; -webkit-box-orient:vertical;">
+                {{ course.description }}
+              </p>
+            {% endif %}
+          </div>
+
+          <i class="fa-solid fa-chevron-right"
+             style="color:#ddd; font-size:13px; margin-top:4px; flex-shrink:0;"></i>
+        </div>
+      </div>
+    </a>
+  {% endfor %}
+
+{% else %}
+  <div style="text-align:center; padding:60px 20px; color:#aaa;">
+    <i class="fa-solid fa-book-open" style="font-size:48px; margin-bottom:16px; display:block;"></i>
+    <p style="font-size:15px;">No courses available yet.</p>
+  </div>
+{% endif %}
+
+<script>
+(function () {
+  const toastEl = document.getElementById("toast");
+
+  function showToast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.remove("show");
+    void toastEl.offsetWidth;
+    toastEl.classList.add("show");
+    setTimeout(() => toastEl.classList.remove("show"), 3000);
+  }
+
+  document.querySelectorAll(".course-card-link").forEach(link => {
+    link.addEventListener("click", async function (e) {
+      e.preventDefault();
+      const courseId    = this.dataset.courseId;
+      const courseLevel = parseInt(this.dataset.courseLevel || "400");
+
+      try {
+        // Check main payment status
+        const res     = await fetch("/api/payment/status", { credentials: "same-origin" });
+        const payment = await res.json();
+
+        if (payment.status === "paid" || payment.status === "admin") {
+          window.location.href = "/course/" + courseId;
+          return;
+        }
+
+        // If main not paid, check if there is a level unlock for this course's level
+        if (courseLevel < 400) {
+          const unlockRes  = await fetch("/api/payment/unlock-status", { credentials: "same-origin" });
+          const unlockData = await unlockRes.json();
+          const unlocks    = unlockData.unlocks || {};
+          if (unlocks[String(courseLevel)] === "paid") {
+            window.location.href = "/course/" + courseId;
+            return;
+          }
+        }
+
+        showToast("Payment required to access this course 🔒");
+      } catch (err) {
+        showToast("Could not verify payment. Please try again.");
+      }
+    });
+  });
+})();
+</script>
+
+{% if not request.headers.get('X-Requested-With') %}
+{% endblock %}
+{% endif %}
