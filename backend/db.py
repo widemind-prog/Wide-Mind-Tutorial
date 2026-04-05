@@ -5,13 +5,20 @@ from werkzeug.security import generate_password_hash
 # -------------------------
 # TURSO HTTP CONFIG
 # -------------------------
-TURSO_URL = os.environ.get("TURSO_URL", "")
-TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
+# In staging: set STAGING_TURSO_URL and STAGING_TURSO_AUTH_TOKEN.
+# In production: set TURSO_URL and TURSO_AUTH_TOKEN as before.
+# Staging vars take priority when present so the live DB is never touched.
+_TURSO_URL        = os.environ.get("STAGING_TURSO_URL")        or os.environ.get("TURSO_URL", "")
+_TURSO_AUTH_TOKEN = os.environ.get("STAGING_TURSO_AUTH_TOKEN") or os.environ.get("TURSO_AUTH_TOKEN", "")
+
+# Log which DB is active at startup so you can confirm in Render logs
+_ENV_LABEL = "STAGING" if os.environ.get("STAGING_TURSO_URL") else "PRODUCTION"
+print(f"[db] Connecting to {_ENV_LABEL} Turso DB: {_TURSO_URL[:60]}...")
 
 # Convert libsql:// URL to https:// for HTTP API
-HTTP_URL = TURSO_URL.replace("libsql://", "https://") + "/v2/pipeline"
+HTTP_URL = _TURSO_URL.replace("libsql://", "https://") + "/v2/pipeline"
 HEADERS = {
-    "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
+    "Authorization": f"Bearer {_TURSO_AUTH_TOKEN}",
     "Content-Type": "application/json"
 }
 
