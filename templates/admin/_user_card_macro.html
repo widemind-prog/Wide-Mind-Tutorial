@@ -1,72 +1,94 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const toast = document.getElementById("admin-toast");
+{#
+  _user_card_macro.html
+  ---------------------
+  Import this in any admin user-list template:
 
-  // ----------------------
-  // Show toast
-  // ----------------------
-  window.showToast = function (message, isError = false) {
-    if (!toast) return;
-    toast.textContent = message;
-    toast.style.background = isError ? "#a00000" : "#333";
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 1500);
-  };
+    {% from "admin/_user_card_macro.html" import user_card %}
 
-  // ----------------------
-  // Suspend / Unsuspend
-  // ----------------------
-  document.querySelectorAll(".btn-suspend").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showToast("Toggling suspension...");
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
+  Then call:
 
-  // ----------------------
-  // Toggle Main Payment
-  // ----------------------
-  document.querySelectorAll(".btn-payment").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showToast("Updating payment status...");
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
+    {{ user_card(user) }}
+#}
 
-  // ----------------------
-  // Level Unlock Toggle (NEW)
-  // Handles L300 Unlock / L200 Unlock buttons
-  // ----------------------
-  document.querySelectorAll(".btn-action").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showToast("Updating level unlock...");
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
+{% macro user_card(user) %}
+<div class="user-card">
 
-  // ----------------------
-  // Delete User
-  // ----------------------
-  document.querySelectorAll(".btn-delete").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (!confirm("This action is permanent. Continue?")) return;
-      showToast("Deleting user...", true);
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
-});
+  <!-- Name + level badge -->
+  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+    <strong>{{ user.name }}</strong>
+    {% if user.level %}
+      <span style="
+        font-size:9px; font-weight:700;
+        background:{% if user.level|string == '400' %}#8B7500
+                   {% elif user.level|string == '300' %}#2e6da4
+                   {% else %}#2e8b57{% endif %};
+        color:#fff; border-radius:4px; padding:1px 5px;
+      ">L{{ user.level }}</span>
+    {% endif %}
+  </div>
+
+  <small>{{ user.email }}</small><br>
+  <small>Level: {{ user.level or "N/A" }}</small><br>
+  <small>Role: {{ user.role }}</small><br>
+
+  {% if user.is_suspended %}
+    <p style="color:red;">Status: Suspended</p>
+  {% else %}
+    <p style="color:green;">Status: Active</p>
+  {% endif %}
+
+  {% if user.role != "admin" %}
+    <p>Payment:
+      {% if user.payment_status == "paid" %}
+        <strong style="color:green;">Paid</strong>
+      {% else %}
+        <strong style="color:red;">Unpaid</strong>
+      {% endif %}
+    </p>
+  {% endif %}
+
+  <form method="POST" class="user-actions">
+
+    <!-- Suspend / Unsuspend -->
+    <button type="button" class="btn-suspend"
+            data-url="/admin/users/suspend/{{ user.id }}">
+      {% if user.is_suspended %}Unsuspend{% else %}Suspend{% endif %}
+    </button>
+
+    {% if user.role != "admin" %}
+      <!-- Toggle main payment -->
+      <button type="button" class="btn-payment"
+              data-url="/admin/users/mark-paid/{{ user.id }}"
+              style="background:#0a7c2f;">
+        {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
+      </button>
+
+      <!-- Level unlock toggles (only relevant for level 300/400 users) -->
+      {% if user.level|string in ['300', '400'] %}
+        <button type="button" class="btn-action"
+                data-url="/admin/users/toggle-unlock/{{ user.id }}/300"
+                style="background:#2e6da4; font-size:12px; padding:6px 10px;"
+                title="Toggle Level 300 content unlock">
+          L300 Unlock
+        </button>
+      {% endif %}
+      {% if user.level|string == '400' %}
+        <button type="button" class="btn-action"
+                data-url="/admin/users/toggle-unlock/{{ user.id }}/200"
+                style="background:#2e8b57; font-size:12px; padding:6px 10px;"
+                title="Toggle Level 200 content unlock">
+          L200 Unlock
+        </button>
+      {% endif %}
+
+      <!-- Delete -->
+      <button type="button" class="btn-delete"
+              data-url="/admin/users/delete/{{ user.id }}"
+              style="background:#a00000;">
+        Delete Permanently
+      </button>
+    {% endif %}
+
+  </form>
+</div>
+{% endmacro %}
