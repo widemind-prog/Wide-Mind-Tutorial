@@ -1,72 +1,28 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const toast = document.getElementById("admin-toast");
+{% extends "base.html" %}
+{% block title %}Admin — {{ page_title or "All Users" }}{% endblock %}
 
-  // ----------------------
-  // Show toast
-  // ----------------------
-  window.showToast = function (message, isError = false) {
-    if (!toast) return;
-    toast.textContent = message;
-    toast.style.background = isError ? "#a00000" : "#333";
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 1500);
-  };
+{% from "admin/_user_card_macro.html" import user_card %}
 
-  // ----------------------
-  // Suspend / Unsuspend
-  // ----------------------
-  document.querySelectorAll(".btn-suspend").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showToast("Toggling suspension...");
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
+{% block content %}
+<section class="admin-dashboard">
+  <h1 class="dashboard-title">{{ page_title or "All Users" }}</h1>
+  <p class="dashboard-subtitle">All registered non-admin users</p>
 
-  // ----------------------
-  // Toggle Main Payment
-  // ----------------------
-  document.querySelectorAll(".btn-payment").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showToast("Updating payment status...");
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
+  <div class="admin-box">
+    {% if users %}
+      <div class="users-grid">
+        {% for user in users %}
+          {{ user_card(user) }}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>No users found.</p>
+    {% endif %}
+  </div>
 
-  // ----------------------
-  // Level Unlock Toggle (NEW)
-  // Handles L300 Unlock / L200 Unlock buttons
-  // ----------------------
-  document.querySelectorAll(".btn-action").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showToast("Updating level unlock...");
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
+  <a href="/admin/users" class="back-login-btn">← Back to Users</a>
+</section>
 
-  // ----------------------
-  // Delete User
-  // ----------------------
-  document.querySelectorAll(".btn-delete").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (!confirm("This action is permanent. Continue?")) return;
-      showToast("Deleting user...", true);
-      setTimeout(() => {
-        const form = btn.closest("form");
-        form.action = btn.dataset.url;
-        form.submit();
-      }, 800);
-    });
-  });
-});
+<div id="admin-toast" class="toast"></div>
+<script src="/static/js/admin.js"></script>
+{% endblock %}
