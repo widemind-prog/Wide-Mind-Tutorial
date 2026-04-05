@@ -8,10 +8,12 @@ import json
 import os
 from werkzeug.utils import secure_filename
 from backend.email_service import send_email, send_new_material_email
+
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
-# ---------------------
+
+# ------------------
 # ADMIN GUARD
-# ---------------------
+# ------------------
 def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -20,9 +22,9 @@ def admin_required(func):
         return func(*args, **kwargs)
     return wrapper
 
-# ---------------------
+# ------------------
 # DASHBOARD
-# ---------------------
+# ------------------
 @admin_bp.route("/")
 @admin_required
 def dashboard():
@@ -33,21 +35,17 @@ def dashboard():
     conn.close()
     return render_template("admin/dashboard.html", unread=unread)
 
+# ------------------
+# PUSH SUBSCRIBE
+# ------------------
 @admin_bp.route("/api/subscribe", methods=["POST"])
 def subscribe():
-
     if "user_id" not in session:
         return jsonify({"error": "Not logged in"}), 401
-
     user_id = session["user_id"]
-    if not user_id:
-        return jsonify({"error": "Not logged in"}), 401
-
     data = request.get_json()
-
     conn = get_db()
     c = conn.cursor()
-
     c.execute("""
         INSERT OR REPLACE INTO push_subscriptions
         (user_id, endpoint, p256dh, auth)
@@ -58,16 +56,13 @@ def subscribe():
         data["keys"]["p256dh"],
         data["keys"]["auth"]
     ))
-
     conn.commit()
     conn.close()
-
     return jsonify({"success": True})
 
-# ---------------------
-# NOTIFICATIONS MANAGEMENT
-# ---------------------
-
+# ------------------
+# NOTIFICATIONS
+# ------------------
 @admin_bp.route("/notifications")
 @admin_required
 def notifications_page():
@@ -78,11 +73,9 @@ def notifications_page():
     conn.close()
     return render_template("admin/send_notification.html", users=users)
 
-
 @admin_bp.route("/notifications/send", methods=["POST"])
 @admin_required
 def send_notification():
-
     send_all = request.form.get("send_all")
     user_id = request.form.get("user_id")
     title = request.form.get("title")
@@ -97,9 +90,6 @@ def send_notification():
     conn = get_db()
     c = conn.cursor()
 
-    # ---------------------
-    # DETERMINE TARGET USERS
-    # ---------------------
     if send_all:
         c.execute("SELECT id, email FROM users WHERE role != 'admin'")
         users = c.fetchall()
@@ -108,81 +98,53 @@ def send_notification():
             flash("Select a user or choose send to all", "error")
             conn.close()
             return redirect(url_for("admin_bp.notifications_page"))
-
         c.execute("SELECT id, email FROM users WHERE id=?", (user_id,))
         users = c.fetchall()
 
-    # ---------------------
-    # PROCESS EACH USER
-    # ---------------------
     for user in users:
-
         uid = int(user["id"])
         email = user["email"]
 
-        # 1️⃣ Save notification in DB
         c.execute("""
             INSERT INTO notifications (user_id, title, message, link, is_critical)
             VALUES (?, ?, ?, ?, ?)
         """, (uid, title, message, link, int(is_critical)))
 
-        # 2️⃣ Real-time WebSocket
-        socketio.emit(
-            "new_notification",
-            {
-                "title": title,
-                "message": message,
-                "link": link
-            },
-            room=f"user_{uid}"
-        )
+        socketio.emit("new_notification", {
+            "title": title,
+            "message": message,
+            "link": link
+        }, room=f"user_{uid}")
 
-        # 3️⃣ Push Notification
         try:
             send_push(uid, title, message, link)
         except Exception as e:
             print("Push error:", e)
 
-        # 4️⃣ Email ONLY if critical
         if is_critical:
             try:
-                send_email(
-                    to_email=email,
-                    subject=title,
-                    body=message
-                )
+                send_email(to_email=email, subject=title, body=message)
             except Exception as e:
                 print("Email failed:", e)
 
-    # Commit AFTER loop finishes
     conn.commit()
     conn.close()
-
     flash("Notification sent successfully", "success")
     return redirect(url_for("admin_bp.notifications_page"))
 
-
-# ---------------------
+# ------------------
 # PUSH DELIVERY
-# ---------------------
-
+# ------------------
 def send_push(user_id, title, message, link):
-
     conn = get_db()
     c = conn.cursor()
-
     c.execute("SELECT * FROM push_subscriptions WHERE user_id=?", (user_id,))
     subs = c.fetchall()
     conn.close()
 
-    print(f"send_push: user={user_id}, subs found={len(subs)}")
-
     for sub in subs:
         try:
             private_key = os.environ.get("VAPID_PRIVATE_KEY")
-            print(f"VAPID_PRIVATE_KEY present: {bool(private_key)}")
-            print(f"Endpoint: {sub['endpoint'][:60]}")
-
             webpush(
                 subscription_info={
                     "endpoint": sub["endpoint"],
@@ -191,24 +153,16 @@ def send_push(user_id, title, message, link):
                         "auth": sub["auth"]
                     }
                 },
-                data=json.dumps({
-                    "title": title,
-                    "message": message,
-                    "link": link
-                }),
+                data=json.dumps({"title": title, "message": message, "link": link}),
                 vapid_private_key=private_key,
-                vapid_claims={
-                    "sub": "mailto:wideminddevs@gmail.com"
-                }
+                vapid_claims={"sub": "mailto:wideminddevs@gmail.com"}
             )
-            print("Push sent successfully!")
         except Exception as e:
             print(f"Push failed: {type(e).__name__}: {e}")
 
-
-# ---------------------
-# MESSAGES MANAGEMENT
-# ---------------------
+# ------------------
+# MESSAGES
+# ------------------
 @admin_bp.route("/messages")
 @admin_required
 def messages():
@@ -282,16 +236,15 @@ def bulk_delete_messages():
     flash(f"{len(ids)} message(s) deleted", "success")
     return redirect(url_for("admin_bp.messages"))
 
-# ---------------------
+# ------------------
 # USERS MANAGEMENT
-# ---------------------
+# ------------------
 @admin_bp.route("/users")
 @admin_required
 def users():
     conn = get_db()
     c = conn.cursor()
 
-    # ---- USER STATS ----
     c.execute("SELECT COUNT(*) AS total FROM users")
     total_users = c.fetchone()["total"]
 
@@ -308,22 +261,23 @@ def users():
 
     unpaid_users = total_users - paid_users
 
-    # ---- USER LIST ----
+    # NEW: count by level
+    c.execute("""
+        SELECT level, COUNT(*) as cnt FROM users
+        WHERE role != 'admin'
+        GROUP BY level
+    """)
+    level_counts = {str(r["level"]): r["cnt"] for r in c.fetchall()}
+
     c.execute("""
         SELECT
-            u.id,
-            u.name,
-            u.email,
-            u.level,
-            u.role,
-            u.is_suspended,
+            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
             COALESCE(p.admin_override_status, p.status) AS payment_status
         FROM users u
         LEFT JOIN payments p ON u.id = p.user_id
         ORDER BY u.id DESC
     """)
     users = c.fetchall()
-
     conn.close()
 
     return render_template(
@@ -332,7 +286,8 @@ def users():
         total_users=total_users,
         paid_users=paid_users,
         unpaid_users=unpaid_users,
-        suspended_users=suspended_users
+        suspended_users=suspended_users,
+        level_counts=level_counts
     )
 
 @admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
@@ -357,29 +312,23 @@ def toggle_suspend_user(user_id):
 def delete_user(user_id):
     conn = get_db()
     c = conn.cursor()
-
-    # Delete all related records first
     c.execute("DELETE FROM payments WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM notifications WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM push_subscriptions WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM password_resets WHERE user_id=?", (user_id,))
-
-    # Now delete the user
+    c.execute("DELETE FROM level_unlocks WHERE user_id=?", (user_id,))   # NEW: clean up unlocks too
     c.execute("DELETE FROM users WHERE id=?", (user_id,))
-
     conn.commit()
     conn.close()
     flash("User deleted", "success")
     return redirect(url_for("admin_bp.users"))
 
-# ---------------------
+# ------------------
 # USER FILTER PAGES
-# ---------------------
-
+# ------------------
 def get_user_list(filter_type):
     conn = get_db()
     c = conn.cursor()
-
     base_query = """
         SELECT
             u.id, u.name, u.email, u.level, u.role, u.is_suspended,
@@ -388,46 +337,60 @@ def get_user_list(filter_type):
         LEFT JOIN payments p ON u.id = p.user_id
         WHERE u.role != 'admin'
     """
-
     if filter_type == "paid":
         c.execute(base_query + " AND COALESCE(p.admin_override_status, p.status) = 'paid' ORDER BY u.id DESC")
     elif filter_type == "unpaid":
         c.execute(base_query + " AND (COALESCE(p.admin_override_status, p.status) != 'paid' OR p.id IS NULL) ORDER BY u.id DESC")
     elif filter_type == "suspended":
         c.execute(base_query + " AND u.is_suspended = 1 ORDER BY u.id DESC")
-    else:  # all
+    else:
         c.execute(base_query + " ORDER BY u.id DESC")
-
     users = c.fetchall()
     conn.close()
     return users
-
 
 @admin_bp.route("/users/all")
 @admin_required
 def users_all():
     return render_template("admin/total.html", users=get_user_list("all"))
 
-
 @admin_bp.route("/users/paid")
 @admin_required
 def users_paid():
     return render_template("admin/paid.html", users=get_user_list("paid"))
-
 
 @admin_bp.route("/users/unpaid")
 @admin_required
 def users_unpaid():
     return render_template("admin/unpaid.html", users=get_user_list("unpaid"))
 
-
 @admin_bp.route("/users/suspended")
 @admin_required
 def users_suspended():
     return render_template("admin/suspended.html", users=get_user_list("suspended"))
-# ---------------------
-# TOGGLE PAYMENT (FIXED)
-# ---------------------
+
+# NEW: filter by level
+@admin_bp.route("/users/level/<int:level>")
+@admin_required
+def users_by_level(level):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT
+            u.id, u.name, u.email, u.level, u.role, u.is_suspended,
+            COALESCE(p.admin_override_status, p.status) AS payment_status
+        FROM users u
+        LEFT JOIN payments p ON u.id = p.user_id
+        WHERE u.role != 'admin' AND u.level = ?
+        ORDER BY u.id DESC
+    """, (str(level),))
+    users = c.fetchall()
+    conn.close()
+    return render_template("admin/total.html", users=users, page_title=f"Level {level} Users")
+
+# ------------------
+# TOGGLE PAYMENT
+# ------------------
 @admin_bp.route("/users/mark-paid/<int:user_id>", methods=["POST"])
 @admin_required
 def toggle_payment(user_id):
@@ -442,10 +405,7 @@ def toggle_payment(user_id):
 
     c.execute("""
         SELECT id, status, admin_override_status
-        FROM payments
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 1
+        FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
     """, (user_id,))
     payment = c.fetchone()
 
@@ -453,7 +413,7 @@ def toggle_payment(user_id):
         c.execute("""
             INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at)
             VALUES (?, ?, 'unpaid', 'paid', datetime('now'))
-        """, (user_id, 2041306))
+        """, (user_id, 1026375))
         new_status = "paid"
     else:
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
@@ -469,16 +429,55 @@ def toggle_payment(user_id):
     flash(f"Payment marked as {new_status}", "success")
     return redirect(url_for("admin_bp.users"))
 
+# NEW: Admin toggle level unlock for a user
+@admin_bp.route("/users/toggle-unlock/<int:user_id>/<int:target_level>", methods=["POST"])
+@admin_required
+def toggle_level_unlock(user_id, target_level):
+    if target_level not in [200, 300]:
+        flash("Invalid target level", "error")
+        return redirect(url_for("admin_bp.users"))
 
-# ---------------------
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, status, admin_override_status
+        FROM level_unlocks
+        WHERE user_id=? AND target_level=?
+        ORDER BY id DESC LIMIT 1
+    """, (user_id, target_level))
+    unlock = c.fetchone()
+
+    if not unlock:
+        # Create a new admin-granted unlock
+        c.execute("""
+            INSERT INTO level_unlocks (user_id, target_level, amount, status, admin_override_status, paid_at)
+            VALUES (?, ?, 0, 'unpaid', 'paid', datetime('now'))
+        """, (user_id, target_level))
+        new_status = "paid"
+    else:
+        current = unlock["admin_override_status"] if unlock["admin_override_status"] else unlock["status"]
+        new_status = "unpaid" if current == "paid" else "paid"
+        c.execute("""
+            UPDATE level_unlocks
+            SET admin_override_status=?, paid_at=datetime('now')
+            WHERE id=?
+        """, (new_status, unlock["id"]))
+
+    conn.commit()
+    conn.close()
+    flash(f"Level {target_level} unlock marked as {new_status}", "success")
+    return redirect(url_for("admin_bp.users"))
+
+# ------------------
 # COURSES MANAGEMENT
-# ---------------------
+# ------------------
 @admin_bp.route("/courses")
 @admin_required
 def courses():
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM courses ORDER BY id DESC")
+    # Order by level then id so courses group visually
+    c.execute("SELECT * FROM courses ORDER BY level ASC, id DESC")
     courses = c.fetchall()
     conn.close()
     return render_template("admin/courses.html", courses=courses)
@@ -489,9 +488,16 @@ def add_course():
     course_code = request.form.get("course_code", "").strip()
     course_title = request.form.get("course_title", "").strip()
     description = request.form.get("description", "").strip()
+    level = request.form.get("level", "400").strip()   # NEW: level field
+
     if not course_code or not course_title:
         flash("Course code and title are required.", "error")
         return redirect(url_for("admin_bp.courses"))
+
+    if level not in ["200", "300", "400"]:
+        flash("Invalid level selected.", "error")
+        return redirect(url_for("admin_bp.courses"))
+
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT id FROM courses WHERE course_code = ?", (course_code,))
@@ -499,7 +505,11 @@ def add_course():
         conn.close()
         flash(f"Course code '{course_code}' already exists.", "error")
         return redirect(url_for("admin_bp.courses"))
-    c.execute("INSERT INTO courses (course_code, course_title, description) VALUES (?, ?, ?)", (course_code, course_title, description))
+
+    c.execute(
+        "INSERT INTO courses (course_code, course_title, description, level) VALUES (?, ?, ?, ?)",
+        (course_code, course_title, description, int(level))
+    )
     conn.commit()
     conn.close()
     flash("Course added successfully!", "success")
@@ -510,21 +520,33 @@ def add_course():
 def edit_course(course_id):
     conn = get_db()
     c = conn.cursor()
+
     if request.method == "POST":
         course_code = request.form.get("course_code", "").strip()
         course_title = request.form.get("course_title", "").strip()
         description = request.form.get("description", "").strip()
+        level = request.form.get("level", "400").strip()   # NEW
+
         if not course_code or not course_title:
             flash("Course code and title are required.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
+
+        if level not in ["200", "300", "400"]:
+            flash("Invalid level selected.", "error")
+            return redirect(f"/admin/courses/edit/{course_id}")
+
         c.execute("SELECT id FROM courses WHERE course_code=? AND id != ?", (course_code, course_id))
         if c.fetchone():
             flash(f"Course code '{course_code}' already exists.", "error")
             return redirect(f"/admin/courses/edit/{course_id}")
-        c.execute("UPDATE courses SET course_code=?, course_title=?, description=? WHERE id=?", 
-                  (course_code, course_title, description, course_id))
+
+        c.execute(
+            "UPDATE courses SET course_code=?, course_title=?, description=?, level=? WHERE id=?",
+            (course_code, course_title, description, int(level), course_id)
+        )
         conn.commit()
         flash("Course updated successfully!", "success")
+
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course_id,))
@@ -543,9 +565,9 @@ def delete_course(course_id):
     flash("Course deleted", "success")
     return redirect(url_for("admin_bp.courses"))
 
-# ---------------------
+# ------------------
 # MATERIALS MANAGEMENT
-# ---------------------
+# ------------------
 @admin_bp.route("/courses/material/add/<file_type>/<int:course_id>", methods=["POST"])
 @admin_required
 def add_material(file_type, course_id):
@@ -557,23 +579,19 @@ def add_material(file_type, course_id):
         return redirect(f"/admin/courses/edit/{course_id}")
 
     filename = secure_filename(file.filename)
-
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT id FROM materials WHERE course_id=? AND filename=?", (course_id, filename))
     if c.fetchone():
         conn.close()
-        flash(f"A material with that filename already exists for this course.", "error")
+        flash("A material with that filename already exists for this course.", "error")
         return redirect(f"/admin/courses/edit/{course_id}")
 
-    # Upload to Supabase Storage
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
     bucket = "materials"
-
     file_bytes = file.read()
     content_type = "application/pdf" if file_type == "pdf" else "audio/mpeg"
-
     upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
     headers = {
         "Authorization": f"Bearer {supabase_key}",
@@ -583,51 +601,100 @@ def add_material(file_type, course_id):
 
     import requests as req
     response = req.post(upload_url, headers=headers, data=file_bytes)
-
     if response.status_code not in (200, 201):
         flash(f"Upload to Supabase failed: {response.text}", "error")
         conn.close()
         return redirect(f"/admin/courses/edit/{course_id}")
 
-    # Build public URL
     file_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
-
-    # Save to Turso
     c.execute(
         "INSERT INTO materials (course_id, filename, file_type, title, file_url) VALUES (?, ?, ?, ?, ?)",
         (course_id, filename, file_type, title, file_url)
     )
     conn.commit()
     conn.close()
-    # Send new material email to all paid users
+
+    # Notify paid users who have access to this course's level
     try:
         conn2 = get_db()
         c2 = conn2.cursor()
         c2.execute("SELECT * FROM courses WHERE id=?", (course_id,))
         course = c2.fetchone()
+        course_level = int(course["level"]) if course else 400
+
+        # Get users who can access this level: their own level >= course_level AND paid,
+        # OR they have a paid unlock for that level
         c2.execute("""
-            SELECT u.name, u.email FROM users u
+            SELECT DISTINCT u.name, u.email
+            FROM users u
             JOIN payments p ON u.id = p.user_id
             WHERE u.role != 'admin'
             AND COALESCE(p.admin_override_status, p.status) = 'paid'
-        """)
+            AND CAST(u.level AS INTEGER) >= ?
+        """, (course_level,))
+        direct_users = set((r["email"],) for r in c2.fetchall())
+
+        # Also users with a paid unlock for that level
+        if course_level < 400:
+            c2.execute("""
+                SELECT DISTINCT u.name, u.email
+                FROM users u
+                JOIN level_unlocks lu ON u.id = lu.user_id
+                WHERE u.role != 'admin'
+                AND lu.target_level = ?
+                AND COALESCE(lu.admin_override_status, lu.status) = 'paid'
+            """, (course_level,))
+            unlock_users = c2.fetchall()
+        else:
+            unlock_users = []
+
+        # Merge and notify
+        notified = set()
+        all_users = list(c2.execute("""
+            SELECT DISTINCT u.name, u.email FROM users u
+            WHERE u.role != 'admin'
+        """).fetchall())
+
+        # Re-fetch properly with names
+        c2.execute("""
+            SELECT DISTINCT u.name, u.email
+            FROM users u
+            JOIN payments p ON u.id = p.user_id
+            WHERE u.role != 'admin'
+            AND COALESCE(p.admin_override_status, p.status) = 'paid'
+            AND CAST(u.level AS INTEGER) >= ?
+        """, (course_level,))
         paid_users = c2.fetchall()
-        conn2.close()
+
         for u in paid_users:
-            send_new_material_email(
-                to_email=u["email"],
-                name=u["name"],
-                material_title=title,
-                course_title=course["course_title"] if course else "your course",
-                file_type=file_type,
-                course_id=course_id
-            )
+            if u["email"] not in notified:
+                notified.add(u["email"])
+                send_new_material_email(
+                    to_email=u["email"],
+                    name=u["name"],
+                    material_title=title,
+                    course_title=course["course_title"] if course else "your course",
+                    file_type=file_type,
+                    course_id=course_id
+                )
+
+        for u in unlock_users:
+            if u["email"] not in notified:
+                notified.add(u["email"])
+                send_new_material_email(
+                    to_email=u["email"],
+                    name=u["name"],
+                    material_title=title,
+                    course_title=course["course_title"] if course else "your course",
+                    file_type=file_type,
+                    course_id=course_id
+                )
+        conn2.close()
     except Exception as e:
         print("New material email failed:", e)
 
     flash("Material uploaded successfully!", "success")
     return redirect(f"/admin/courses/edit/{course_id}")
-
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
 @admin_required
@@ -640,17 +707,13 @@ def delete_material(material_id):
         conn.close()
         abort(404)
 
-    # Delete from Supabase Storage
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
     if supabase_url and supabase_key:
         import requests as req
         delete_url = f"{supabase_url}/storage/v1/object/materials/{material['filename']}"
-        req.delete(delete_url, headers={
-            "Authorization": f"Bearer {supabase_key}"
-        })
+        req.delete(delete_url, headers={"Authorization": f"Bearer {supabase_key}"})
 
-    # Delete from Turso
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))
     conn.commit()
     conn.close()
