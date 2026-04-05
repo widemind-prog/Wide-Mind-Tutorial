@@ -19,7 +19,7 @@ def init_payment():
     if is_admin(user_id):
         return jsonify({"status": True, "message": "Admin does not require payment"}), 200
 
-    amount = int(20413.06 * 100)
+    amount = 2041306
 
     conn = get_db()
     c = conn.cursor()
