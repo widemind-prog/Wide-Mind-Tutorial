@@ -1,56 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Admin – Users{% endblock %}
+{% block title %}Admin — Users{% endblock %}
 
 {% block content %}
 <section class="admin-dashboard">
+  <h1 class="dashboard-title">User Management</h1>
+  <p class="dashboard-subtitle">View users, manage access, and handle payments.</p>
 
-    <h1 class="dashboard-title">User Management</h1>
-    <p class="dashboard-subtitle">View users, manage access, and handle payments.</p>
+  <!-- ===== TOP STATS ===== -->
+  <div class="stats-grid">
+    <a href="/admin/users/all" class="stat-card" style="text-decoration:none; cursor:pointer;">
+      <h3>Total Users</h3>
+      <p>{{ total_users }}</p>
+    </a>
+    <a href="/admin/users/paid" class="stat-card paid" style="text-decoration:none; cursor:pointer;">
+      <h3>Paid</h3>
+      <p>{{ paid_users }}</p>
+    </a>
+    <a href="/admin/users/unpaid" class="stat-card unpaid" style="text-decoration:none; cursor:pointer;">
+      <h3>Unpaid</h3>
+      <p>{{ unpaid_users }}</p>
+    </a>
+    <a href="/admin/users/suspended" class="stat-card suspended" style="text-decoration:none; cursor:pointer;">
+      <h3>Suspended</h3>
+      <p>{{ suspended_users }}</p>
+    </a>
+  </div>
 
-    <div class="stats-grid">
-        <a href="/admin/users/all" class="stat-card" style="text-decoration:none; cursor:pointer;">
-            <h3>Total Users</h3>
-            <p>{{ total_users }}</p>
+  <!-- ===== LEVEL BREAKDOWN (NEW) ===== -->
+  <div class="admin-box" style="margin-bottom:20px;">
+    <h3 style="margin-top:0; font-size:14px; text-transform:uppercase;
+               letter-spacing:1px; color:#8B7500;">Students by Level</h3>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      {% for lvl in ['400', '300', '200'] %}
+        <a href="/admin/users/level/{{ lvl }}"
+           style="
+             flex:1; min-width:80px; text-align:center;
+             background:{% if lvl == '400' %}#8B7500{% elif lvl == '300' %}#2e6da4{% else %}#2e8b57{% endif %};
+             color:#fff; border-radius:10px; padding:12px 8px;
+             text-decoration:none; font-weight:700;
+           ">
+          <div style="font-size:22px;">{{ level_counts.get(lvl, 0) }}</div>
+          <div style="font-size:11px; opacity:0.9;">Level {{ lvl }}</div>
         </a>
-
-        <a href="/admin/users/paid" class="stat-card paid" style="text-decoration:none; cursor:pointer;">
-            <h3>Paid Users</h3>
-            <p>{{ paid_users }}</p>
-        </a>
-
-        <a href="/admin/users/unpaid" class="stat-card unpaid" style="text-decoration:none; cursor:pointer;">
-            <h3>Unpaid Users</h3>
-            <p>{{ unpaid_users }}</p>
-        </a>
-
-        <a href="/admin/users/suspended" class="stat-card suspended" style="text-decoration:none; cursor:pointer;">
-            <h3>Suspended</h3>
-            <p>{{ suspended_users }}</p>
-        </a>
+      {% endfor %}
     </div>
+  </div>
 
-    <!-- ADMIN ACCOUNTS ONLY -->
-    <div class="admin-box">
-        <h3 style="margin-top:0;">Admin Accounts</h3>
-        {% set admin_users = users | selectattr("role", "equalto", "admin") | list %}
-        {% if admin_users %}
-        <div class="users-grid">
-            {% for user in admin_users %}
-            <div class="user-card">
-                <strong>{{ user.name }}</strong><br>
-                <small>{{ user.email }}</small><br>
-                <small>Role: {{ user.role }}</small><br>
-                <p style="color:green;">Status: Active</p>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-            <p>No admin accounts found.</p>
-        {% endif %}
-    </div>
+  <!-- ===== ADMIN ACCOUNTS ===== -->
+  <div class="admin-box">
+    <h3 style="margin-top:0;">Admin Accounts</h3>
+    {% set admin_users = users | selectattr("role", "equalto", "admin") | list %}
+    {% if admin_users %}
+      <div class="users-grid">
+        {% for user in admin_users %}
+          <div class="user-card">
+            <strong>{{ user.name }}</strong><br>
+            <small>{{ user.email }}</small><br>
+            <small>Role: {{ user.role }}</small><br>
+            <p style="color:green;">Status: Active</p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>No admin accounts found.</p>
+    {% endif %}
+  </div>
 
-    <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
-
+  <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
 </section>
 
 <div id="admin-toast" class="toast"></div>
