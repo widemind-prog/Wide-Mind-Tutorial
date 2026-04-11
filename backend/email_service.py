@@ -1,19 +1,16 @@
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import requests
 from datetime import datetime
 
 
 def send_email(to_email, subject, body):
 
-    smtp_user = os.environ.get("BREVO_SMTP_USER")
-    smtp_password = os.environ.get("BREVO_SMTP_PASSWORD")
+    api_key = os.environ.get("BREVO_API_KEY")
     from_email = os.environ.get("EMAIL_FROM", "no-reply@widemindtutorial.com")
     from_name = "Wide Mind Tutorial"
 
-    if not smtp_user or not smtp_password:
-        print("BREVO_SMTP_USER or BREVO_SMTP_PASSWORD missing")
+    if not api_key:
+        print("[EMAIL] BREVO_API_KEY missing")
         return False
 
     html_content = f"""
@@ -50,37 +47,29 @@ def send_email(to_email, subject, body):
 """
 
     try:
-        print(f"[EMAIL] Attempting to send to {to_email}")
-        print(f"[EMAIL] SMTP user: {smtp_user}")
-        print(f"[EMAIL] From email: {from_email}")
-
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"{from_name} <{from_email}>"
-        msg["To"] = to_email
-        msg.attach(MIMEText(html_content, "html"))
-
-        print("[EMAIL] Connecting to smtp-relay.brevo.com:587...")
-        with smtplib.SMTP("smtp-relay.brevo.com", 587, timeout=20) as server:
-            server.set_debuglevel(1)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(smtp_user, smtp_password)
-            print("[EMAIL] Logged in, sending...")
-            server.sendmail(from_email, to_email, msg.as_string())
-
-        print(f"[EMAIL] Successfully sent to {to_email}")
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "accept": "application/json",
+                "api-key": api_key,
+                "content-type": "application/json"
+            },
+            json={
+                "sender": {"name": from_name, "email": from_email},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content
+            },
+            timeout=15
+        )
+        print(f"[EMAIL] Brevo status: {response.status_code} to {to_email}")
+        if response.status_code not in (200, 201):
+            print(f"[EMAIL] Brevo error: {response.text}")
+            return False
         return True
 
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"[EMAIL] Auth failed: {e}")
-        return False
-    except smtplib.SMTPException as e:
-        print(f"[EMAIL] SMTP error: {e}")
-        return False
     except Exception as e:
-        print(f"[EMAIL] Unexpected error: {type(e).__name__}: {e}")
+        print(f"[EMAIL] Failed: {type(e).__name__}: {e}")
         return False
 
 
@@ -185,4 +174,3 @@ def send_new_material_email(to_email, name, material_title, course_title, file_t
         f"New {type_label} Available — {course_title} {icon}",
         body
     )
-
