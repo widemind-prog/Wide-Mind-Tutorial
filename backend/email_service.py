@@ -1,27 +1,22 @@
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import datetime
 
 
 def send_email(to_email, subject, body):
 
-    api_key = os.environ.get("SENDGRID_API_KEY")
+    smtp_user = os.environ.get("BREVO_SMTP_USER")
+    smtp_password = os.environ.get("BREVO_SMTP_PASSWORD")
     from_email = os.environ.get("EMAIL_FROM", "no-reply@widemindtutorial.com")
     from_name = "Wide Mind Tutorial"
 
-    if not api_key:
-        print("SENDGRID_API_KEY missing")
+    if not smtp_user or not smtp_password:
+        print("BREVO_SMTP_USER or BREVO_SMTP_PASSWORD missing")
         return False
 
-    try:
-        sg = SendGridAPIClient(api_key)
-
-        message = Mail(
-            from_email=(from_email, from_name),
-            to_emails=to_email,
-            subject=subject,
-            html_content=f"""
+    html_content = f"""
 <div style="margin:0;padding:0;background-color:#fdf6e3;">
   <div style="max-width:600px;margin:0 auto;background-color:#ffffff;
               font-family:'Poppins', Arial, sans-serif;border-radius:14px;
@@ -47,20 +42,32 @@ def send_email(to_email, subject, body):
     </div>
     <div style="background-color:#8B7500;padding:18px;text-align:center;
                 font-size:12px;color:#f0e6d2;">
-      © {datetime.utcnow().year} Wide Mind Tutorial<br>
+      &copy; {datetime.utcnow().year} Wide Mind Tutorial<br>
       www.widemindtutorial.com
     </div>
   </div>
 </div>
 """
-        )
 
-        response = sg.send(message)
-        print("SendGrid status:", response.status_code)
-        return response.status_code in (200, 202)
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{from_name} <{from_email}>"
+        msg["To"] = to_email
+
+        msg.attach(MIMEText(html_content, "html"))
+
+        with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(from_email, to_email, msg.as_string())
+
+        print(f"Email sent to {to_email}")
+        return True
 
     except Exception as e:
-        print("Email failed:", e)
+        print(f"Email failed: {e}")
         return False
 
 
