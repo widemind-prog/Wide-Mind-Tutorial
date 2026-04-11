@@ -50,24 +50,37 @@ def send_email(to_email, subject, body):
 """
 
     try:
+        print(f"[EMAIL] Attempting to send to {to_email}")
+        print(f"[EMAIL] SMTP user: {smtp_user}")
+        print(f"[EMAIL] From email: {from_email}")
+
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"{from_name} <{from_email}>"
         msg["To"] = to_email
-
         msg.attach(MIMEText(html_content, "html"))
 
-        with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
+        print("[EMAIL] Connecting to smtp-relay.brevo.com:587...")
+        with smtplib.SMTP("smtp-relay.brevo.com", 587, timeout=20) as server:
+            server.set_debuglevel(1)
             server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(smtp_user, smtp_password)
+            print("[EMAIL] Logged in, sending...")
             server.sendmail(from_email, to_email, msg.as_string())
 
-        print(f"Email sent to {to_email}")
+        print(f"[EMAIL] Successfully sent to {to_email}")
         return True
 
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"[EMAIL] Auth failed: {e}")
+        return False
+    except smtplib.SMTPException as e:
+        print(f"[EMAIL] SMTP error: {e}")
+        return False
     except Exception as e:
-        print(f"Email failed: {e}")
+        print(f"[EMAIL] Unexpected error: {type(e).__name__}: {e}")
         return False
 
 
@@ -172,3 +185,4 @@ def send_new_material_email(to_email, name, material_title, course_title, file_t
         f"New {type_label} Available — {course_title} {icon}",
         body
     )
+
