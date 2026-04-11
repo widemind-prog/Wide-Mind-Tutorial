@@ -113,12 +113,6 @@ def home():
 def home_redirect():
     return redirect("/")
 
-@app.route("/test-email")
-def test_email():
-    from backend.email_service import send_email
-    result = send_email("wideminddevs@gmail.com", "Test Email", "<p>This is a test</p>")
-    return f"Email result: {result}"
-
 @app.route("/about")
 def about_page():
     return render_template("about.html")
