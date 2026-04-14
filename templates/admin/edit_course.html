@@ -1,77 +1,103 @@
 {% extends "base.html" %}
+
 {% block title %}Edit Course{% endblock %}
 
 {% block content %}
+
 <h1 class="dashboard-title">Edit Course</h1>
 
 <!-- COURSE DETAILS -->
 <form method="POST" class="admin-box">
-    <label>Course Code</label>
-    <input type="text" name="course_code" value="{{ course.course_code }}" required>
+  <label>Course Code</label>
+  <input type="text" name="course_code" value="{{ course.course_code }}" required>
 
-    <label>Course Title</label>
-    <input type="text" name="course_title" value="{{ course.course_title }}" required>
+  <label>Course Title</label>
+  <input type="text" name="course_title" value="{{ course.course_title }}" required>
 
-    <label>Description</label>
-    <textarea name="description" rows="4">{{ course.description }}</textarea>
+  <label>Description</label>
+  <textarea name="description" rows="4">{{ course.description }}</textarea>
 
-    <button type="submit">Save Changes</button>
+  <button type="submit">Save Changes</button>
 </form>
 
 <!-- EXISTING MATERIALS -->
 <div class="admin-box">
-    <h3>Existing Materials</h3>
-    {% if materials %}
-    <ul>
-        {% for material in materials %}
-        <li>
-            <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
-            <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
-                <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
-                    Delete
-                </button>
-            </form>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>No materials uploaded yet.</p>
-    {% endif %}
+  <h3>Existing Materials</h3>
+  {% if materials %}
+  <ul>
+    {% for material in materials %}
+    <li>
+      <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
+      <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
+        <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
+          Delete
+        </button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No materials uploaded yet.</p>
+  {% endif %}
 </div>
 
 <!-- ADD PDF -->
 <div class="admin-box">
-    <h3>Add PDF Material</h3>
-    <form method="POST" action="/admin/courses/material/add/pdf/{{ course.id }}">
-        <label>Title:</label>
-        <input type="text" name="title" placeholder="e.g. Psy405 Notes" required>
-        <label>Filename (e.g. Psy405_WideMindNotes.pdf):</label>
-        <input type="text" name="filename" placeholder="Psy405_WideMindNotes.pdf" required>
-        <label>Supabase URL:</label>
-        <input type="text" name="drive_url" placeholder="https://drive.google.com/uc?export=download&id=..." required>
-        <button type="submit">Add PDF</button>
-    </form>
+  <h3>Upload PDF Material</h3>
+  <form method="POST"
+        action="/admin/courses/material/add/pdf/{{ course.id }}"
+        enctype="multipart/form-data">
+    <label>Title</label>
+    <input type="text" name="title" placeholder="e.g. PSY405 Notes" required>
+
+    <label>PDF File</label>
+    <input type="file" name="file" accept=".pdf" required>
+
+    <button type="submit" id="pdf-submit-btn">Upload PDF</button>
+  </form>
+  <p id="pdf-upload-msg" style="display:none; color:#8B7500; font-size:13px; text-align:center; margin-top:8px;">
+    ⏳ Uploading... please wait, do not close this page.
+  </p>
 </div>
 
 <!-- ADD AUDIO -->
 <div class="admin-box">
-    <h3>Add Audio Material</h3>
-    <form method="POST" action="/admin/courses/material/add/audio/{{ course.id }}">
-        <label>Title:</label>
-        <input type="text" name="title" placeholder="e.g. Sessions 1-5" required>
-        <label>Filename (e.g. Psy429_Session_1-5.mp3):</label>
-        <input type="text" name="filename" placeholder="Psy429_Session_1-5.mp3" required>
-        <label>Supabase URL:</label>
-        <input type="text" name="drive_url" placeholder="https://drive.google.com/uc?export=download&id=..." required>
-        <button type="submit">Add Audio</button>
-    </form>
+  <h3>Upload Audio Material</h3>
+  <form method="POST"
+        action="/admin/courses/material/add/audio/{{ course.id }}"
+        enctype="multipart/form-data">
+    <label>Title</label>
+    <input type="text" name="title" placeholder="e.g. Sessions 1–5" required>
+
+    <label>Audio File (.mp3)</label>
+    <input type="file" name="file" accept=".mp3,audio/*" required>
+
+    <button type="submit" id="audio-submit-btn">Upload Audio</button>
+  </form>
+  <p id="audio-upload-msg" style="display:none; color:#8B7500; font-size:13px; text-align:center; margin-top:8px;">
+    ⏳ Uploading... please wait, do not close this page.
+  </p>
 </div>
 
-
 <a href="/admin/courses" class="back-login-btn">← Back to Courses</a>
-<!-- Toast for admin actions -->
-<div id="admin-toast" class="toast"></div>
 
+<div id="admin-toast" class="toast"></div>
 <script src="/static/js/admin.js"></script>
+
+<script>
+  // Show "uploading..." feedback on submit so you know it's working
+  document.querySelectorAll('form[enctype="multipart/form-data"]').forEach(function(form) {
+    form.addEventListener('submit', function() {
+      var btn = form.querySelector('button[type="submit"]');
+      var isPdf = form.action.includes('/pdf/');
+      var msgEl = document.getElementById(isPdf ? 'pdf-upload-msg' : 'audio-upload-msg');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Uploading…';
+      }
+      if (msgEl) msgEl.style.display = 'block';
+    });
+  });
+</script>
 
 {% endblock %}
