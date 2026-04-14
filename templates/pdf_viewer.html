@@ -4,477 +4,810 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
+    :root {
+      --bg:        #0e0e0f;
+      --surface:   #161618;
+      --border:    #2a2a2e;
+      --gold:      #d4af37;
+      --gold-dim:  #9c7f22;
+      --text:      #e8e8e8;
+      --text-muted:#888;
+      --radius:    8px;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      overflow-x: hidden;
     }
-
-    /* ── CONTROLS BAR ── */
-    #controls {
-      width: 100%;
-      padding: 10px 14px;
-      background: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    #controls button {
-      padding: 6px 14px;
-      border: none;
-      cursor: pointer;
-      background: #444;
-      color: #fff;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    #controls button:hover { background: #666; }
-    #controls button:disabled { opacity: 0.35; cursor: not-allowed; }
-    #cancelBtn { background: #a00000; }
-    #cancelBtn:hover { background: #c00000; }
-
-    #pageInfo { font-size: 14px; white-space: nowrap; min-width: 90px; text-align: center; }
 
     /* ── LOADING OVERLAY ── */
     #loadingOverlay {
       position: fixed;
       inset: 0;
-      background: #111;
+      background: var(--bg);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 999;
-      gap: 18px;
-      transition: opacity 0.4s ease;
+      gap: 20px;
+      transition: opacity 0.35s ease;
     }
+    #loadingOverlay.hidden { opacity: 0; pointer-events: none; }
 
-    #loadingOverlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .spinner {
-      width: 52px;
-      height: 52px;
-      border: 5px solid #333;
-      border-top-color: #d4af37;
+    .loader-ring {
+      width: 56px; height: 56px;
+      border: 3px solid #222;
+      border-top-color: var(--gold);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.75s linear infinite;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #loadingText {
-      font-size: 15px;
-      color: #ccc;
-      letter-spacing: 0.5px;
-    }
-
-    #loadingProgress {
+    #loadingLabel {
       font-size: 13px;
-      color: #d4af37;
-      font-weight: bold;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
     }
 
-    /* ── PROGRESS BAR ── */
-    #progressBar {
-      width: 200px;
-      height: 4px;
-      background: #333;
-      border-radius: 4px;
-      overflow: hidden;
+    #progressTrack {
+      width: 180px; height: 3px;
+      background: #222; border-radius: 99px; overflow: hidden;
     }
-
     #progressFill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #d4af37, #f1e5ac);
-      border-radius: 4px;
-      transition: width 0.3s ease;
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+      border-radius: 99px;
+      transition: width 0.25s ease;
+    }
+    #progressPct {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--gold);
     }
 
-    /* ── PDF CANVAS AREA ── */
-    #pdfWrapper {
-      display: inline-block;
-      margin: 16px auto;
-      max-width: 95%;
-    }
-
-    canvas#pdfCanvas {
-      display: block;
-      max-width: 100%;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-
-    /* ── ERROR STATE ── */
+    /* ── ERROR ── */
     #errorBox {
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 14px;
-      padding: 40px 20px;
+      gap: 16px;
+      padding: 60px 24px;
+      text-align: center;
+    }
+    #errorBox .err-icon { font-size: 44px; }
+    #errorBox p { color: var(--text-muted); font-size: 14px; line-height: 1.7; max-width: 280px; }
+    #errorBox button {
+      padding: 10px 28px;
+      background: var(--gold);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Sora', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* ── TOPBAR ── */
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      width: 100%;
+      background: rgba(14,14,15,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      height: 52px;
+      gap: 10px;
+    }
+
+    .bar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: #222; border-color: #444; }
+    .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .icon-btn:disabled:hover { background: var(--surface); border-color: var(--border); }
+
+    #closeBtn {
+      border-color: #3a1a1a;
+      background: #1e0e0e;
+      color: #e05555;
+    }
+    #closeBtn:hover { background: #2a1010; border-color: #6a2020; }
+
+    #pageInfo {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      min-width: 80px;
+      text-align: center;
+      padding: 0 4px;
+    }
+
+    .zoom-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      min-width: 38px;
       text-align: center;
     }
 
-    #errorBox .error-icon { font-size: 48px; }
-    #errorBox p { color: #ccc; font-size: 15px; max-width: 300px; line-height: 1.6; }
-    #errorBox button {
-      padding: 10px 24px;
-      background: #d4af37;
-      color: #000;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 14px;
+    /* ── MAIN AREA ── */
+    #main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0 32px;
+      min-height: calc(100vh - 52px);
+    }
+
+    /* ── CANVAS WRAPPER ── */
+    #canvasWrap {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      max-width: 860px;
+      padding: 0 12px;
+    }
+
+    /* The actual canvas — never set width/height via CSS, only via JS */
+    #pdfCanvas {
+      display: block;
+      width: 100%;          /* CSS display width — controlled by JS */
+      height: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      border-radius: 4px;
+      background: #fff;
+      /* NO transition on opacity here — handled manually */
+    }
+
+    /* Page-turn loading shimmer */
+    #pageLoader {
+      position: absolute;
+      inset: 0;
+      background: rgba(14,14,15,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+    #pageLoader.show { opacity: 1; }
+    .mini-ring {
+      width: 32px; height: 32px;
+      border: 3px solid #333;
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
     }
 
     /* ── THUMBNAILS ── */
-    #thumbnailsWrapper {
+    #thumbBar {
+      width: 100%;
+      max-width: 860px;
+      padding: 12px;
+      margin-top: 20px;
+    }
+
+    #thumbScroller {
       display: flex;
       align-items: center;
-      width: 95%;
-      background: #1a1a1a;
-      padding: 8px;
-      gap: 5px;
-      overflow: hidden;
-      border-radius: 8px;
-      margin-bottom: 20px;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
     }
 
-    #thumbnails {
+    #thumbTrack {
       display: flex;
+      gap: 8px;
       overflow-x: auto;
-      gap: 6px;
       scroll-behavior: smooth;
-      padding: 4px 0;
+      flex: 1;
+      padding: 2px 0;
+    }
+    #thumbTrack::-webkit-scrollbar { height: 3px; }
+    #thumbTrack::-webkit-scrollbar-track { background: transparent; }
+    #thumbTrack::-webkit-scrollbar-thumb { background: #333; border-radius: 99px; }
+
+    .thumb-item {
+      flex-shrink: 0;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 3px;
+      overflow: hidden;
+      transition: border-color 0.15s, transform 0.15s;
+      position: relative;
+    }
+    .thumb-item:hover { border-color: #555; transform: translateY(-1px); }
+    .thumb-item.active { border-color: var(--gold); }
+
+    .thumb-item canvas {
+      display: block;
+      width: 56px;
+      height: auto;
     }
 
-    #thumbnails::-webkit-scrollbar { height: 4px; }
-    #thumbnails::-webkit-scrollbar-track { background: #222; }
-    #thumbnails::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+    .thumb-num {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.6);
+      color: #aaa;
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      text-align: center;
+      padding: 2px 0;
+    }
+    .thumb-item.active .thumb-num { color: var(--gold); }
 
-    #thumbnails canvas {
-      width: 60px;
-      cursor: pointer;
-      border: 2px solid #444;
-      flex-shrink: 0;
+    /* Thumb placeholder while rendering */
+    .thumb-placeholder {
+      width: 56px;
+      height: 74px;
+      background: #1e1e20;
       border-radius: 2px;
-      transition: border-color 0.15s;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 0.8; }
     }
 
-    #thumbnails canvas.active { border-color: #d4af37; }
-    #thumbnails canvas:hover { border-color: #888; }
-
-    .thumbArrow {
-      background: #333;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      padding: 5px 10px;
-      font-size: 18px;
-      border-radius: 4px;
+    .arrow-btn {
       flex-shrink: 0;
+      width: 28px; height: 28px;
+      background: #1e1e20;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
     }
-    .thumbArrow:hover { background: #555; }
+    .arrow-btn:hover { background: #2a2a2e; color: var(--text); }
 
-    /* ── PAGE TRANSITION ── */
-    #pdfCanvas {
-      transition: opacity 0.15s ease;
+    /* ── SWIPE HINT (mobile) ── */
+    #swipeHint {
+      font-size: 11px;
+      color: #444;
+      text-align: center;
+      margin-top: 12px;
+      letter-spacing: 0.05em;
     }
-    #pdfCanvas.fading { opacity: 0.3; }
+
+    @media (min-width: 600px) { #swipeHint { display: none; } }
   </style>
 </head>
 
 <body>
 
-<!-- LOADING OVERLAY — shown immediately while PDF loads -->
+<!-- LOADING OVERLAY -->
 <div id="loadingOverlay">
-  <div class="spinner"></div>
-  <div id="loadingText">Opening your document…</div>
-  <div id="progressBar"><div id="progressFill"></div></div>
-  <div id="loadingProgress"></div>
+  <div class="loader-ring"></div>
+  <div id="loadingLabel">Opening document…</div>
+  <div id="progressTrack"><div id="progressFill"></div></div>
+  <div id="progressPct">0%</div>
 </div>
 
-<!-- ERROR BOX — shown if PDF fails to load -->
+<!-- ERROR STATE -->
 <div id="errorBox">
-  <div class="error-icon">📄</div>
-  <p>We couldn't load the document right now. Please check your connection and try again.</p>
-  <button onclick="window.location.reload()">Try Again</button>
+  <div class="err-icon">📄</div>
+  <p>Couldn't load this document. Check your connection and try again.</p>
+  <button onclick="location.reload()">Retry</button>
 </div>
 
-<!-- CONTROLS -->
-<div id="controls">
-  <button id="cancelBtn">✖ Close</button>
-  <button id="prevBtn" disabled>◀ Prev</button>
-  <span id="pageInfo">Loading…</span>
-  <button id="nextBtn" disabled>Next ▶</button>
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="bar-group">
+    <button class="icon-btn" id="closeBtn" title="Close">✕</button>
+  </div>
+
+  <div class="bar-group">
+    <button class="icon-btn" id="prevBtn" disabled title="Previous page">‹</button>
+    <span id="pageInfo">—</span>
+    <button class="icon-btn" id="nextBtn" disabled title="Next page">›</button>
+  </div>
+
+  <div class="bar-group">
+    <button class="icon-btn" id="zoomOut" title="Zoom out">−</button>
+    <span class="zoom-label" id="zoomLabel">100%</span>
+    <button class="icon-btn" id="zoomIn"  title="Zoom in">+</button>
+  </div>
 </div>
 
-<!-- PDF CANVAS -->
-<div id="pdfWrapper">
-  <canvas id="pdfCanvas"></canvas>
+<!-- MAIN -->
+<div id="main">
+  <div id="canvasWrap">
+    <canvas id="pdfCanvas"></canvas>
+    <div id="pageLoader"><div class="mini-ring"></div></div>
+  </div>
+
+  <!-- THUMBNAILS -->
+  <div id="thumbBar">
+    <div id="thumbScroller">
+      <button class="arrow-btn" id="thumbLeft">‹</button>
+      <div id="thumbTrack"></div>
+      <button class="arrow-btn" id="thumbRight">›</button>
+    </div>
+  </div>
+
+  <div id="swipeHint">← swipe to change pages →</div>
 </div>
 
-<!-- THUMBNAILS -->
-<div id="thumbnailsWrapper">
-  <button class="thumbArrow" id="thumbLeft">&#10094;</button>
-  <div id="thumbnails"></div>
-  <button class="thumbArrow" id="thumbRight">&#10095;</button>
-</div>
-
-<!-- PDF.js — load from CDN -->
+<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script>
-/* ===== CONFIG ===== */
-const pdfUrl   = "{{ supabase_url }}";
+/* ============================================================
+   CONFIG — injected by Flask
+   ============================================================ */
+const pdfUrl    = "{{ supabase_url }}";
 const courseUrl = "/course/{{ course_id }}";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-/* ===== STATE ===== */
-let pdfDoc     = null;
-let pageNum    = 1;
-let totalPages = 0;
-let rendering  = false;
-const pageCache = {};
+/* ============================================================
+   STATE
+   ============================================================ */
+let pdfDoc      = null;
+let currentPage = 1;
+let totalPages  = 0;
+let isRendering = false;
+let pendingPage = null;         // queued page if a render is in progress
+let zoomLevel   = 1.0;          // user zoom multiplier
+const MIN_ZOOM  = 0.5;
+const MAX_ZOOM  = 3.0;
 
-/* ===== ELEMENTS ===== */
-const canvas       = document.getElementById("pdfCanvas");
-const ctx          = canvas.getContext("2d");
-const prevBtn      = document.getElementById("prevBtn");
-const nextBtn      = document.getElementById("nextBtn");
-const pageInfo     = document.getElementById("pageInfo");
-const thumbsEl     = document.getElementById("thumbnails");
-const thumbLeft    = document.getElementById("thumbLeft");
-const thumbRight   = document.getElementById("thumbRight");
-const cancelBtn    = document.getElementById("cancelBtn");
-const overlay      = document.getElementById("loadingOverlay");
-const errorBox     = document.getElementById("errorBox");
-const loadingText  = document.getElementById("loadingText");
-const loadingProg  = document.getElementById("loadingProgress");
-const progressFill = document.getElementById("progressFill");
+// Cache: stores rendered ImageBitmap objects (lossless, no toDataURL())
+// Key: `${pageNum}_${zoomLevel}`
+const renderCache = new Map();
 
-/* ===== CLOSE BUTTON ===== */
-cancelBtn.onclick = () => {
+/* ============================================================
+   ELEMENTS
+   ============================================================ */
+const canvas      = document.getElementById("pdfCanvas");
+const ctx         = canvas.getContext("2d", { alpha: false });
+const overlay     = document.getElementById("loadingOverlay");
+const errorBox    = document.getElementById("errorBox");
+const loadingLbl  = document.getElementById("loadingLabel");
+const progressPct = document.getElementById("progressPct");
+const progressFill= document.getElementById("progressFill");
+const pageInfo    = document.getElementById("pageInfo");
+const prevBtn     = document.getElementById("prevBtn");
+const nextBtn     = document.getElementById("nextBtn");
+const closeBtn    = document.getElementById("closeBtn");
+const zoomInBtn   = document.getElementById("zoomIn");
+const zoomOutBtn  = document.getElementById("zoomOut");
+const zoomLabel   = document.getElementById("zoomLabel");
+const thumbTrack  = document.getElementById("thumbTrack");
+const thumbLeft   = document.getElementById("thumbLeft");
+const thumbRight  = document.getElementById("thumbRight");
+const pageLoader  = document.getElementById("pageLoader");
+
+/* ============================================================
+   CLOSE
+   ============================================================ */
+closeBtn.onclick = () => {
   window.close();
   setTimeout(() => {
     if (window.history.length > 1) window.history.back();
     else window.location.href = courseUrl;
-  }, 100);
+  }, 80);
 };
 
-/* ===== HIDE OVERLAY ===== */
+/* ============================================================
+   OVERLAY HELPERS
+   ============================================================ */
 function hideOverlay() {
   overlay.classList.add("hidden");
-  setTimeout(() => overlay.style.display = "none", 400);
+  setTimeout(() => { overlay.style.display = "none"; }, 380);
 }
-
 function showError() {
   overlay.style.display = "none";
   errorBox.style.display = "flex";
 }
 
-/* ===== LOAD PDF WITH PROGRESS ===== */
-loadingText.textContent = "Connecting to document…";
+/* ============================================================
+   LOAD PDF
+   ============================================================ */
+loadingLbl.textContent = "Connecting…";
 
-const loadingTask = pdfjsLib.getDocument({
+const loadTask = pdfjsLib.getDocument({
   url: pdfUrl,
-  rangeChunkSize: 65536,   // 64KB chunks — faster range requests
+  rangeChunkSize: 131072,   // 128 KB chunks
   disableAutoFetch: false,
   disableStream: false,
+  cMapUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/",
+  cMapPacked: true,
 });
 
-loadingTask.onProgress = function(data) {
-  if (data.total) {
-    const pct = Math.round((data.loaded / data.total) * 100);
-    progressFill.style.width = pct + "%";
-    loadingProg.textContent  = pct + "%";
-    if (pct < 30)       loadingText.textContent = "Connecting to document…";
-    else if (pct < 70)  loadingText.textContent = "Loading pages…";
-    else if (pct < 95)  loadingText.textContent = "Almost ready…";
-    else                loadingText.textContent = "Rendering first page…";
-  }
+loadTask.onProgress = ({ loaded, total }) => {
+  if (!total) return;
+  const pct = Math.min(100, Math.round((loaded / total) * 100));
+  progressFill.style.width = pct + "%";
+  progressPct.textContent  = pct + "%";
+  if (pct < 25)      loadingLbl.textContent = "Connecting…";
+  else if (pct < 60) loadingLbl.textContent = "Loading pages…";
+  else if (pct < 90) loadingLbl.textContent = "Almost ready…";
+  else               loadingLbl.textContent = "Rendering…";
 };
 
-loadingTask.promise
+loadTask.promise
   .then(pdf => {
-    pdfDoc     = pdf;
-    totalPages = pdf.numPages;
+    pdfDoc      = pdf;
+    totalPages  = pdf.numPages;
     progressFill.style.width = "100%";
-    loadingText.textContent  = "Rendering first page…";
-
-    // Render page 1 FIRST, then hide overlay, then build thumbnails
+    loadingLbl.textContent   = "Rendering first page…";
     return renderPage(1, true);
   })
   .then(() => {
     hideOverlay();
-    createThumbnails();          // build thumbnails in background
-    preloadAdjacentPages(1);     // preload page 2 in background
+    buildThumbnails();
+    warmCache(2);   // preload next page
   })
   .catch(err => {
     console.error("PDF load error:", err);
     showError();
   });
 
-/* ===== RENDER PAGE ===== */
-function renderPage(num, firstLoad = false) {
-  if (!pdfDoc || rendering) return Promise.resolve();
-  rendering = true;
+/* ============================================================
+   CORE RENDER — crisp, DPR-aware, lossless cache
+   ============================================================ */
+function renderPage(num, isFirst = false) {
+  return new Promise((resolve, reject) => {
 
-  // Fade canvas during page switch (not on first load)
-  if (!firstLoad) canvas.classList.add("fading");
-
-  return new Promise((resolve) => {
-    // Use cache if available
-    if (pageCache[num]) {
-      const img = new Image();
-      img.onload = () => {
-        canvas.width  = img.width;
-        canvas.height = img.height;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-        canvas.classList.remove("fading");
-        updateUI(num);
-        rendering = false;
-        resolve();
-      };
-      img.src = pageCache[num];
+    // If already rendering, queue this page and resolve immediately
+    if (isRendering) {
+      pendingPage = num;
+      resolve();
       return;
     }
 
-    pdfDoc.getPage(num).then(page => {
-      // Responsive scale — fit to screen width
-      const maxWidth = Math.min(window.innerWidth * 0.95, 900);
-      const dpr      = window.devicePixelRatio || 1;
-      const unscaled = page.getViewport({ scale: 1 });
-      const scale    = (maxWidth / unscaled.width) * dpr;
-      const viewport = page.getViewport({ scale });
+    isRendering = true;
+    if (!isFirst) pageLoader.classList.add("show");
 
-      canvas.width  = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width  = (viewport.width / dpr) + "px";
-      canvas.style.height = (viewport.height / dpr) + "px";
+    const cacheKey = `${num}_${zoomLevel.toFixed(2)}`;
 
-      page.render({ canvasContext: ctx, viewport }).promise.then(() => {
-        pageCache[num] = canvas.toDataURL(); // cache rendered page
-        canvas.classList.remove("fading");
-        updateUI(num);
-        rendering = false;
-        resolve();
-      });
-    }).catch(() => { rendering = false; resolve(); });
-  });
-}
-
-/* ===== PRELOAD ADJACENT PAGES (background) ===== */
-function preloadAdjacentPages(current) {
-  [current + 1, current - 1].forEach(n => {
-    if (n >= 1 && n <= totalPages && !pageCache[n]) {
-      pdfDoc.getPage(n).then(page => {
-        const viewport   = page.getViewport({ scale: 0.8 });
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width  = viewport.width;
-        tempCanvas.height = viewport.height;
-        page.render({
-          canvasContext: tempCanvas.getContext("2d"),
-          viewport
-        }).promise.then(() => {
-          pageCache[n] = tempCanvas.toDataURL();
-        });
-      });
+    // ── Cache HIT: draw the stored ImageBitmap directly (lossless) ──
+    if (renderCache.has(cacheKey)) {
+      const { bitmap, cssW, cssH } = renderCache.get(cacheKey);
+      canvas.width  = bitmap.width;
+      canvas.height = bitmap.height;
+      canvas.style.width  = cssW + "px";
+      canvas.style.height = cssH + "px";
+      ctx.drawImage(bitmap, 0, 0);
+      finishRender(num);
+      resolve();
+      return;
     }
-  });
-}
 
-/* ===== THUMBNAILS (built lazily in background) ===== */
-function createThumbnails() {
-  for (let i = 1; i <= totalPages; i++) {
-    const thumbCanvas = document.createElement("canvas");
-    thumbsEl.appendChild(thumbCanvas);
+    // ── Cache MISS: render via PDF.js ──
+    pdfDoc.getPage(num).then(page => {
+      const dpr = window.devicePixelRatio || 1;
 
-    // Stagger thumbnail rendering so it doesn't block main thread
-    setTimeout(() => {
-      if (!pdfDoc) return;
-      pdfDoc.getPage(i).then(page => {
-        const viewport = page.getViewport({ scale: 0.15 });
-        thumbCanvas.width  = viewport.width;
-        thumbCanvas.height = viewport.height;
-        page.render({
-          canvasContext: thumbCanvas.getContext("2d"),
-          viewport
-        }).promise.then(() => {
-          thumbCanvas.onclick = () => {
-            pageNum = i;
-            renderPage(pageNum).then(() => preloadAdjacentPages(pageNum));
-          };
-          if (i === 1) thumbCanvas.classList.add("active");
-        });
+      // Fit to viewport width, then apply user zoom
+      const containerW = Math.min(window.innerWidth - 24, 836);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const fitScale    = containerW / baseViewport.width;
+      const finalScale  = fitScale * zoomLevel * dpr;   // multiply by DPR for crispness
+
+      const viewport = page.getViewport({ scale: finalScale });
+
+      // Set canvas PHYSICAL size = pixel-perfect
+      canvas.width  = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+
+      // Set canvas CSS size = display size (divided by DPR)
+      const cssW = Math.floor(viewport.width / dpr);
+      const cssH = Math.floor(viewport.height / dpr);
+      canvas.style.width  = cssW + "px";
+      canvas.style.height = cssH + "px";
+
+      const renderCtx = { canvasContext: ctx, viewport };
+
+      page.render(renderCtx).promise.then(() => {
+        // Store lossless ImageBitmap in cache
+        createImageBitmap(canvas).then(bitmap => {
+          renderCache.set(cacheKey, { bitmap, cssW, cssH });
+          // Limit cache size to avoid memory bloat
+          if (renderCache.size > 20) {
+            const firstKey = renderCache.keys().next().value;
+            renderCache.get(firstKey).bitmap.close();
+            renderCache.delete(firstKey);
+          }
+        }).catch(() => {}); // createImageBitmap optional — just skip if unsupported
+
+        finishRender(num);
+        resolve();
+      }).catch(err => {
+        isRendering = false;
+        pageLoader.classList.remove("show");
+        reject(err);
       });
-    }, i * 80); // stagger each thumbnail by 80ms
-  }
-}
 
-function highlightThumbnail(num) {
-  thumbsEl.querySelectorAll("canvas").forEach((c, i) => {
-    c.classList.toggle("active", i + 1 === num);
+    }).catch(err => {
+      isRendering = false;
+      pageLoader.classList.remove("show");
+      reject(err);
+    });
   });
 }
 
-/* ===== UI ===== */
-function updateUI(num) {
-  pageInfo.textContent = `Page ${num} of ${totalPages}`;
-  prevBtn.disabled = num <= 1;
-  nextBtn.disabled = num >= totalPages;
-  highlightThumbnail(num);
+function finishRender(num) {
+  currentPage = num;
+  isRendering = false;
+  pageLoader.classList.remove("show");
+  updateUI();
+
+  // If a page was queued while we were rendering, render it now
+  if (pendingPage !== null && pendingPage !== currentPage) {
+    const next = pendingPage;
+    pendingPage = null;
+    renderPage(next);
+  }
 }
 
-/* ===== CONTROLS ===== */
-prevBtn.onclick = () => {
-  if (pageNum > 1) {
-    pageNum--;
-    renderPage(pageNum).then(() => preloadAdjacentPages(pageNum));
+/* ============================================================
+   BACKGROUND CACHE WARM-UP
+   ============================================================ */
+function warmCache(pageNum) {
+  if (!pdfDoc || pageNum < 1 || pageNum > totalPages) return;
+  const cacheKey = `${pageNum}_${zoomLevel.toFixed(2)}`;
+  if (renderCache.has(cacheKey)) return;
+
+  // Render off-screen into a temp canvas (full quality)
+  pdfDoc.getPage(pageNum).then(page => {
+    const dpr         = window.devicePixelRatio || 1;
+    const containerW  = Math.min(window.innerWidth - 24, 836);
+    const baseViewport= page.getViewport({ scale: 1 });
+    const fitScale    = containerW / baseViewport.width;
+    const finalScale  = fitScale * zoomLevel * dpr;
+    const viewport    = page.getViewport({ scale: finalScale });
+
+    const tempCanvas  = document.createElement("canvas");
+    tempCanvas.width  = Math.floor(viewport.width);
+    tempCanvas.height = Math.floor(viewport.height);
+    const tempCtx     = tempCanvas.getContext("2d", { alpha: false });
+
+    page.render({ canvasContext: tempCtx, viewport }).promise.then(() => {
+      const cssW = Math.floor(viewport.width / dpr);
+      const cssH = Math.floor(viewport.height / dpr);
+      createImageBitmap(tempCanvas).then(bitmap => {
+        renderCache.set(cacheKey, { bitmap, cssW, cssH });
+      }).catch(() => {});
+    });
+  });
+}
+
+/* ============================================================
+   UI UPDATE
+   ============================================================ */
+function updateUI() {
+  pageInfo.textContent = `${currentPage} / ${totalPages}`;
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
+  zoomLabel.textContent = Math.round(zoomLevel * 100) + "%";
+  zoomOutBtn.disabled = zoomLevel <= MIN_ZOOM;
+  zoomInBtn.disabled  = zoomLevel >= MAX_ZOOM;
+  highlightThumb(currentPage);
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function goTo(num) {
+  if (!pdfDoc || num < 1 || num > totalPages) return;
+  renderPage(num).then(() => {
+    warmCache(num + 1);
+    warmCache(num - 1);
+  });
+}
+
+prevBtn.onclick = () => goTo(currentPage - 1);
+nextBtn.onclick = () => goTo(currentPage + 1);
+
+/* ============================================================
+   ZOOM
+   ============================================================ */
+function applyZoom(delta) {
+  const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM,
+    Math.round((zoomLevel + delta) * 10) / 10
+  ));
+  if (next === zoomLevel) return;
+  zoomLevel = next;
+  // Clear cache for the new zoom level (old zoom bitmaps are stale)
+  renderCache.clear();
+  renderPage(currentPage);
+}
+
+zoomInBtn.onclick  = () => applyZoom(+0.25);
+zoomOutBtn.onclick = () => applyZoom(-0.25);
+
+// Pinch-to-zoom
+let pinchDist = null;
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length === 2) {
+    pinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
   }
-};
+}, { passive: true });
 
-nextBtn.onclick = () => {
-  if (pageNum < totalPages) {
-    pageNum++;
-    renderPage(pageNum).then(() => preloadAdjacentPages(pageNum));
+canvas.addEventListener("touchend", e => { pinchDist = null; }, { passive: true });
+
+canvas.addEventListener("touchmove", e => {
+  if (e.touches.length !== 2 || !pinchDist) return;
+  const d = Math.hypot(
+    e.touches[0].clientX - e.touches[1].clientX,
+    e.touches[0].clientY - e.touches[1].clientY
+  );
+  if (Math.abs(d - pinchDist) > 30) {
+    applyZoom(d > pinchDist ? 0.25 : -0.25);
+    pinchDist = d;
   }
-};
+}, { passive: true });
 
-thumbLeft.onclick  = () => thumbsEl.scrollBy({ left: -200, behavior: "smooth" });
-thumbRight.onclick = () => thumbsEl.scrollBy({ left:  200, behavior: "smooth" });
-
-/* ===== KEYBOARD NAVIGATION ===== */
-document.addEventListener("keydown", e => {
-  if (e.key === "ArrowRight" || e.key === "ArrowDown") nextBtn.click();
-  if (e.key === "ArrowLeft"  || e.key === "ArrowUp")   prevBtn.click();
-  if ((e.ctrlKey || e.metaKey) && ["s","p"].includes(e.key.toLowerCase())) {
+// Mouse wheel zoom (Ctrl + scroll)
+window.addEventListener("wheel", e => {
+  if (e.ctrlKey || e.metaKey) {
     e.preventDefault();
+    applyZoom(e.deltaY < 0 ? 0.25 : -0.25);
   }
+}, { passive: false });
+
+/* ============================================================
+   SWIPE NAVIGATION (mobile)
+   ============================================================ */
+let touchStartX = null;
+document.addEventListener("touchstart", e => {
+  if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
+}, { passive: true });
+
+document.addEventListener("touchend", e => {
+  if (touchStartX === null || e.touches.length > 0) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  touchStartX = null;
+  if (Math.abs(dx) > 60) {
+    dx < 0 ? goTo(currentPage + 1) : goTo(currentPage - 1);
+  }
+}, { passive: true });
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "PageDown") goTo(currentPage + 1);
+  if (e.key === "ArrowLeft"  || e.key === "ArrowUp"   || e.key === "PageUp")   goTo(currentPage - 1);
+  if (e.key === "Home") goTo(1);
+  if (e.key === "End")  goTo(totalPages);
+  if (e.key === "+" || e.key === "=") applyZoom(0.25);
+  if (e.key === "-") applyZoom(-0.25);
+  if ((e.ctrlKey || e.metaKey) && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
 });
 
-/* ===== PROTECTION ===== */
+/* ============================================================
+   THUMBNAILS
+   ============================================================ */
+function buildThumbnails() {
+  thumbTrack.innerHTML = "";
+
+  for (let i = 1; i <= totalPages; i++) {
+    // Placeholder first
+    const wrapper = document.createElement("div");
+    wrapper.className = "thumb-item";
+    wrapper.dataset.page = i;
+
+    const ph = document.createElement("div");
+    ph.className = "thumb-placeholder";
+    wrapper.appendChild(ph);
+
+    const numLabel = document.createElement("div");
+    numLabel.className = "thumb-num";
+    numLabel.textContent = i;
+    wrapper.appendChild(numLabel);
+
+    wrapper.onclick = () => goTo(i);
+    thumbTrack.appendChild(wrapper);
+
+    // Staggered render — don't block the main thread
+    setTimeout(() => renderThumb(i, wrapper, ph), i * 60);
+  }
+
+  if (totalPages > 0) highlightThumb(1);
+}
+
+function renderThumb(pageNum, wrapper, placeholder) {
+  if (!pdfDoc) return;
+  pdfDoc.getPage(pageNum).then(page => {
+    const THUMB_W = 56;
+    const viewport = page.getViewport({ scale: 1 });
+    const scale = (THUMB_W * (window.devicePixelRatio || 1)) / viewport.width;
+    const vp    = page.getViewport({ scale });
+
+    const tc = document.createElement("canvas");
+    tc.width  = Math.floor(vp.width);
+    tc.height = Math.floor(vp.height);
+
+    page.render({ canvasContext: tc.getContext("2d", { alpha: false }), viewport: vp })
+      .promise.then(() => {
+        tc.style.width  = THUMB_W + "px";
+        tc.style.height = "auto";
+        placeholder.replaceWith(tc);
+      });
+  });
+}
+
+function highlightThumb(num) {
+  thumbTrack.querySelectorAll(".thumb-item").forEach(el => {
+    el.classList.toggle("active", parseInt(el.dataset.page) === num);
+  });
+  // Scroll active thumb into view
+  const active = thumbTrack.querySelector(".thumb-item.active");
+  if (active) active.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
+}
+
+thumbLeft.onclick  = () => thumbTrack.scrollBy({ left: -180, behavior: "smooth" });
+thumbRight.onclick = () => thumbTrack.scrollBy({ left:  180, behavior: "smooth" });
+
+/* ============================================================
+   PROTECTION
+   ============================================================ */
 canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+/* ============================================================
+   RESIZE — re-render if window resizes (orientation change etc.)
+   ============================================================ */
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    renderCache.clear();
+    renderPage(currentPage);
+  }, 250);
+});
 </script>
 
 </body>
