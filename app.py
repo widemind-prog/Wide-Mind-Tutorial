@@ -1,5 +1,5 @@
-from gevent import monkey
-monkey.patch_all()
+import eventlet
+eventlet.monkey_patch()
 from flask import (
     Flask, render_template, redirect, session,
     request, jsonify, send_file, send_from_directory, abort, g, current_app
@@ -157,7 +157,6 @@ def account_page():
 def service_worker():
     return send_from_directory("static/js", "service-worker.js",
                                mimetype="application/javascript")
-
 # =====================
 # REGISTER
 # =====================
@@ -188,20 +187,17 @@ def register():
     )
     user_id = c.lastrowid
 
-    # Level-based payment amount
-    student_level = int(level) if level else 400
-    amount = 1500000 if student_level == 300 else 2000000
-
     c.execute("SELECT id FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
     if not c.fetchone():
         c.execute(
             "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-            (user_id, amount, "unpaid")
+            (user_id, 1026375, "unpaid")
         )
 
     conn.commit()
     conn.close()
 
+    # Send welcome email
     try:
         send_welcome_email(email, name)
     except Exception as e:
@@ -209,9 +205,6 @@ def register():
 
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
-# =====================
-# COURSES PAGE (LEVEL FILTERED)
-# =====================
 @app.route("/courses")
 def courses_page():
     if "user_id" not in session:
@@ -221,46 +214,15 @@ def courses_page():
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("SELECT level FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    student_level = int(user["level"]) if user and user["level"] else 400
-
-    c.execute("""
-        SELECT id, course_code, course_title, description, level
-        FROM courses WHERE level=? ORDER BY id DESC
-    """, (student_level,))
-    my_courses = c.fetchall()
-
-    rerun_courses = []
-    if student_level > 300:
-        c.execute("""
-            SELECT id, course_code, course_title, description, level
-            FROM courses WHERE level < ? ORDER BY level DESC, id DESC
-        """, (student_level,))
-        lower_courses = c.fetchall()
-        for course in lower_courses:
-            c.execute("""
-                SELECT id FROM rerun_access WHERE user_id=? AND course_id=?
-            """, (session["user_id"], course["id"]))
-            has_access = c.fetchone() is not None
-            rerun_courses.append({
-                "id": course["id"],
-                "course_code": course["course_code"],
-                "course_title": course["course_title"],
-                "description": course["description"],
-                "level": course["level"],
-                "has_access": has_access
-            })
-
+    c.execute("SELECT id, course_code, course_title, description FROM courses ORDER BY id DESC")
+    courses = c.fetchall()
     conn.close()
-    return render_template("courses.html",
-                           my_courses=my_courses,
-                           rerun_courses=rerun_courses,
-                           student_level=student_level)
+
+    return render_template("courses.html", courses=courses)
+
 
 # =====================
-# COURSES FOR USERS API
+# COURSES FOR USERS
 # =====================
 @app.route("/api/courses/my")
 def my_courses():
@@ -269,15 +231,7 @@ def my_courses():
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("SELECT level FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    student_level = int(user["level"]) if user and user["level"] else 400
-
-    c.execute("""
-        SELECT id, course_code, course_title FROM courses
-        WHERE level=? ORDER BY id DESC
-    """, (student_level,))
+    c.execute("SELECT id, course_code, course_title FROM courses ORDER BY id DESC")
     courses = [
         {"id": r["id"], "code": r["course_code"], "title": r["course_title"]}
         for r in c.fetchall()
@@ -297,34 +251,19 @@ def course_page(course_id):
     conn = get_db()
     c = conn.cursor()
 
-    c.execute("SELECT level FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    student_level = int(user["level"]) if user and user["level"] else 400
+    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
+    payment = c.fetchone()
+
+    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
+        conn.close()
+        return "<h3>Payment required to access this course</h3>", 403
 
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
     if not course:
         conn.close()
         abort(404)
-
-    course_level = course["level"] if course["level"] else 400
-
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
-    payment = c.fetchone()
-    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
-    has_main_payment = payment and (payment["status"] == "paid" or admin_override == "paid")
-
-    if course_level < student_level:
-        c.execute("SELECT id FROM rerun_access WHERE user_id=? AND course_id=?",
-                  (session["user_id"], course_id))
-        has_rerun = c.fetchone() is not None
-        if not has_rerun:
-            conn.close()
-            return "<h3>Rerun payment required to access this course</h3>", 403
-    else:
-        if not has_main_payment:
-            conn.close()
-            return "<h3>Payment required to access this course</h3>", 403
 
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='audio'", (course_id,))
     audios = c.fetchall()
@@ -337,19 +276,34 @@ def course_page(course_id):
     return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
 
 # =====================
-# PDF VIEWER — accepts specific material_id
+# PDF VIEWER
 # =====================
-@app.route("/course/<int:course_id>/pdf/<int:material_id>")
-def pdf_viewer(course_id, material_id):
+@app.route("/course/<int:course_id>/pdf")
+def pdf_viewer(course_id):
     if "user_id" not in session:
         return redirect("/login-page")
 
     conn = get_db()
     c = conn.cursor()
 
-    c.execute("SELECT level FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    student_level = int(user["level"]) if user and user["level"] else 400
+    c.execute(
+        """
+        SELECT status, admin_override_status
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (session["user_id"],)
+    )
+    payment = c.fetchone()
+
+    if not payment or (
+        payment["status"] != "paid"
+        and payment["admin_override_status"] != "paid"
+    ):
+        conn.close()
+        return "<h3>Payment required to access PDF</h3>", 403
 
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
@@ -357,29 +311,16 @@ def pdf_viewer(course_id, material_id):
         conn.close()
         abort(404)
 
-    course_level = course["level"] if course["level"] else 400
-
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
-    payment = c.fetchone()
-    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
-    has_main_payment = payment and (payment["status"] == "paid" or admin_override == "paid")
-
-    if course_level < student_level:
-        c.execute("SELECT id FROM rerun_access WHERE user_id=? AND course_id=?",
-                  (session["user_id"], course_id))
-        if not c.fetchone():
-            conn.close()
-            return "<h3>Rerun payment required to access this PDF</h3>", 403
-    else:
-        if not has_main_payment:
-            conn.close()
-            return "<h3>Payment required to access PDF</h3>", 403
-
-    # Fetch the SPECIFIC material by id
-    c.execute("""
-        SELECT id, filename FROM materials
-        WHERE id=? AND course_id=? AND file_type='pdf'
-    """, (material_id, course_id))
+    c.execute(
+        """
+        SELECT id, filename
+        FROM materials
+        WHERE course_id=? AND file_type='pdf'
+        ORDER BY id ASC
+        LIMIT 1
+        """,
+        (course_id,)
+    )
     material = c.fetchone()
     conn.close()
 
@@ -401,6 +342,7 @@ def pdf_viewer(course_id, material_id):
 # SUPABASE URL HELPER
 # =====================
 def get_material_url(filename):
+    # Check hardcoded legacy files first (old uploads with renamed filenames)
     LEGACY_FILES = {
         "Psy405_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy405_WideMindNotes%20(1).pdf",
         "Psy429_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy429_WideMindNotes%20(1).pdf",
@@ -409,12 +351,15 @@ def get_material_url(filename):
     }
     if filename in LEGACY_FILES:
         return LEGACY_FILES[filename]
+    # For all new files, construct URL directly from filename
     from urllib.parse import quote
     return f"https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/{quote(filename)}"
 
 # =====================
 # STREAM FILES
 # =====================
+
+# --- AUDIO STREAM ---
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
     if "user_id" not in session:
@@ -422,29 +367,18 @@ def stream_audio(material_id):
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("SELECT level FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    student_level = int(user["level"]) if user and user["level"] else 400
-
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
     admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
-    has_main_payment = payment and (payment["status"] == "paid" or admin_override == "paid")
 
-    if not has_main_payment:
-        # Check rerun access
-        c.execute("""
-            SELECT ra.id FROM rerun_access ra
-            JOIN materials m ON m.course_id = ra.course_id
-            WHERE ra.user_id=? AND m.id=?
-        """, (session["user_id"], material_id))
-        if not c.fetchone():
-            conn.close()
-            abort(403)
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
+        conn.close()
+        abort(403)
 
     c.execute("""
-        SELECT m.filename FROM materials m
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
         WHERE m.id=? AND m.file_type='audio'
     """, (material_id,))
     material = c.fetchone()
@@ -459,6 +393,7 @@ def stream_audio(material_id):
 
     return redirect(url)
 
+# --- PDF STREAM ---
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     if "user_id" not in session:
@@ -466,24 +401,21 @@ def stream_pdf(material_id):
 
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
+    c.execute(
+        "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        (session["user_id"],)
+    )
     payment = c.fetchone()
     admin_override = payment["admin_override_status"] if payment else None
-    has_main_payment = payment and (payment["status"] == "paid" or admin_override == "paid")
 
-    if not has_main_payment:
-        c.execute("""
-            SELECT ra.id FROM rerun_access ra
-            JOIN materials m ON m.course_id = ra.course_id
-            WHERE ra.user_id=? AND m.id=?
-        """, (session["user_id"], material_id))
-        if not c.fetchone():
-            conn.close()
-            abort(403)
+    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
+        conn.close()
+        abort(403)
 
     c.execute("""
-        SELECT m.filename FROM materials m
+        SELECT m.filename
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
         WHERE m.id=? AND m.file_type='pdf'
     """, (material_id,))
     material = c.fetchone()
@@ -526,7 +458,8 @@ def mark_notification_read(notif_id):
     conn = get_db()
     c = conn.cursor()
     c.execute("""
-        UPDATE notifications SET is_read=1
+        UPDATE notifications
+        SET is_read=1
         WHERE id=? AND user_id=?
     """, (notif_id, session["user_id"]))
     conn.commit()
