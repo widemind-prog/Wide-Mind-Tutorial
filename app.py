@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()
 from flask import (
     Flask, render_template, redirect, session,
     request, jsonify, send_file, send_from_directory, abort, g, current_app
