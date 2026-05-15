@@ -278,8 +278,8 @@ def course_page(course_id):
 # =====================
 # PDF VIEWER
 # =====================
-@app.route("/course/<int:course_id>/pdf")
-def pdf_viewer(course_id):
+@app.route("/course/<int:course_id>/pdf/<int:material_id>")
+def pdf_viewer(course_id, material_id):
     if "user_id" not in session:
         return redirect("/login-page")
 
@@ -315,11 +315,9 @@ def pdf_viewer(course_id):
         """
         SELECT id, filename
         FROM materials
-        WHERE course_id=? AND file_type='pdf'
-        ORDER BY id ASC
-        LIMIT 1
+        WHERE id=? AND course_id=? AND file_type='pdf'
         """,
-        (course_id,)
+        (material_id, course_id)
     )
     material = c.fetchone()
     conn.close()
@@ -337,7 +335,6 @@ def pdf_viewer(course_id):
         material_id=material["id"],
         supabase_url=supabase_url
     )
-
 # =====================
 # SUPABASE URL HELPER
 # =====================
