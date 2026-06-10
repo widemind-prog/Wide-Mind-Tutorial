@@ -1,199 +1,126 @@
-from flask import Blueprint, jsonify, session, redirect, request
-import requests
-import os
+from flask import Blueprint, jsonify, session, request, redirect, current_app
 from backend.db import get_db, is_admin
-from backend.email_service import send_payment_success_email
+import requests as req
+import os
 
 payment_bp = Blueprint("payment_bp", __name__)
 
-# ------------------------------------
-# INIT PAYSTACK PAYMENT
-# ------------------------------------
+LEVEL_AMOUNTS = {
+    "300": 1026375,
+    "400": 1533042,
+    "500": 2041025,
+}
+
+def get_amount_for_level(level):
+    return LEVEL_AMOUNTS.get(str(level), 1026375)
+
 @payment_bp.route("/api/payment/init", methods=["POST"])
 def init_payment():
     if "user_id" not in session:
-        return jsonify({"status": False, "message": "Not authenticated"}), 401
-
-    user_id = session["user_id"]
-
-    if is_admin(user_id):
-        return jsonify({"status": True, "message": "Admin does not require payment"}), 200
-
-    amount = 1026375
+        return jsonify({"error": "Not authenticated"}), 401
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT email FROM users WHERE id=?", (user_id,))
+    c.execute("SELECT email, level FROM users WHERE id=?", (session["user_id"],))
     user = c.fetchone()
+    if not user:
+        conn.close()
+        return jsonify({"error": "User not found"}), 404
+
+    # Always use the correct amount for the user's current level
+    amount = get_amount_for_level(user["level"])
+
+    # Update payment record amount to match current level (in case of migration)
+    c.execute(
+        "UPDATE payments SET amount=? WHERE user_id=? AND status != 'paid' AND (admin_override_status IS NULL OR admin_override_status != 'paid')",
+        (amount, session["user_id"])
+    )
+    conn.commit()
     conn.close()
 
-    if not user:
-        return jsonify({"status": False, "message": "User not found"}), 404
-
+    secret_key = current_app.config["PAYSTACK_SECRET_KEY"]
     headers = {
-        "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
+        "Authorization": f"Bearer {secret_key}",
         "Content-Type": "application/json"
     }
-
     payload = {
         "email": user["email"],
         "amount": amount,
-        "callback_url": "https://www.widemindtutorial.com/payment/callback"
+        "callback_url": "https://www.widemindtutorial.com/api/payment/callback"
     }
 
-    try:
-        resp = requests.post(
-            "https://api.paystack.co/transaction/initialize",
-            json=payload,
-            headers=headers,
-            timeout=10
-        )
-        resp.raise_for_status()
-        resp_json = resp.json()
-    except requests.RequestException:
-        return jsonify({"status": False, "message": "Failed to initialize payment"}), 500
+    response = req.post("https://api.paystack.co/transaction/initialize", json=payload, headers=headers)
+    data = response.json()
+    return jsonify(data)
 
-    if resp_json.get("status"):
-        return jsonify({"status": True, "data": resp_json["data"]})
-
-    return jsonify({"status": False, "message": "Payment initialization failed"}), 500
-
-
-# ------------------------------------
-# PAYSTACK CALLBACK (REDIRECT FLOW)
-# ------------------------------------
-@payment_bp.route("/payment/callback", methods=["GET"])
+@payment_bp.route("/api/payment/callback")
 def payment_callback():
     reference = request.args.get("reference")
     if not reference:
         return redirect("/account?payment=failed")
 
-    headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
+    secret_key = current_app.config.get("PAYSTACK_SECRET_KEY")
+    headers = {"Authorization": f"Bearer {secret_key}"}
+    response = req.get(f"https://api.paystack.co/transaction/verify/{reference}", headers=headers)
+    data = response.json()
 
-    try:
-        resp = requests.get(
-            f"https://api.paystack.co/transaction/verify/{reference}",
-            headers=headers,
-            timeout=10
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.RequestException:
-        return redirect("/account?payment=failed")
+    if data.get("data", {}).get("status") == "success":
+        customer_email = data["data"]["customer"]["email"]
+        amount_paid = data["data"]["amount"]
 
-    if not (data.get("status") and data["data"]["status"] == "success"):
-        return redirect("/account?payment=failed")
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT id, level FROM users WHERE email=?", (customer_email,))
+        user = c.fetchone()
 
-    email = data["data"]["customer"]["email"]
-    amount = data["data"]["amount"]
-
-    if amount != 1026375:
-        return redirect("/account?payment=invalid_amount")
-
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("SELECT id, name FROM users WHERE email=?", (email,))
-    user = c.fetchone()
-    if not user:
+        if user:
+            expected_amount = get_amount_for_level(user["level"])
+            if amount_paid >= expected_amount:
+                c.execute("""
+                    UPDATE payments
+                    SET status='paid', reference=?, paid_at=datetime('now')
+                    WHERE user_id=?
+                """, (reference, user["id"]))
+                conn.commit()
         conn.close()
-        return redirect("/account?payment=user_not_found")
 
-    user_id = user["id"]
-    user_name = user["name"]
+    return redirect("/account?payment=callback")
 
-    c.execute("""
-        SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
-    """, (user_id,))
-    payment = c.fetchone()
-
-    already_paid = False
-
-    if not payment:
-        c.execute("""
-            INSERT INTO payments (user_id, amount, status, reference, paid_at)
-            VALUES (?, ?, 'paid', ?, datetime('now'))
-        """, (user_id, amount, reference))
-
-    elif payment.get("admin_override_status") == "unpaid":
-        conn.close()
-        return redirect("/account?payment=blocked")
-
-    elif payment.get("admin_override_status") == "paid":
-        already_paid = True
-
-    elif payment["status"] == "unpaid":
-        c.execute("""
-            UPDATE payments SET status='paid', reference=?, paid_at=datetime('now') WHERE id=?
-        """, (reference, payment["id"]))
-    else:
-        already_paid = True
-
-    conn.commit()
-    conn.close()
-
-    # Send payment success email
-    if not already_paid:
-        try:
-            send_payment_success_email(email, user_name)
-        except Exception as e:
-            print("Payment email failed:", e)
-
-    return redirect("/account?payment=success")
-
-
-# ------------------------------------
-# PAYMENT STATUS
-# ------------------------------------
-@payment_bp.route("/api/payment/status", methods=["GET"])
+@payment_bp.route("/api/payment/status")
 def payment_status():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
-    user_id = session["user_id"]
-
-    if is_admin(user_id):
-        return jsonify({
-            "status": "admin", "amount": 0, "reference": None, "paid_at": None
-        }), 200
-
     conn = get_db()
     c = conn.cursor()
-
     c.execute("""
-        SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
-    """, (user_id,))
+        SELECT status, admin_override_status, amount
+        FROM payments
+        WHERE user_id=?
+        ORDER BY id DESC LIMIT 1
+    """, (session["user_id"],))
     payment = c.fetchone()
 
-    payment_data = dict(payment) if payment else {
-        "id": None, "user_id": user_id, "amount": 1026375,
-        "status": "unpaid", "reference": None,
-        "paid_at": None, "admin_override_status": None
-    }
-
-    if payment_data.get("admin_override_status") in ("paid", "unpaid"):
-        payment_data["status"] = payment_data["admin_override_status"]
-        conn.close()
-        return jsonify(payment_data), 200
-
-    if payment_data.get("reference") and payment_data["status"] == "unpaid":
-        headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
-        try:
-            resp = requests.get(
-                f"https://api.paystack.co/transaction/verify/{payment_data['reference']}",
-                headers=headers, timeout=10
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if data.get("status") and data["data"]["status"] == "success":
-                c.execute("""
-                    UPDATE payments SET status='paid', paid_at=datetime('now') WHERE id=?
-                """, (payment_data["id"],))
-                conn.commit()
-                payment_data["status"] = "paid"
-                payment_data["paid_at"] = data["data"].get("paid_at")
-        except requests.RequestException:
-            pass
-
+    # Also get user's level to return correct expected amount
+    c.execute("SELECT level FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
     conn.close()
-    return jsonify(payment_data), 200
+
+    if not payment:
+        return jsonify({"status": "unpaid", "amount": 0})
+
+    override = payment["admin_override_status"]
+    status = payment["status"]
+    level = user["level"] if user else "300"
+    amount = get_amount_for_level(level)
+
+    if override == "paid" or status == "paid":
+        display_status = "admin" if override == "paid" else "paid"
+    else:
+        display_status = "unpaid"
+
+    return jsonify({
+        "status": display_status,
+        "amount": amount,
+        "amount_display": f"₦{amount / 100:,.2f}"
+    })
