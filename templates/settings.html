@@ -15,7 +15,10 @@
         <div>
             <div style="font-weight:700; font-size:16px; color:#3c2f1f;">{{ user.name }}</div>
             <div style="font-size:13px; color:#777;">{{ user.email }}</div>
-            <div style="font-size:12px; color:#aaa; margin-top:2px;">Level {{ user.level or "N/A" }}</div>
+            <div style="font-size:12px; color:#aaa; margin-top:2px;">
+                {{ user.level or "N/A" }} Level &nbsp;·&nbsp;
+                {% if user.semester == 1 %}1st Semester{% elif user.semester == 2 %}2nd Semester{% else %}N/A{% endif %}
+            </div>
         </div>
     </div>
     <div style="margin-top:12px; padding-top:12px; border-top:1px solid #e6d8b5; font-size:13px; color:#555;">
@@ -27,28 +30,24 @@
 
 <!-- MENU -->
 <div style="background:#fff; border:1px solid #e6d8b5; border-radius:12px; overflow:hidden; margin-bottom:16px;">
-
     <a href="/about" style="display:flex; align-items:center; gap:14px; padding:16px 18px;
                              text-decoration:none; color:#3c2f1f; border-bottom:1px solid #f0e6d2;">
         <i class="fa-solid fa-circle-info" style="color:#8B7500; width:20px; text-align:center;"></i>
         <span style="font-size:15px;">About</span>
         <i class="fa-solid fa-chevron-right" style="color:#ccc; margin-left:auto; font-size:12px;"></i>
     </a>
-
     <a href="/privacy" style="display:flex; align-items:center; gap:14px; padding:16px 18px;
                                text-decoration:none; color:#3c2f1f; border-bottom:1px solid #f0e6d2;">
         <i class="fa-solid fa-shield-halved" style="color:#8B7500; width:20px; text-align:center;"></i>
         <span style="font-size:15px;">Privacy Policy</span>
         <i class="fa-solid fa-chevron-right" style="color:#ccc; margin-left:auto; font-size:12px;"></i>
     </a>
-
     <a href="/forgot-password-page" style="display:flex; align-items:center; gap:14px; padding:16px 18px;
                                             text-decoration:none; color:#3c2f1f; border-bottom:1px solid #f0e6d2;">
         <i class="fa-solid fa-key" style="color:#8B7500; width:20px; text-align:center;"></i>
         <span style="font-size:15px;">Change Password</span>
         <i class="fa-solid fa-chevron-right" style="color:#ccc; margin-left:auto; font-size:12px;"></i>
     </a>
-
     <a href="#" onclick="toggleTheme(); return false;"
        style="display:flex; align-items:center; gap:14px; padding:16px 18px;
               text-decoration:none; color:#3c2f1f; border-bottom:1px solid #f0e6d2;">
@@ -56,14 +55,12 @@
         <span style="font-size:15px;">Toggle Dark Mode</span>
         <i class="fa-solid fa-chevron-right" style="color:#ccc; margin-left:auto; font-size:12px;"></i>
     </a>
-
     <a href="/contact" style="display:flex; align-items:center; gap:14px; padding:16px 18px;
                                text-decoration:none; color:#3c2f1f;">
         <i class="fa-solid fa-envelope" style="color:#8B7500; width:20px; text-align:center;"></i>
         <span style="font-size:15px;">Contact Us</span>
         <i class="fa-solid fa-chevron-right" style="color:#ccc; margin-left:auto; font-size:12px;"></i>
     </a>
-
 </div>
 
 <!-- LOGOUT -->
@@ -74,9 +71,7 @@
     <i class="fa-solid fa-right-from-bracket" style="margin-right:8px;"></i>Logout
 </a>
 
-<!-- FOOTER — only on settings page -->
 <div class="settings-footer">
     &copy; {{ now().year }} Wide Mind Tutorials
 </div>
-
 {% endblock %}
