@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Admin – Bulk Migration{% endblock %}
+
+{% block content %}
+<section class="admin-dashboard">
+    <h1 class="dashboard-title">Bulk Level Migration</h1>
+    <p class="dashboard-subtitle">Move groups of students to a new level or semester at once.</p>
+
+    <!-- QUICK MIGRATION: 400L S2 → 500L S2 -->
+    <div class="admin-box" style="border-left: 4px solid #d4af37;">
+        <h3 style="margin-bottom:8px;">Quick Migration</h3>
+        <p style="margin-bottom:16px; font-size:14px; color:#555;">
+            Promote all <strong>400 Level · 2nd Semester</strong> students to
+            <strong>500 Level · 2nd Semester</strong>.
+            <br><br>
+            <strong>{{ count_400_s2 }} student(s)</strong> will be affected.
+        </p>
+        <form method="POST" action="/admin/users/migrate"
+              onsubmit="return confirm('This will update {{ count_400_s2 }} user(s). Continue?');">
+            <input type="hidden" name="action" value="promote_400_to_500">
+            <button type="submit"
+                    style="background:linear-gradient(135deg,#8B7500,#d4af37); color:#fff; width:auto;"
+                    {% if count_400_s2 == 0 %}disabled{% endif %}>
+                Promote 400L → 500L (2nd Semester)
+            </button>
+        </form>
+        {% if count_400_s2 == 0 %}
+        <p style="margin-top:10px; font-size:13px; color:#aaa;">No 400L 2nd Semester students found.</p>
+        {% endif %}
+    </div>
+
+    <!-- CUSTOM MIGRATION -->
+    <div class="admin-box" style="margin-top:20px;">
+        <h3 style="margin-bottom:8px;">Custom Migration</h3>
+        <p style="font-size:14px; color:#555; margin-bottom:16px;">
+            Move any group of students from one level/semester to another.
+        </p>
+        <form method="POST" action="/admin/users/migrate"
+              onsubmit="return confirm('This will update all matching students. Continue?');">
+            <input type="hidden" name="action" value="custom">
+
+            <label style="font-size:13px; font-weight:600; margin-bottom:4px; display:block;">From</label>
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+                <select name="from_level" required style="flex:1;">
+                    <option value="" disabled selected>Level</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
+                <select name="from_semester" required style="flex:1;">
+                    <option value="" disabled selected>Semester</option>
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+            </div>
+
+            <label style="font-size:13px; font-weight:600; margin-bottom:4px; display:block;">To</label>
+            <div style="display:flex; gap:10px; margin-bottom:16px;">
+                <select name="to_level" required style="flex:1;">
+                    <option value="" disabled selected>Level</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
+                <select name="to_semester" required style="flex:1;">
+                    <option value="" disabled selected>Semester</option>
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+            </div>
+
+            <button type="submit" style="width:auto;">Run Custom Migration</button>
+        </form>
+    </div>
+
+    <a href="/admin/users" class="back-login-btn" style="margin-top:20px; display:inline-block;">← Back to Users</a>
+</section>
+
+<div id="admin-toast" class="toast"></div>
+<script src="/static/js/admin.js"></script>
+{% endblock %}
