@@ -21,14 +21,23 @@
         </a>
     </div>
 
-    <!-- MIGRATION TOOL LINK -->
-    <div style="margin-bottom:20px; text-align:center;">
+    <!-- ACTION BUTTONS -->
+    <div style="margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
         <a href="/admin/users/migrate"
            style="display:inline-block; background:linear-gradient(135deg,#8B7500,#d4af37);
-                  color:#fff; padding:12px 24px; border-radius:10px; font-weight:600;
+                  color:#fff; padding:12px 20px; border-radius:10px; font-weight:600;
                   font-size:14px; text-decoration:none;">
             <i class="fa-solid fa-arrows-rotate" style="margin-right:8px;"></i>Bulk Level Migration
         </a>
+
+        <form method="POST" action="/admin/users/mark-all-unpaid"
+              onsubmit="return confirm('This will mark ALL students as unpaid. Are you sure?');">
+            <button type="submit"
+                    style="background:#a00000; color:#fff; padding:12px 20px; border-radius:10px;
+                           font-weight:600; font-size:14px; border:none; cursor:pointer;">
+                <i class="fa-solid fa-xmark" style="margin-right:8px;"></i>Mark All Unpaid
+            </button>
+        </form>
     </div>
 
     <!-- USER LIST -->
@@ -40,48 +49,54 @@
                 <strong>{{ user.name }}</strong><br>
                 <small>{{ user.email }}</small><br>
                 <small>
-                    Level: {{ user.level or "N/A" }} &nbsp;·&nbsp;
-                    Semester: {{ '1st' if user.semester == 1 else ('2nd' if user.semester == 2 else 'N/A') }}
+                    Level: <strong>{{ user.level or "N/A" }}</strong> &nbsp;·&nbsp;
+                    Semester: <strong>{{ '1st' if user.semester == 1 else ('2nd' if user.semester == 2 else 'N/A') }}</strong>
                 </small><br>
                 <small>Role: {{ user.role }}</small><br>
 
+                {% if user.role != "admin" %}
+                <small style="color:#777;">
+                    Fee: ₦{{ "{:,.2f}".format((user.amount or 0) / 100) }}
+                </small><br>
+                {% endif %}
+
                 {% if user.is_suspended %}
-                    <p style="color:red;">Status: Suspended</p>
+                    <p style="color:red; margin:4px 0;">Status: Suspended</p>
                 {% else %}
-                    <p style="color:green;">Status: Active</p>
+                    <p style="color:green; margin:4px 0;">Status: Active</p>
                 {% endif %}
 
                 {% if user.role != "admin" %}
-                    <p>Payment:
-                        {% if user.payment_status == "paid" %}
-                            <strong style="color:green;">Paid</strong>
-                        {% else %}
-                            <strong style="color:red;">Unpaid</strong>
-                        {% endif %}
-                    </p>
+                <p style="margin:4px 0;">Payment:
+                    {% if user.payment_status == "paid" %}
+                        <strong style="color:green;">Paid</strong>
+                    {% else %}
+                        <strong style="color:red;">Unpaid</strong>
+                    {% endif %}
+                </p>
                 {% endif %}
 
                 <!-- ACTION BUTTONS -->
-                <form method="POST" class="user-actions">
+                <div class="user-actions" style="margin-top:8px;">
                     <button type="button" class="btn-suspend"
                             data-url="/admin/users/suspend/{{ user.id }}">
                         {% if user.is_suspended %}Unsuspend{% else %}Suspend{% endif %}
                     </button>
 
                     {% if user.role != "admin" %}
-                        <button type="button" class="btn-payment"
-                                data-url="/admin/users/mark-paid/{{ user.id }}"
-                                style="background:#0a7c2f;">
-                            {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
-                        </button>
+                    <button type="button" class="btn-payment"
+                            data-url="/admin/users/mark-paid/{{ user.id }}"
+                            style="background:#0a7c2f;">
+                        {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
+                    </button>
                     {% endif %}
 
                     <button type="button" class="btn-delete"
                             data-url="/admin/users/delete/{{ user.id }}"
                             style="background:#a00000;">
-                        Delete Permanently
+                        Delete
                     </button>
-                </form>
+                </div>
 
                 <!-- EDIT LEVEL/SEMESTER INLINE -->
                 {% if user.role != "admin" %}
@@ -108,7 +123,7 @@
             {% endfor %}
         </div>
         {% else %}
-            <p>No users found.</p>
+        <p>No users found.</p>
         {% endif %}
     </div>
 
