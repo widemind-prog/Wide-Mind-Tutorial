@@ -19,7 +19,7 @@ def me():
     conn = get_db()
     c = conn.cursor()
     c.execute(
-        "SELECT name, department, level, email, role FROM users WHERE id=?",
+        "SELECT name, department, level, semester, email, role FROM users WHERE id=?",
         (session["user_id"],)
     )
     user = c.fetchone()
@@ -33,6 +33,7 @@ def me():
         "email": user["email"],
         "department": user["department"],
         "level": user["level"],
+        "semester": user["semester"],
         "role": user["role"]
     })
 
@@ -90,17 +91,14 @@ def forgot_password():
     c.execute("SELECT id, name FROM users WHERE email=?", (email,))
     user = c.fetchone()
 
-    # Always return success to prevent email enumeration
     if not user:
         conn.close()
         return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
-    # Generate secure token
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     expires_at = (datetime.utcnow() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
 
-    # Store token in db (create table if needed)
     c.execute("""
         CREATE TABLE IF NOT EXISTS password_resets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,7 +108,7 @@ def forgot_password():
             used INTEGER DEFAULT 0
         )
     """)
-    # Clear old tokens for this user
+
     c.execute("DELETE FROM password_resets WHERE user_id=?", (user["id"],))
     c.execute(
         "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
@@ -120,7 +118,6 @@ def forgot_password():
     conn.close()
 
     reset_link = f"https://www.widemindtutorial.com/reset-password?token={raw_token}"
-
     body = f"""
         <p>Hi <strong>{user['name']}</strong>,</p>
         <p>We received a request to reset your password for your Wide Mind Tutorial account.</p>
@@ -128,26 +125,19 @@ def forgot_password():
         <div style="text-align:center;margin:28px 0;">
             <a href="{reset_link}"
                style="background:linear-gradient(135deg,#8B7500,#d4af37);
-                      color:#fff;
-                      padding:14px 32px;
-                      border-radius:8px;
-                      text-decoration:none;
-                      font-weight:bold;
-                      font-size:15px;">
+                      color:#fff;padding:14px 32px;border-radius:8px;
+                      text-decoration:none;font-weight:bold;font-size:15px;">
                 Reset My Password
             </a>
         </div>
         <p style="font-size:13px;color:#777;">
             If you didn't request this, you can safely ignore this email.
-            Your password will not change.
         </p>
         <p style="font-size:12px;color:#999;word-break:break-all;">
             Or copy this link: {reset_link}
         </p>
     """
-
     send_email(email, "Reset Your Password — Wide Mind Tutorial", body)
-
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
 # ---------------------
@@ -166,9 +156,9 @@ def reset_password():
         return jsonify({"error": "Password must be at least 6 characters"}), 400
 
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-
     conn = get_db()
     c = conn.cursor()
+
     c.execute("""
         SELECT user_id, expires_at, used
         FROM password_resets
@@ -189,7 +179,6 @@ def reset_password():
         conn.close()
         return jsonify({"error": "Reset link has expired. Please request a new one."}), 400
 
-    # Update password and mark token used
     hashed = generate_password_hash(new_password)
     c.execute("UPDATE users SET password=? WHERE id=?", (hashed, record["user_id"]))
     c.execute("UPDATE password_resets SET used=1 WHERE token_hash=?", (token_hash,))
