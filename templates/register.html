@@ -1,27 +1,40 @@
 {% extends "base.html" %}
 {% block title %}Register | Wide Mind Tutorials{% endblock %}
-{% block content %}
 
-<section class="register-section">  
-    <h2>Create Account</h2>  
-    <form id="register-form">  
-        <input type="text" name="name" placeholder="Full Name" required>  
-        <input type="email" name="email" placeholder="Email" required>  
-        <select name="department" required>  
-            <option value="Psychology">Psychology</option>  
-        </select>  
-        <select name="level" required>  
-            <option value="400">400</option>  
-        </select>  
-        <div class="password-wrapper" style="position: relative;">
-    <div class="password-wrapper">
-    <input type="password" name="password" id="password" placeholder="Enter your password" required>
-    <i class="fa-regular fa-eye toggle-password-icon"></i>
-</div>
-        <button type="submit" class="btn">Register</button>  
-    </form>  
-    <p id="register-msg"></p>  
-    <p>Already registered? <a href="/login-page">Back to Login</a></p>  
-</section>  
-<script src="/static/js/register.js"></script>  
+{% block content %}
+<section class="register-section">
+    <h2>Create Account</h2>
+    <form id="register-form">
+        <input type="text" name="name" placeholder="Full Name" required>
+        <input type="email" name="email" placeholder="Email" required>
+
+        <select name="department" required>
+            <option value="Psychology">Psychology</option>
+        </select>
+
+        <select name="level" required>
+            <option value="" disabled selected>Select Level</option>
+            <option value="300">300 Level</option>
+            <option value="400">400 Level</option>
+            <option value="500">500 Level</option>
+        </select>
+
+        <select name="semester" required>
+            <option value="" disabled selected>Select Semester</option>
+            <option value="1">1st Semester</option>
+            <option value="2">2nd Semester</option>
+        </select>
+
+        <div class="password-wrapper">
+            <input type="password" name="password" id="password" placeholder="Enter your password" required>
+            <i class="fa-regular fa-eye toggle-password-icon"></i>
+        </div>
+
+        <button type="submit" class="btn">Register</button>
+    </form>
+    <p id="register-msg"></p>
+    <p>Already registered? <a href="/login-page">Back to Login</a></p>
+</section>
+
+<script src="/static/js/register.js"></script>
 {% endblock %}
