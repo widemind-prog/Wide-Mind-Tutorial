@@ -1,14 +1,14 @@
 document.addEventListener("DOMContentLoaded", async () => {
     const paymentStatusEl = document.getElementById("payment-status");
     const payBtn = document.getElementById("pay-btn");
+    const payAmountEl = document.getElementById("pay-amount");
     const coursesList = document.getElementById("courses");
     const logoutBtn = document.getElementById("logout-btn");
     const toastEl = document.getElementById("toast");
     let isPaid = false;
 
     function getQueryParam(param) {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get(param);
+        return new URLSearchParams(window.location.search).get(param);
     }
 
     function showToast(message) {
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!coursesList) return;
         try {
             const res = await fetch("/api/courses/my", { credentials: "same-origin" });
-            if (!res.ok) throw new Error("Failed to fetch courses");
+            if (!res.ok) throw new Error("Failed");
             const data = await res.json();
             coursesList.innerHTML = "";
 
@@ -64,12 +64,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                     paymentStatusEl.textContent = "UNPAID ❌";
                     paymentStatusEl.style.color = "red";
                     payBtn.style.display = "inline-block";
-                    return;
                 }
-                throw new Error("Failed to fetch payment status");
+                return;
             }
 
             const payment = await res.json();
+
+            // Update the pay button label with the correct amount for this level
+            if (payAmountEl && payment.amount_display) {
+                payAmountEl.textContent = payment.amount_display;
+            }
 
             if (payment.status === "paid" || payment.status === "admin") {
                 if (!isPaid) {
@@ -97,15 +101,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function loadUserInfo() {
         try {
-            const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
-            if (!meRes.ok) return;
-            const user = await meRes.json();
-
+            const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+            if (!res.ok) return;
+            const user = await res.json();
             const usernameEl = document.getElementById("username");
             const departmentEl = document.getElementById("department");
             const levelEl = document.getElementById("level");
             const semesterEl = document.getElementById("semester");
-
             if (usernameEl) usernameEl.textContent = user.name;
             if (departmentEl) departmentEl.textContent = user.department;
             if (levelEl) levelEl.textContent = user.level ? user.level + " Level" : "N/A";
@@ -120,22 +122,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             payBtn.disabled = true;
             payBtn.textContent = "Initializing...";
             try {
-                const res = await fetch("/api/payment/init", {
-                    method: "POST",
-                    credentials: "same-origin",
-                });
+                const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
                 const data = await res.json();
                 if (data.status && data.data && data.data.authorization_url) {
                     window.location.href = data.data.authorization_url;
                 } else {
                     showToast(data.message || "Payment initialization failed ❌");
                     payBtn.disabled = false;
-                    payBtn.textContent = "Pay Now 💳";
+                    payBtn.innerHTML = 'Pay Now <span id="pay-amount"></span> 💳';
                 }
             } catch (err) {
                 showToast("Payment initiation failed ❌");
                 payBtn.disabled = false;
-                payBtn.textContent = "Pay Now 💳";
+                payBtn.innerHTML = 'Pay Now <span id="pay-amount"></span> 💳';
             }
         });
     }
