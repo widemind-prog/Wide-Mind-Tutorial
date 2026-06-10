@@ -4,22 +4,18 @@
 {% block content %}
 <section class="account-section">
 
-    <!-- USER INFO -->
     <div class="account-box">
         <img src="/static/images/avatar.png" alt="Profile Avatar" class="profile-avatar">
         <h2 id="username">Loading...</h2>
         <p>Department: <span id="department">Loading...</span></p>
         <p>Level: <span id="level">Loading...</span></p>
         <p>Semester: <span id="semester">Loading...</span></p>
-        <p>
-            Payment Status: <strong id="payment-status">Checking...</strong>
-        </p>
-        <button type="button" id="pay-btn" class="btn-pay-now">
-            Pay Now 💳
+        <p>Payment Status: <strong id="payment-status">Checking...</strong></p>
+        <button type="button" id="pay-btn" class="btn-pay-now" style="display:none;">
+            Pay Now <span id="pay-amount"></span> 💳
         </button>
     </div>
 
-    <!-- COURSES -->
     <div class="courses-box">
         <div id="toast" class="toast"></div>
         <h3>Your Courses</h3>
