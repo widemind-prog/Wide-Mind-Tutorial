@@ -1,5 +1,6 @@
 from gevent import monkey
 monkey.patch_all()
+
 from flask import (
     Flask, render_template, redirect, session,
     request, jsonify, send_file, send_from_directory, abort, g, current_app
@@ -16,7 +17,6 @@ from backend.email_service import send_welcome_email
 from backend.admin import admin_bp
 from backend.payment import payment_bp
 from backend.webhook import webhook_bp
-
 import requests
 import hashlib
 import hmac
@@ -157,6 +157,7 @@ def account_page():
 def service_worker():
     return send_from_directory("static/js", "service-worker.js",
                                mimetype="application/javascript")
+
 # =====================
 # REGISTER
 # =====================
@@ -168,9 +169,18 @@ def register():
     password = data.get("password")
     department = data.get("department")
     level = data.get("level")
+    semester = data.get("semester")
 
-    if not all([name, email, password, department, level]):
+    if not all([name, email, password, department, level, semester]):
         return jsonify({"error": "All fields are required"}), 400
+
+    # Validate semester value
+    try:
+        semester = int(semester)
+        if semester not in (1, 2):
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid semester value"}), 400
 
     hashed_pw = generate_password_hash(password)
     conn = get_db()
@@ -182,8 +192,8 @@ def register():
         return jsonify({"error": "Email already exists"}), 400
 
     c.execute(
-        "INSERT INTO users (name, email, password, department, level) VALUES (?, ?, ?, ?, ?)",
-        (name, email, hashed_pw, department, level)
+        "INSERT INTO users (name, email, password, department, level, semester) VALUES (?, ?, ?, ?, ?, ?)",
+        (name, email, hashed_pw, department, level, semester)
     )
     user_id = c.lastrowid
 
@@ -197,7 +207,6 @@ def register():
     conn.commit()
     conn.close()
 
-    # Send welcome email
     try:
         send_welcome_email(email, name)
     except Exception as e:
@@ -205,6 +214,9 @@ def register():
 
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
+# =====================
+# COURSES FOR USERS
+# =====================
 @app.route("/courses")
 def courses_page():
     if "user_id" not in session:
@@ -214,16 +226,24 @@ def courses_page():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, course_code, course_title, description FROM courses ORDER BY id DESC")
+
+    # Get user's level and semester
+    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+
+    if not user:
+        conn.close()
+        return redirect("/login-page")
+
+    c.execute(
+        "SELECT id, course_code, course_title, description FROM courses WHERE level=? AND semester=? ORDER BY id DESC",
+        (user["level"], user["semester"])
+    )
     courses = c.fetchall()
     conn.close()
 
     return render_template("courses.html", courses=courses)
 
-
-# =====================
-# COURSES FOR USERS
-# =====================
 @app.route("/api/courses/my")
 def my_courses():
     if "user_id" not in session:
@@ -231,13 +251,23 @@ def my_courses():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, course_code, course_title FROM courses ORDER BY id DESC")
+
+    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+
+    if not user:
+        conn.close()
+        return jsonify({"error": "User not found"}), 404
+
+    c.execute(
+        "SELECT id, course_code, course_title FROM courses WHERE level=? AND semester=? ORDER BY id DESC",
+        (user["level"], user["semester"])
+    )
     courses = [
         {"id": r["id"], "code": r["course_code"], "title": r["course_title"]}
         for r in c.fetchall()
     ]
     conn.close()
-
     return jsonify({"courses": courses})
 
 # =====================
@@ -251,19 +281,31 @@ def course_page(course_id):
     conn = get_db()
     c = conn.cursor()
 
+    # Check payment
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
-
     admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
+
     if not payment or (payment["status"] != "paid" and admin_override != "paid"):
         conn.close()
         return "<h3>Payment required to access this course</h3>", 403
 
+    # Verify course belongs to user's level/semester
+    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
+
     if not course:
         conn.close()
         abort(404)
+
+    # Block access if course level/semester doesn't match user's
+    if not is_admin(session["user_id"]):
+        if course["level"] != user["level"] or course["semester"] != user["semester"]:
+            conn.close()
+            return "<h3>This course is not available for your current level and semester</h3>", 403
 
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='audio'", (course_id,))
     audios = c.fetchall()
@@ -272,7 +314,6 @@ def course_page(course_id):
     pdfs = c.fetchall()
 
     conn.close()
-
     return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
 
 # =====================
@@ -307,6 +348,7 @@ def pdf_viewer(course_id, material_id):
 
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
+
     if not course:
         conn.close()
         abort(404)
@@ -335,11 +377,11 @@ def pdf_viewer(course_id, material_id):
         material_id=material["id"],
         supabase_url=supabase_url
     )
+
 # =====================
 # SUPABASE URL HELPER
 # =====================
 def get_material_url(filename):
-    # Check hardcoded legacy files first (old uploads with renamed filenames)
     LEGACY_FILES = {
         "Psy405_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy405_WideMindNotes%20(1).pdf",
         "Psy429_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy429_WideMindNotes%20(1).pdf",
@@ -348,15 +390,12 @@ def get_material_url(filename):
     }
     if filename in LEGACY_FILES:
         return LEGACY_FILES[filename]
-    # For all new files, construct URL directly from filename
     from urllib.parse import quote
     return f"https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/{quote(filename)}"
 
 # =====================
 # STREAM FILES
 # =====================
-
-# --- AUDIO STREAM ---
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
     if "user_id" not in session:
@@ -364,6 +403,7 @@ def stream_audio(material_id):
 
     conn = get_db()
     c = conn.cursor()
+
     c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
     payment = c.fetchone()
     admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
@@ -390,7 +430,6 @@ def stream_audio(material_id):
 
     return redirect(url)
 
-# --- PDF STREAM ---
 @app.route("/stream/pdf/<int:material_id>")
 def stream_pdf(material_id):
     if "user_id" not in session:
@@ -398,6 +437,7 @@ def stream_pdf(material_id):
 
     conn = get_db()
     c = conn.cursor()
+
     c.execute(
         "SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1",
         (session["user_id"],)
@@ -444,7 +484,6 @@ def get_notifications():
     """, (session["user_id"],))
     rows = c.fetchall()
     conn.close()
-
     return jsonify([dict(r) for r in rows])
 
 @app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
@@ -461,7 +500,6 @@ def mark_notification_read(notif_id):
     """, (notif_id, session["user_id"]))
     conn.commit()
     conn.close()
-
     return jsonify({"success": True})
 
 # =====================
@@ -500,7 +538,6 @@ def submit_contact():
     """, (name, email, subject, message))
     conn.commit()
     conn.close()
-
     return jsonify({"message": "Message sent successfully"}), 201
 
 # =====================
@@ -510,10 +547,12 @@ def submit_contact():
 def settings():
     if "user_id" not in session:
         return redirect("/login-page")
+
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, name, email, level FROM users WHERE id=?", (session["user_id"],))
+    c.execute("SELECT id, name, email, level, semester FROM users WHERE id=?", (session["user_id"],))
     user = c.fetchone()
+
     c.execute("""
         SELECT COALESCE(p.admin_override_status, p.status) AS status
         FROM payments p WHERE p.user_id=?
@@ -521,6 +560,7 @@ def settings():
     """, (session["user_id"],))
     payment = c.fetchone()
     conn.close()
+
     payment_status = payment["status"] if payment else "unpaid"
     return render_template("settings.html", user=user, payment_status=payment_status)
 
