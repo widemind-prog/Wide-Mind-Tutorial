@@ -5,20 +5,21 @@ from werkzeug.security import generate_password_hash
 # -----------------------
 # TURSO HTTP CONFIG
 # -----------------------
+
 TURSO_URL = os.environ.get("TURSO_URL", "")
 TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
 
-# Convert libsql:// URL to https:// for HTTP API
 HTTP_URL = TURSO_URL.replace("libsql://", "https://") + "/v2/pipeline"
+
 HEADERS = {
     "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
     "Content-Type": "application/json"
 }
 
+# -----------------------
+# ROW
+# -----------------------
 
-# -----------------------
-# ROW — access by name like sqlite3.Row
-# -----------------------
 class Row:
     def __init__(self, columns, values):
         self._columns = columns
@@ -42,10 +43,10 @@ class Row:
     def __repr__(self):
         return str(self._dict)
 
-
 # -----------------------
 # CURSOR
 # -----------------------
+
 class TursoCursor:
     def __init__(self, conn):
         self._conn = conn
@@ -55,7 +56,6 @@ class TursoCursor:
         self._columns = []
 
     def execute(self, sql, params=()):
-        # Convert ? placeholders and Python params to Turso format
         args = [{"type": _turso_type(p), "value": _turso_value(p)} for p in params]
         result = self._conn._execute(sql, args)
         cols = result.get("cols", [])
@@ -75,10 +75,10 @@ class TursoCursor:
     def fetchall(self):
         return self._rows
 
-
 # -----------------------
 # CONNECTION
 # -----------------------
+
 class TursoConnection:
     def __init__(self):
         self._statements = []
@@ -118,10 +118,10 @@ class TursoConnection:
     def close(self):
         pass
 
-
 # -----------------------
 # TYPE HELPERS
 # -----------------------
+
 def _turso_type(value):
     if value is None:
         return "null"
@@ -151,31 +151,35 @@ def _parse_value(v):
         return val
     return v
 
-
 # -----------------------
 # GET DB CONNECTION
 # -----------------------
+
 def get_db():
     return TursoConnection()
-
 
 # -----------------------
 # INITIALIZE DATABASE
 # -----------------------
+
 def init_db():
     conn = get_db()
 
+    # Core tables
     conn.execute("""CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL, department TEXT, level TEXT,
+        semester INTEGER DEFAULT 2,
         role TEXT DEFAULT 'student', is_suspended INTEGER DEFAULT 0,
         push_enabled INTEGER DEFAULT 0)""")
 
     conn.execute("""CREATE TABLE IF NOT EXISTS courses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        course_code TEXT UNIQUE NOT NULL,
-        course_title TEXT NOT NULL, description TEXT)""")
+        course_code TEXT NOT NULL,
+        course_title TEXT NOT NULL, description TEXT,
+        level TEXT NOT NULL DEFAULT '400',
+        semester INTEGER NOT NULL DEFAULT 2)""")
 
     conn.execute("""CREATE TABLE IF NOT EXISTS materials (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,12 +218,25 @@ def init_db():
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id))""")
 
-    print("Database initialized successfully.")
+    # Migrate existing tables — add new columns if they don't exist yet
+    # (Turso ignores "duplicate column" errors so we catch and continue)
+    migrations = [
+        "ALTER TABLE users ADD COLUMN semester INTEGER DEFAULT 2",
+        "ALTER TABLE courses ADD COLUMN level TEXT NOT NULL DEFAULT '400'",
+        "ALTER TABLE courses ADD COLUMN semester INTEGER NOT NULL DEFAULT 2",
+    ]
+    for sql in migrations:
+        try:
+            conn.execute(sql)
+        except Exception:
+            pass  # Column already exists — safe to ignore
 
+    print("Database initialized successfully.")
 
 # -----------------------
 # CHECK IF ADMIN
 # -----------------------
+
 def is_admin(user_id):
     conn = get_db()
     result = conn.execute(
@@ -227,10 +244,8 @@ def is_admin(user_id):
     ).fetchone()
     return result and result["role"] == "admin"
 
-
 def hash_password(password):
     return generate_password_hash(password)
-
 
 if __name__ == "__main__":
     init_db()
