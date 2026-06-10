@@ -1,89 +1,78 @@
 {% extends "base.html" %}
-
 {% block title %}Admin – Courses{% endblock %}
 
 {% block content %}
-
 <section class="admin-dashboard">
-
     <h1 class="dashboard-title">Course Management</h1>
-    <p class="dashboard-subtitle">
-        Add, edit, or delete courses.
-    </p>
+    <p class="dashboard-subtitle">Add, edit, or delete courses by level and semester.</p>
 
     <div class="courses-list">
 
         <!-- ADD COURSE BOX -->
         <div class="course-box add-course-box">
             <h3>Add New Course</h3>
-
             <form method="POST" action="/admin/courses/add">
-                <input
-                    type="text"
-                    name="course_code"
-                    placeholder="Course Code"
-                    required>
 
-                <input
-                    type="text"
-                    name="course_title"
-                    placeholder="Course Title"
-                    required>
+                <select name="level" required>
+                    <option value="" disabled selected>Select Level</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
 
-                <textarea
-                    name="description"
-                    rows="3"
-                    placeholder="Course Description (optional)"></textarea>
-                    
+                <select name="semester" required>
+                    <option value="" disabled selected>Select Semester</option>
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+
+                <input type="text" name="course_code" placeholder="Course Code (e.g. PSY501)" required>
+                <input type="text" name="course_title" placeholder="Course Title" required>
+                <textarea name="description" rows="3" placeholder="Course Description (optional)"></textarea>
                 <button type="submit">Add Course</button>
             </form>
         </div>
 
         {% if courses %}
-        <div class="course-grid">
+        <!-- GROUP BY LEVEL + SEMESTER -->
+        {% set ns = namespace(current_group='') %}
+        {% for course in courses %}
+            {% set group = course.level ~ 'L — ' ~ ('1st' if course.semester == 1 else '2nd') ~ ' Semester' %}
+            {% if group != ns.current_group %}
+                {% set ns.current_group = group %}
+                <h3 style="margin:24px 0 10px; font-size:14px; text-transform:uppercase;
+                            letter-spacing:1px; color:#8B7500; border-bottom:2px solid #e6d8b5; padding-bottom:6px;">
+                    {{ group }}
+                </h3>
+            {% endif %}
 
-            {% for course in courses %}
             <div class="course-box">
-
                 <h3>{{ course.course_title }}</h3>
                 <p><strong>Code:</strong> {{ course.course_code }}</p>
+                <p><strong>Level:</strong> {{ course.level }}L &nbsp;·&nbsp;
+                   <strong>Semester:</strong> {{ '1st' if course.semester == 1 else '2nd' }}</p>
                 <p>{{ course.description or "No description" }}</p>
-
                 <div class="course-actions">
-
-                    <!-- EDIT -->
-                    <a href="/admin/courses/edit/{{ course.id }}" class="btn">
-                        Edit
-                    </a>
-
-                    <!-- DELETE -->
+                    <a href="/admin/courses/edit/{{ course.id }}" class="btn">Edit</a>
                     <form method="POST" action="/admin/courses/delete/{{ course.id }}">
-                        <button
-                            type="submit"
-                            class="btn danger"
-                            onclick="return confirm('Delete this course permanently?')">
+                        <button type="submit" class="btn danger"
+                                onclick="return confirm('Delete this course permanently?')">
                             Delete
                         </button>
                     </form>
-
                 </div>
-
             </div>
-            {% endfor %}
+        {% endfor %}
 
-        </div>
         {% else %}
-            <p>No courses available.</p>
+            <p>No courses available yet.</p>
         {% endif %}
 
     </div>
 
     <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
-
 </section>
-<!-- Toast for admin actions -->
+
 <div id="admin-toast" class="toast"></div>
-
 <script src="/static/js/admin.js"></script>
-
 {% endblock %}
