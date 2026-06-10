@@ -2,59 +2,72 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
+<div class="admin-dashboard">
+    <h1 class="dashboard-title">Admin Dashboard</h1>
+    <p class="dashboard-subtitle">Manage users and courses</p>
 
-<div class="admin-dashboard">  
-    <h1 class="dashboard-title">Admin Dashboard</h1>  
-    <p class="dashboard-subtitle">Manage users and courses</p>  <div class="dashboard-boxes">  
+    <div class="dashboard-boxes">
 
-    <!-- USERS -->  
-    <a href="/admin/users" class="dashboard-box">  
-        <h3>Users</h3>  
-        <ul>  
-            <li>View all users</li>  
-            <li>Suspend users</li>  
-            <li>Delete users</li>  
-            <li>Manage payments</li>  
-        </ul>  
-    </a>  
+        <!-- USERS -->
+        <a href="/admin/users" class="dashboard-box">
+            <h3>Users</h3>
+            <ul>
+                <li>View all users</li>
+                <li>Suspend users</li>
+                <li>Delete users</li>
+                <li>Manage payments</li>
+                <li>Edit level &amp; semester</li>
+            </ul>
+        </a>
 
-    <!-- COURSES -->  
-    <a href="/admin/courses" class="dashboard-box">  
-        <h3>Courses</h3>  
-        <ul>  
-            <li>Add/Edit/Delete courses</li>  
-            <li>Upload course materials</li>  
-        </ul>  
-    </a>  
+        <!-- COURSES -->
+        <a href="/admin/courses" class="dashboard-box">
+            <h3>Courses</h3>
+            <ul>
+                <li>Add/Edit/Delete courses</li>
+                <li>Upload course materials</li>
+                <li>Organised by level &amp; semester</li>
+            </ul>
+        </a>
 
-    <!-- NOTIF --> 
-    <a href="/admin/notifications" class="dashboard-box">
-    <h3>Notifications</h3>
-    <ul>
-        <li>Send notification to users</li>
-        <li>Send critical alerts</li>
-        <li>Push + Email system</li>
-    </ul>
-</a>
+        <!-- MIGRATION -->
+        <a href="/admin/users/migrate" class="dashboard-box">
+            <h3>Level Migration</h3>
+            <ul>
+                <li>Promote 400L → 500L in bulk</li>
+                <li>Custom level/semester migration</li>
+                <li>Move groups of students at once</li>
+            </ul>
+        </a>
 
-    <!-- MESSAGES -->  
-    <a href="/admin/messages" class="dashboard-box">  
-       <h3>Messages{% if unread and unread > 0 %}<span class="badge">{{ unread }}</span>{% endif %}  
-       </h3>  
-       <ul>  
-           <li>View contact messages</li>  
-           <li>Reply to users</li>  
-           <li>Mark messages as read</li>  
-       </ul>  
-    </a>
+        <!-- NOTIFICATIONS -->
+        <a href="/admin/notifications" class="dashboard-box">
+            <h3>Notifications</h3>
+            <ul>
+                <li>Send notification to users</li>
+                <li>Send critical alerts</li>
+                <li>Push + Email system</li>
+            </ul>
+        </a>
 
-<button id="logout-btn" class="btn">Logout</button>
+        <!-- MESSAGES -->
+        <a href="/admin/messages" class="dashboard-box">
+            <h3>Messages{% if unread and unread > 0 %}<span class="badge">{{ unread }}</span>{% endif %}</h3>
+            <ul>
+                <li>View contact messages</li>
+                <li>Reply to users</li>
+                <li>Mark messages as read</li>
+            </ul>
+        </a>
 
-<script>  
-document.getElementById("logout-btn").addEventListener("click", function() {  
-    window.location.href = "/logout";  
-});  
-</script>  </div>
+    </div>
 
-</div>  
-{% endblock %}  
+    <button id="logout-btn" class="btn">Logout</button>
+</div>
+
+<script>
+document.getElementById("logout-btn").addEventListener("click", function() {
+    window.location.href = "/logout";
+});
+</script>
+{% endblock %}
