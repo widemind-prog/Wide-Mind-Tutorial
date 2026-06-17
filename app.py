@@ -3,23 +3,18 @@ monkey.patch_all()
 
 from flask import (
     Flask, render_template, redirect, session,
-    request, jsonify, send_file, send_from_directory, abort, g, current_app
+    request, jsonify, send_from_directory, abort
 )
-from flask_cors import CORS
 import os
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
 from extensions import socketio
-from state import online_users
 from backend.db import init_db, get_db, is_admin
 from backend.auth import auth_bp
 from backend.email_service import send_welcome_email
 from backend.admin import admin_bp
-from backend.payment import payment_bp
+from backend.payment import payment_bp, get_amount_for_level, get_rerun_amount
 from backend.webhook import webhook_bp
-import requests
-import hashlib
-import hmac
 
 app = Flask(__name__)
 
@@ -43,25 +38,12 @@ app.config.update(
 )
 
 socketio.init_app(app)
-
 app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
 
 init_db()
-
-# =====================
-# PAYMENT AMOUNT HELPER
-# =====================
-LEVEL_AMOUNTS = {
-    "300": 1026375,
-    "400": 1533042,
-    "500": 2041025,
-}
-
-def get_amount_for_level(level):
-    return LEVEL_AMOUNTS.get(str(level), 1026375)
 
 @app.context_processor
 def inject_config():
@@ -93,6 +75,9 @@ def block_suspended_users():
             session.clear()
             return redirect("/login-page")
 
+# =====================
+# PAGES
+# =====================
 @app.route("/")
 def home():
     if "user_id" in session:
@@ -162,10 +147,8 @@ def register():
 
     if not all([name, email, password, department, level, semester]):
         return jsonify({"error": "All fields are required"}), 400
-
     if str(level) not in ("300", "400", "500"):
         return jsonify({"error": "Invalid level"}), 400
-
     try:
         semester = int(semester)
         if semester not in (1, 2):
@@ -176,7 +159,6 @@ def register():
     hashed_pw = generate_password_hash(password)
     conn = get_db()
     c = conn.cursor()
-
     c.execute("SELECT id FROM users WHERE email=?", (email,))
     if c.fetchone():
         conn.close()
@@ -187,14 +169,11 @@ def register():
         (name, email, hashed_pw, department, level, semester)
     )
     user_id = c.lastrowid
-
-    # Amount based on level — always unpaid on registration
     amount = get_amount_for_level(level)
     c.execute(
-        "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, ?)",
-        (user_id, amount, "unpaid")
+        "INSERT INTO payments (user_id, amount, status) VALUES (?, ?, 'unpaid')",
+        (user_id, amount)
     )
-
     conn.commit()
     conn.close()
 
@@ -206,8 +185,68 @@ def register():
     return jsonify({"message": "Registration successful", "redirect": "/login-page"}), 201
 
 # =====================
-# COURSES
+# COURSES — main + rerun combined
 # =====================
+def get_user_accessible_courses(user_id):
+    """
+    Returns dict with:
+      - main_courses: courses matching user's level + semester (if main paid)
+      - rerun_courses: {level: [courses]} for each rerun pass the user holds
+      - main_paid: bool
+    """
+    conn = get_db()
+    c = conn.cursor()
+
+    c.execute("SELECT level, semester FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    if not user:
+        conn.close()
+        return None
+
+    # Check main payment
+    c.execute("""
+        SELECT status, admin_override_status FROM payments
+        WHERE user_id=? ORDER BY id DESC LIMIT 1
+    """, (user_id,))
+    payment = c.fetchone()
+    main_paid = payment and (
+        payment["status"] == "paid" or payment["admin_override_status"] == "paid"
+    )
+
+    main_courses = []
+    if main_paid:
+        c.execute("""
+            SELECT id, course_code, course_title, description, level, semester
+            FROM courses WHERE level=? AND semester=? ORDER BY id DESC
+        """, (user["level"], user["semester"]))
+        main_courses = c.fetchall()
+
+    # Check rerun passes
+    c.execute("""
+        SELECT rerun_level, status, admin_override_status FROM rerun_passes
+        WHERE user_id=?
+    """, (user_id,))
+    passes = c.fetchall()
+
+    rerun_courses = {}
+    for p in passes:
+        effective = p["admin_override_status"] if p["admin_override_status"] else p["status"]
+        if effective == "paid":
+            lvl = p["rerun_level"]
+            c.execute("""
+                SELECT id, course_code, course_title, description, level, semester
+                FROM courses WHERE level=? AND semester=? ORDER BY id DESC
+            """, (lvl, user["semester"]))
+            rerun_courses[lvl] = c.fetchall()
+
+    conn.close()
+    return {
+        "user": user,
+        "main_paid": main_paid,
+        "main_courses": main_courses,
+        "rerun_courses": rerun_courses
+    }
+
 @app.route("/courses")
 def courses_page():
     if "user_id" not in session:
@@ -215,42 +254,42 @@ def courses_page():
     if is_admin(session["user_id"]):
         return redirect("/admin")
 
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    if not user:
-        conn.close()
+    data = get_user_accessible_courses(session["user_id"])
+    if not data:
         return redirect("/login-page")
 
-    c.execute(
-        "SELECT id, course_code, course_title, description FROM courses WHERE level=? AND semester=? ORDER BY id DESC",
-        (user["level"], user["semester"])
-    )
-    courses = c.fetchall()
-    conn.close()
-    return render_template("courses.html", courses=courses)
+    return render_template("courses.html",
+                           user=data["user"],
+                           main_paid=data["main_paid"],
+                           main_courses=data["main_courses"],
+                           rerun_courses=data["rerun_courses"])
 
 @app.route("/api/courses/my")
 def my_courses():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
-    user = c.fetchone()
-    if not user:
-        conn.close()
+    data = get_user_accessible_courses(session["user_id"])
+    if not data:
         return jsonify({"error": "User not found"}), 404
 
-    c.execute(
-        "SELECT id, course_code, course_title FROM courses WHERE level=? AND semester=? ORDER BY id DESC",
-        (user["level"], user["semester"])
-    )
-    courses = [{"id": r["id"], "code": r["course_code"], "title": r["course_title"]} for r in c.fetchall()]
-    conn.close()
-    return jsonify({"courses": courses})
+    main = [
+        {"id": r["id"], "code": r["course_code"], "title": r["course_title"], "type": "main"}
+        for r in data["main_courses"]
+    ]
+    rerun = []
+    for lvl, courses in data["rerun_courses"].items():
+        for r in courses:
+            rerun.append({
+                "id": r["id"], "code": r["course_code"],
+                "title": r["course_title"], "type": "rerun", "rerun_level": lvl
+            })
+
+    return jsonify({
+        "main_paid": data["main_paid"],
+        "courses": main,
+        "rerun_courses": rerun
+    })
 
 # =====================
 # COURSE PAGE
@@ -262,34 +301,58 @@ def course_page(course_id):
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
-    payment = c.fetchone()
-    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
-
-    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
-        conn.close()
-        return "<h3>Payment required to access this course</h3>", 403
 
     c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
     user = c.fetchone()
+    if not user:
+        conn.close()
+        return redirect("/login-page")
+
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
-
     if not course:
         conn.close()
         abort(404)
 
-    if not is_admin(session["user_id"]):
-        if course["level"] != user["level"] or course["semester"] != user["semester"]:
-            conn.close()
-            return "<h3>This course is not available for your current level and semester</h3>", 403
+    # Check access
+    has_access = False
+
+    # Admin always has access
+    if is_admin(session["user_id"]):
+        has_access = True
+    else:
+        # Main course access
+        if course["level"] == user["level"] and course["semester"] == user["semester"]:
+            c.execute("""
+                SELECT status, admin_override_status FROM payments
+                WHERE user_id=? ORDER BY id DESC LIMIT 1
+            """, (session["user_id"],))
+            payment = c.fetchone()
+            if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
+                has_access = True
+
+        # Rerun access
+        if not has_access and course["semester"] == user["semester"] and int(course["level"]) < int(user["level"]):
+            c.execute("""
+                SELECT status, admin_override_status FROM rerun_passes
+                WHERE user_id=? AND rerun_level=? ORDER BY id DESC LIMIT 1
+            """, (session["user_id"], course["level"]))
+            rpass = c.fetchone()
+            if rpass and (rpass["status"] == "paid" or rpass["admin_override_status"] == "paid"):
+                has_access = True
+
+    if not has_access:
+        conn.close()
+        return "<h3>Access denied. Please complete payment to view this course.</h3>", 403
 
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='audio'", (course_id,))
     audios = c.fetchall()
     c.execute("SELECT * FROM materials WHERE course_id=? AND file_type='pdf'", (course_id,))
     pdfs = c.fetchall()
     conn.close()
-    return render_template("course.html", course=course, audios=audios, pdfs=pdfs)
+
+    is_rerun = (course["level"] != user["level"])
+    return render_template("course.html", course=course, audios=audios, pdfs=pdfs, is_rerun=is_rerun)
 
 # =====================
 # PDF VIEWER
@@ -301,12 +364,9 @@ def pdf_viewer(course_id, material_id):
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
-    payment = c.fetchone()
 
-    if not payment or (payment["status"] != "paid" and payment["admin_override_status"] != "paid"):
-        conn.close()
-        return "<h3>Payment required to access PDF</h3>", 403
+    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
 
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
@@ -314,7 +374,34 @@ def pdf_viewer(course_id, material_id):
         conn.close()
         abort(404)
 
-    c.execute("SELECT id, filename FROM materials WHERE id=? AND course_id=? AND file_type='pdf'", (material_id, course_id))
+    has_access = False
+    if is_admin(session["user_id"]):
+        has_access = True
+    else:
+        if course["level"] == user["level"] and course["semester"] == user["semester"]:
+            c.execute("""
+                SELECT status, admin_override_status FROM payments
+                WHERE user_id=? ORDER BY id DESC LIMIT 1
+            """, (session["user_id"],))
+            payment = c.fetchone()
+            if payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid"):
+                has_access = True
+
+        if not has_access and course["semester"] == user["semester"] and int(course["level"]) < int(user["level"]):
+            c.execute("""
+                SELECT status, admin_override_status FROM rerun_passes
+                WHERE user_id=? AND rerun_level=? ORDER BY id DESC LIMIT 1
+            """, (session["user_id"], course["level"]))
+            rpass = c.fetchone()
+            if rpass and (rpass["status"] == "paid" or rpass["admin_override_status"] == "paid"):
+                has_access = True
+
+    if not has_access:
+        conn.close()
+        return "<h3>Access denied. Please complete payment.</h3>", 403
+
+    c.execute("SELECT id, filename FROM materials WHERE id=? AND course_id=? AND file_type='pdf'",
+              (material_id, course_id))
     material = c.fetchone()
     conn.close()
 
@@ -325,8 +412,12 @@ def pdf_viewer(course_id, material_id):
     if not supabase_url:
         abort(404)
 
-    return render_template("pdf_viewer.html", course_id=course_id, material_id=material["id"], supabase_url=supabase_url)
+    return render_template("pdf_viewer.html", course_id=course_id,
+                           material_id=material["id"], supabase_url=supabase_url)
 
+# =====================
+# SUPABASE URL HELPER
+# =====================
 def get_material_url(filename):
     LEGACY_FILES = {
         "Psy405_WideMindNotes.pdf": "https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/Psy405_WideMindNotes%20(1).pdf",
@@ -339,23 +430,50 @@ def get_material_url(filename):
     from urllib.parse import quote
     return f"https://rtdshzvyzuzqndddxnkv.supabase.co/storage/v1/object/public/materials/{quote(filename)}"
 
+# =====================
+# STREAM
+# =====================
+def check_course_access(user_id, course_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT level, semester FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    c.execute("SELECT level, semester FROM courses WHERE id=?", (course_id,))
+    course = c.fetchone()
+    if not user or not course:
+        conn.close()
+        return False
+
+    has_access = False
+    if course["level"] == user["level"] and course["semester"] == user["semester"]:
+        c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
+        p = c.fetchone()
+        if p and (p["status"] == "paid" or p["admin_override_status"] == "paid"):
+            has_access = True
+
+    if not has_access and course["semester"] == user["semester"] and int(course["level"]) < int(user["level"]):
+        c.execute("SELECT status, admin_override_status FROM rerun_passes WHERE user_id=? AND rerun_level=? ORDER BY id DESC LIMIT 1",
+                  (user_id, course["level"]))
+        rp = c.fetchone()
+        if rp and (rp["status"] == "paid" or rp["admin_override_status"] == "paid"):
+            has_access = True
+
+    conn.close()
+    return has_access
+
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
     if "user_id" not in session:
         abort(403)
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
-    payment = c.fetchone()
-    admin_override = payment["admin_override_status"] if payment and payment["admin_override_status"] else None
-    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
-        conn.close()
-        abort(403)
-    c.execute("SELECT m.filename FROM materials m JOIN courses c ON m.course_id = c.id WHERE m.id=? AND m.file_type='audio'", (material_id,))
+    c.execute("SELECT course_id, filename FROM materials WHERE id=? AND file_type='audio'", (material_id,))
     material = c.fetchone()
     conn.close()
     if not material:
         abort(404)
+    if not is_admin(session["user_id"]) and not check_course_access(session["user_id"], material["course_id"]):
+        abort(403)
     url = get_material_url(material["filename"])
     if not url:
         abort(404)
@@ -367,22 +485,21 @@ def stream_pdf(material_id):
         abort(403)
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (session["user_id"],))
-    payment = c.fetchone()
-    admin_override = payment["admin_override_status"] if payment else None
-    if not payment or (payment["status"] != "paid" and admin_override != "paid"):
-        conn.close()
-        abort(403)
-    c.execute("SELECT m.filename FROM materials m JOIN courses c ON m.course_id = c.id WHERE m.id=? AND m.file_type='pdf'", (material_id,))
+    c.execute("SELECT course_id, filename FROM materials WHERE id=? AND file_type='pdf'", (material_id,))
     material = c.fetchone()
     conn.close()
     if not material:
         abort(404)
+    if not is_admin(session["user_id"]) and not check_course_access(session["user_id"], material["course_id"]):
+        abort(403)
     url = get_material_url(material["filename"])
     if not url:
         abort(404)
     return redirect(url)
 
+# =====================
+# NOTIFICATIONS
+# =====================
 @app.route("/api/notifications")
 def get_notifications():
     if "user_id" not in session:
@@ -425,7 +542,8 @@ def submit_contact():
         return jsonify({"error": "All required fields must be filled"}), 400
     conn = get_db()
     c = conn.cursor()
-    c.execute("INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)", (name, email, subject, message))
+    c.execute("INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)",
+              (name, email, subject, message))
     conn.commit()
     conn.close()
     return jsonify({"message": "Message sent successfully"}), 201
@@ -438,7 +556,8 @@ def settings():
     c = conn.cursor()
     c.execute("SELECT id, name, email, level, semester FROM users WHERE id=?", (session["user_id"],))
     user = c.fetchone()
-    c.execute("SELECT COALESCE(p.admin_override_status, p.status) AS status FROM payments p WHERE p.user_id=? ORDER BY p.id DESC LIMIT 1", (session["user_id"],))
+    c.execute("SELECT COALESCE(p.admin_override_status, p.status) AS status FROM payments p WHERE p.user_id=? ORDER BY p.id DESC LIMIT 1",
+              (session["user_id"],))
     payment = c.fetchone()
     conn.close()
     payment_status = payment["status"] if payment else "unpaid"
