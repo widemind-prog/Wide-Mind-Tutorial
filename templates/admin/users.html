@@ -7,18 +7,10 @@
 
     <!-- STATS -->
     <div class="stats-grid">
-        <a href="/admin/users/all" class="stat-card">
-            <h3>Total</h3><p>{{ total_users }}</p>
-        </a>
-        <a href="/admin/users/paid" class="stat-card paid">
-            <h3>Paid</h3><p>{{ paid_users }}</p>
-        </a>
-        <a href="/admin/users/unpaid" class="stat-card unpaid">
-            <h3>Unpaid</h3><p>{{ unpaid_users }}</p>
-        </a>
-        <a href="/admin/users/suspended" class="stat-card suspended">
-            <h3>Suspended</h3><p>{{ suspended_users }}</p>
-        </a>
+        <a href="/admin/users/all" class="stat-card"><h3>Total</h3><p>{{ total_users }}</p></a>
+        <a href="/admin/users/paid" class="stat-card paid"><h3>Paid</h3><p>{{ paid_users }}</p></a>
+        <a href="/admin/users/unpaid" class="stat-card unpaid"><h3>Unpaid</h3><p>{{ unpaid_users }}</p></a>
+        <a href="/admin/users/suspended" class="stat-card suspended"><h3>Suspended</h3><p>{{ suspended_users }}</p></a>
     </div>
 
     <!-- ACTION BUTTONS -->
@@ -29,9 +21,8 @@
                   font-size:14px; text-decoration:none;">
             <i class="fa-solid fa-arrows-rotate" style="margin-right:8px;"></i>Bulk Level Migration
         </a>
-
         <form method="POST" action="/admin/users/mark-all-unpaid"
-              onsubmit="return confirm('This will mark ALL students as unpaid. Are you sure?');">
+              onsubmit="return confirm('Mark ALL students unpaid? This also resets all rerun passes.');">
             <button type="submit"
                     style="background:#a00000; color:#fff; padding:12px 20px; border-radius:10px;
                            font-weight:600; font-size:14px; border:none; cursor:pointer;">
@@ -52,19 +43,13 @@
                     Level: <strong>{{ user.level or "N/A" }}</strong> &nbsp;·&nbsp;
                     Semester: <strong>{{ '1st' if user.semester == 1 else ('2nd' if user.semester == 2 else 'N/A') }}</strong>
                 </small><br>
-                <small>Role: {{ user.role }}</small><br>
-
                 {% if user.role != "admin" %}
-                <small style="color:#777;">
-                    Fee: ₦{{ "{:,.2f}".format((user.amount or 0) / 100) }}
-                </small><br>
+                <small style="color:#777;">Main Fee: ₦{{ "{:,.2f}".format((user.amount or 0) / 100) }}</small><br>
                 {% endif %}
 
-                {% if user.is_suspended %}
-                    <p style="color:red; margin:4px 0;">Status: Suspended</p>
-                {% else %}
-                    <p style="color:green; margin:4px 0;">Status: Active</p>
-                {% endif %}
+                <p style="margin:4px 0; color:{% if user.is_suspended %}red{% else %}green{% endif %};">
+                    {{ "Suspended" if user.is_suspended else "Active" }}
+                </p>
 
                 {% if user.role != "admin" %}
                 <p style="margin:4px 0;">Payment:
@@ -74,36 +59,61 @@
                         <strong style="color:red;">Unpaid</strong>
                     {% endif %}
                 </p>
+
+                <!-- RERUN PASSES -->
+                {% set user_passes = rerun_by_user.get(user.id, []) %}
+                {% if user.level in ('400', '500') %}
+                <div style="margin:6px 0; font-size:12px;">
+                    <strong>Rerun Passes:</strong>
+                    {% set eligible = [] %}
+                    {% if user.level == '400' %}{% set eligible = ['300'] %}{% endif %}
+                    {% if user.level == '500' %}{% set eligible = ['300', '400'] %}{% endif %}
+
+                    {% for lvl in eligible %}
+                        {% set pass_status = namespace(val='unpaid') %}
+                        {% for p in user_passes %}
+                            {% if p.level == lvl %}{% set pass_status.val = p.status %}{% endif %}
+                        {% endfor %}
+                        <span style="display:inline-flex; align-items:center; gap:6px;
+                                     background:#f8f0dc; border-radius:6px; padding:3px 8px; margin:3px 2px;">
+                            🔁 {{ lvl }}L
+                            <span style="color:{% if pass_status.val == 'paid' %}green{% else %}#aaa{% endif %};">
+                                {{ "✅" if pass_status.val == 'paid' else "—" }}
+                            </span>
+                            <form method="POST" action="/admin/users/rerun/toggle/{{ user.id }}/{{ lvl }}"
+                                  style="display:inline; margin:0; padding:0; box-shadow:none; background:none;">
+                                <button type="submit"
+                                        style="font-size:10px; padding:2px 8px; background:{% if pass_status.val == 'paid' %}#a00000{% else %}#0a7c2f{% endif %}; border-radius:4px;">
+                                    {{ "Revoke" if pass_status.val == 'paid' else "Grant" }}
+                                </button>
+                            </form>
+                        </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% endif %}
 
                 <!-- ACTION BUTTONS -->
                 <div class="user-actions" style="margin-top:8px;">
-                    <button type="button" class="btn-suspend"
-                            data-url="/admin/users/suspend/{{ user.id }}">
-                        {% if user.is_suspended %}Unsuspend{% else %}Suspend{% endif %}
+                    <button type="button" class="btn-suspend" data-url="/admin/users/suspend/{{ user.id }}">
+                        {{ "Unsuspend" if user.is_suspended else "Suspend" }}
                     </button>
-
                     {% if user.role != "admin" %}
                     <button type="button" class="btn-payment"
                             data-url="/admin/users/mark-paid/{{ user.id }}"
                             style="background:#0a7c2f;">
-                        {% if user.payment_status == "paid" %}Mark Unpaid{% else %}Mark Paid{% endif %}
+                        {{ "Mark Unpaid" if user.payment_status == "paid" else "Mark Paid" }}
                     </button>
                     {% endif %}
-
                     <button type="button" class="btn-delete"
                             data-url="/admin/users/delete/{{ user.id }}"
-                            style="background:#a00000;">
-                        Delete
-                    </button>
+                            style="background:#a00000;">Delete</button>
                 </div>
 
-                <!-- EDIT LEVEL/SEMESTER INLINE -->
+                <!-- EDIT LEVEL/SEMESTER -->
                 {% if user.role != "admin" %}
                 <details style="margin-top:10px;">
-                    <summary style="font-size:12px; color:#8B7500; cursor:pointer;">
-                        Edit Level / Semester
-                    </summary>
+                    <summary style="font-size:12px; color:#8B7500; cursor:pointer;">Edit Level / Semester</summary>
                     <form method="POST" action="/admin/users/edit-level/{{ user.id }}"
                           style="margin-top:8px; background:transparent; box-shadow:none; padding:0;">
                         <select name="level" required style="margin-bottom:6px;">
