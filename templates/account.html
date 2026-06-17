@@ -4,6 +4,7 @@
 {% block content %}
 <section class="account-section">
 
+    <!-- PROFILE BOX -->
     <div class="account-box">
         <img src="/static/images/avatar.png" alt="Profile Avatar" class="profile-avatar">
         <h2 id="username">Loading...</h2>
@@ -16,25 +17,91 @@
         </button>
     </div>
 
+    <!-- MAIN COURSES -->
     <div class="courses-box">
         <div id="toast" class="toast"></div>
         <h3>Your Courses</h3>
-        <ul id="courses">
+        <ul id="courses-main">
             <li>Loading courses...</li>
         </ul>
     </div>
+
+    <!-- RERUN SECTION — visible only to 400L/500L paid students via JS -->
+    <div id="rerun-section" style="display:none;">
+
+        <!-- RERUN PASSES -->
+        <div class="courses-box" style="margin-top:16px;">
+            <h3>🔁 Rerun Passes</h3>
+            <p style="font-size:13px; color:#777; margin-bottom:12px;">
+                Unlock access to courses from a lower level in the same semester you failed them.
+            </p>
+            <div id="rerun-passes"></div>
+        </div>
+
+        <!-- RERUN COURSES (if any pass is active) -->
+        <div class="courses-box" style="margin-top:16px;">
+            <h3>🔁 Rerun Courses</h3>
+            <ul id="courses-rerun">
+                <!-- populated by JS if any rerun pass is active -->
+            </ul>
+        </div>
+
+    </div>
+
 </section>
 
 <style>
-.paid-animate {
-    animation: pop 0.6s ease-out;
-    color: green;
-}
+.paid-animate { animation: pop 0.6s ease-out; color: green; }
 @keyframes pop {
     0% { transform: scale(0.6); opacity: 0; }
     70% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
 }
+
+.rerun-pass-card {
+    background: #fffaf0;
+    border: 1px solid #e6d8b5;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+.rerun-pass-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.rerun-pass-label {
+    font-weight: 700;
+    font-size: 14px;
+    color: #3c2f1f;
+}
+.rerun-pass-status.purchased { color: green; font-size: 13px; }
+.rerun-pass-status.not-purchased { color: #aaa; font-size: 13px; }
+.rerun-pass-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+.rerun-pass-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #8B7500;
+}
+.btn-rerun-buy {
+    background: linear-gradient(135deg, #8B7500, #d4af37);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-rerun-buy:disabled { opacity: 0.6; cursor: not-allowed; }
+.rerun-pass-desc { font-size: 12px; color: #888; margin-top: 6px; }
+.toast-error { background: crimson !important; }
 </style>
 
 <script src="/static/js/account.js"></script>
