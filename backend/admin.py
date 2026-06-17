@@ -1,24 +1,22 @@
-from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, url_for, current_app
+from flask import Blueprint, render_template, jsonify, session, redirect, request, abort, flash, url_for
 from extensions import socketio
-from state import online_users
 from backend.db import get_db, is_admin
 from functools import wraps
 from pywebpush import webpush
-import json
-import os
+import json, os
 from werkzeug.utils import secure_filename
 from backend.email_service import send_email, send_new_material_email
 
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
 
-LEVEL_AMOUNTS = {
-    "300": 1026375,
-    "400": 1533042,
-    "500": 2041025,
-}
+LEVEL_AMOUNTS = {"300": 1026375, "400": 1533042, "500": 2041025}
+RERUN_AMOUNTS = {"300": 359231, "400": 536565}
 
 def get_amount_for_level(level):
     return LEVEL_AMOUNTS.get(str(level), 1026375)
+
+def get_rerun_amount(level):
+    return RERUN_AMOUNTS.get(str(level), 359231)
 
 def admin_required(func):
     @wraps(func)
@@ -48,10 +46,8 @@ def subscribe():
     data = request.get_json()
     conn = get_db()
     c = conn.cursor()
-    c.execute("""
-        INSERT OR REPLACE INTO push_subscriptions (user_id, endpoint, p256dh, auth)
-        VALUES (?, ?, ?, ?)
-    """, (session["user_id"], data["endpoint"], data["keys"]["p256dh"], data["keys"]["auth"]))
+    c.execute("INSERT OR REPLACE INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)",
+              (session["user_id"], data["endpoint"], data["keys"]["p256dh"], data["keys"]["auth"]))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -126,11 +122,10 @@ def send_push(user_id, title, message, link):
     conn.close()
     for sub in subs:
         try:
-            private_key = os.environ.get("VAPID_PRIVATE_KEY")
             webpush(
                 subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}},
                 data=json.dumps({"title": title, "message": message, "link": link}),
-                vapid_private_key=private_key,
+                vapid_private_key=os.environ.get("VAPID_PRIVATE_KEY"),
                 vapid_claims={"sub": "mailto:wideminddevs@gmail.com"}
             )
         except Exception as e:
@@ -227,19 +222,32 @@ def users():
     c.execute("SELECT COUNT(*) AS suspended FROM users WHERE is_suspended = 1")
     suspended_users = c.fetchone()["suspended"]
     unpaid_users = total_users - paid_users
+
     c.execute("""
         SELECT u.id, u.name, u.email, u.level, u.semester, u.role, u.is_suspended,
-               COALESCE(p.admin_override_status, p.status) AS payment_status,
-               p.amount
+               COALESCE(p.admin_override_status, p.status) AS payment_status, p.amount
         FROM users u
         LEFT JOIN payments p ON u.id = p.user_id
         ORDER BY u.id DESC
     """)
-    users = c.fetchall()
+    all_users = c.fetchall()
+
+    # Gather rerun passes per user
+    c.execute("SELECT user_id, rerun_level, COALESCE(admin_override_status, status) AS effective_status FROM rerun_passes")
+    passes_raw = c.fetchall()
     conn.close()
-    return render_template("admin/users.html", users=users,
+
+    rerun_by_user = {}
+    for p in passes_raw:
+        uid = p["user_id"]
+        if uid not in rerun_by_user:
+            rerun_by_user[uid] = []
+        rerun_by_user[uid].append({"level": p["rerun_level"], "status": p["effective_status"]})
+
+    return render_template("admin/users.html", users=all_users,
                            total_users=total_users, paid_users=paid_users,
-                           unpaid_users=unpaid_users, suspended_users=suspended_users)
+                           unpaid_users=unpaid_users, suspended_users=suspended_users,
+                           rerun_by_user=rerun_by_user, rerun_amounts=RERUN_AMOUNTS)
 
 @admin_bp.route("/users/suspend/<int:user_id>", methods=["POST"])
 @admin_required
@@ -251,7 +259,7 @@ def toggle_suspend_user(user_id):
     c.execute("SELECT is_suspended FROM users WHERE id = ?", (user_id,))
     user = c.fetchone()
     conn.close()
-    flash("User has been suspended" if user["is_suspended"] else "User has been unsuspended", "success")
+    flash("User suspended" if user["is_suspended"] else "User unsuspended", "success")
     return redirect(url_for("admin_bp.users"))
 
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
@@ -260,6 +268,7 @@ def delete_user(user_id):
     conn = get_db()
     c = conn.cursor()
     c.execute("DELETE FROM payments WHERE user_id=?", (user_id,))
+    c.execute("DELETE FROM rerun_passes WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM notifications WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM push_subscriptions WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM password_resets WHERE user_id=?", (user_id,))
@@ -292,17 +301,16 @@ def edit_user_level(user_id):
     conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE users SET level=?, semester=? WHERE id=?", (level, semester, user_id))
-
-    # Update payment amount for new level, reset to unpaid
     new_amount = get_amount_for_level(level)
     c.execute("""
-        UPDATE payments
-        SET amount=?, status='unpaid', admin_override_status=NULL, reference=NULL, paid_at=NULL
+        UPDATE payments SET amount=?, status='unpaid', admin_override_status=NULL, reference=NULL, paid_at=NULL
         WHERE user_id=?
     """, (new_amount, user_id))
+    # Clear all rerun passes when level changes
+    c.execute("DELETE FROM rerun_passes WHERE user_id=?", (user_id,))
     conn.commit()
     conn.close()
-    flash(f"User updated to {level}L Semester {semester}. Payment reset to unpaid.", "success")
+    flash(f"User updated to {level}L Semester {semester}. Payment and rerun passes reset.", "success")
     return redirect(url_for("admin_bp.users"))
 
 # =====================
@@ -313,21 +321,66 @@ def edit_user_level(user_id):
 def mark_all_unpaid():
     conn = get_db()
     c = conn.cursor()
-    # Reset all non-admin users to unpaid, preserving correct amount per level
-    c.execute("""
-        SELECT u.id, u.level FROM users u WHERE u.role != 'admin'
-    """)
-    users = c.fetchall()
-    for user in users:
+    c.execute("SELECT id, level FROM users WHERE role != 'admin'")
+    all_users = c.fetchall()
+    for user in all_users:
         new_amount = get_amount_for_level(user["level"])
         c.execute("""
-            UPDATE payments
-            SET status='unpaid', admin_override_status=NULL, reference=NULL, paid_at=NULL, amount=?
-            WHERE user_id=?
+            UPDATE payments SET status='unpaid', admin_override_status=NULL,
+            reference=NULL, paid_at=NULL, amount=? WHERE user_id=?
         """, (new_amount, user["id"]))
+        # Also reset rerun passes
+        c.execute("""
+            UPDATE rerun_passes SET status='unpaid', admin_override_status=NULL,
+            reference=NULL, paid_at=NULL WHERE user_id=?
+        """, (user["id"],))
     conn.commit()
     conn.close()
-    flash(f"All {len(users)} students marked as unpaid.", "success")
+    flash(f"All {len(all_users)} students marked as unpaid (main + rerun passes reset).", "success")
+    return redirect(url_for("admin_bp.users"))
+
+# =====================
+# ADMIN GRANT/REVOKE RERUN PASS
+# =====================
+@admin_bp.route("/users/rerun/toggle/<int:user_id>/<rerun_level>", methods=["POST"])
+@admin_required
+def toggle_rerun_pass(user_id, rerun_level):
+    if rerun_level not in ("300", "400"):
+        flash("Invalid rerun level", "error")
+        return redirect(url_for("admin_bp.users"))
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT level FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    if not user or int(rerun_level) >= int(user["level"]):
+        conn.close()
+        flash("Invalid: rerun level must be below user's level", "error")
+        return redirect(url_for("admin_bp.users"))
+
+    c.execute("SELECT id, status, admin_override_status FROM rerun_passes WHERE user_id=? AND rerun_level=?",
+              (user_id, rerun_level))
+    existing = c.fetchone()
+    amount = get_rerun_amount(rerun_level)
+
+    if not existing:
+        # Grant
+        c.execute("""
+            INSERT INTO rerun_passes (user_id, rerun_level, amount, status, admin_override_status, paid_at)
+            VALUES (?, ?, ?, 'unpaid', 'paid', datetime('now'))
+        """, (user_id, rerun_level, amount))
+        new_status = "paid"
+    else:
+        current = existing["admin_override_status"] if existing["admin_override_status"] else existing["status"]
+        new_status = "unpaid" if current == "paid" else "paid"
+        c.execute("""
+            UPDATE rerun_passes SET admin_override_status=?, paid_at=datetime('now')
+            WHERE id=?
+        """, (new_status, existing["id"]))
+
+    conn.commit()
+    conn.close()
+    flash(f"{rerun_level}L rerun pass {'granted' if new_status == 'paid' else 'revoked'}", "success")
     return redirect(url_for("admin_bp.users"))
 
 # =====================
@@ -351,26 +404,20 @@ def run_migration():
     c = conn.cursor()
 
     if action == "promote_400_to_500":
-        # Get affected users first
         c.execute("SELECT id FROM users WHERE level='400' AND semester=2 AND role!='admin'")
-        affected_users = c.fetchall()
-        count = len(affected_users)
-
-        # Update level
+        affected = c.fetchall()
+        count = len(affected)
         c.execute("UPDATE users SET level='500', semester=2 WHERE level='400' AND semester=2 AND role!='admin'")
-
-        # Reset payments to unpaid with new 500L amount
         new_amount = get_amount_for_level("500")
-        for user in affected_users:
+        for user in affected:
             c.execute("""
-                UPDATE payments
-                SET amount=?, status='unpaid', admin_override_status=NULL, reference=NULL, paid_at=NULL
-                WHERE user_id=?
+                UPDATE payments SET amount=?, status='unpaid', admin_override_status=NULL,
+                reference=NULL, paid_at=NULL WHERE user_id=?
             """, (new_amount, user["id"]))
-
+            c.execute("DELETE FROM rerun_passes WHERE user_id=?", (user["id"],))
         conn.commit()
         conn.close()
-        flash(f"Migration complete: {count} students moved to 500L (2nd Semester). All payment reset to unpaid.", "success")
+        flash(f"Migration complete: {count} students → 500L 2nd Semester. Payments + rerun passes reset.", "success")
 
     elif action == "custom":
         from_level = request.form.get("from_level", "").strip()
@@ -392,26 +439,21 @@ def run_migration():
             flash("Invalid semester values", "error")
             return redirect(url_for("admin_bp.migration_page"))
 
-        # Get affected users
         c.execute("SELECT id FROM users WHERE level=? AND semester=? AND role!='admin'", (from_level, from_sem))
-        affected_users = c.fetchall()
-        count = len(affected_users)
-
+        affected = c.fetchall()
+        count = len(affected)
         c.execute("UPDATE users SET level=?, semester=? WHERE level=? AND semester=? AND role!='admin'",
                   (to_level, to_sem, from_level, from_sem))
-
         new_amount = get_amount_for_level(to_level)
-        for user in affected_users:
+        for user in affected:
             c.execute("""
-                UPDATE payments
-                SET amount=?, status='unpaid', admin_override_status=NULL, reference=NULL, paid_at=NULL
-                WHERE user_id=?
+                UPDATE payments SET amount=?, status='unpaid', admin_override_status=NULL,
+                reference=NULL, paid_at=NULL WHERE user_id=?
             """, (new_amount, user["id"]))
-
+            c.execute("DELETE FROM rerun_passes WHERE user_id=?", (user["id"],))
         conn.commit()
         conn.close()
-        flash(f"Migration complete: {count} students moved from {from_level}L S{from_sem} → {to_level}L S{to_sem}. All payment reset to unpaid.", "success")
-
+        flash(f"Migration complete: {count} students moved. Payments + rerun passes reset.", "success")
     else:
         conn.close()
         flash("Unknown action", "error")
@@ -458,21 +500,20 @@ def toggle_payment(user_id):
 def get_user_list(filter_type):
     conn = get_db()
     c = conn.cursor()
-    base_query = """
+    base = """
         SELECT u.id, u.name, u.email, u.level, u.semester, u.role, u.is_suspended,
                COALESCE(p.admin_override_status, p.status) AS payment_status, p.amount
-        FROM users u
-        LEFT JOIN payments p ON u.id = p.user_id
+        FROM users u LEFT JOIN payments p ON u.id = p.user_id
         WHERE u.role != 'admin'
     """
     if filter_type == "paid":
-        c.execute(base_query + " AND COALESCE(p.admin_override_status, p.status) = 'paid' ORDER BY u.id DESC")
+        c.execute(base + " AND COALESCE(p.admin_override_status, p.status) = 'paid' ORDER BY u.id DESC")
     elif filter_type == "unpaid":
-        c.execute(base_query + " AND (COALESCE(p.admin_override_status, p.status) != 'paid' OR p.id IS NULL) ORDER BY u.id DESC")
+        c.execute(base + " AND (COALESCE(p.admin_override_status, p.status) != 'paid' OR p.id IS NULL) ORDER BY u.id DESC")
     elif filter_type == "suspended":
-        c.execute(base_query + " AND u.is_suspended = 1 ORDER BY u.id DESC")
+        c.execute(base + " AND u.is_suspended = 1 ORDER BY u.id DESC")
     else:
-        c.execute(base_query + " ORDER BY u.id DESC")
+        c.execute(base + " ORDER BY u.id DESC")
     users = c.fetchall()
     conn.close()
     return users
@@ -523,14 +564,14 @@ def add_course():
         flash("Course code and title are required.", "error")
         return redirect(url_for("admin_bp.courses"))
     if level not in ("300", "400", "500"):
-        flash("Invalid level selected.", "error")
+        flash("Invalid level.", "error")
         return redirect(url_for("admin_bp.courses"))
     try:
         semester = int(semester)
         if semester not in (1, 2):
             raise ValueError
     except (ValueError, TypeError):
-        flash("Invalid semester selected.", "error")
+        flash("Invalid semester.", "error")
         return redirect(url_for("admin_bp.courses"))
 
     conn = get_db()
@@ -584,7 +625,7 @@ def edit_course(course_id):
         c.execute("UPDATE courses SET course_code=?, course_title=?, description=?, level=?, semester=? WHERE id=?",
                   (course_code, course_title, description, level, semester, course_id))
         conn.commit()
-        flash("Course updated successfully!", "success")
+        flash("Course updated!", "success")
 
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
@@ -612,7 +653,6 @@ def delete_course(course_id):
 def add_material(file_type, course_id):
     title = request.form.get("title", "").strip()
     file = request.files.get("file")
-
     if not title or not file or file.filename == "":
         flash("Title and file are required.", "error")
         return redirect(f"/admin/courses/edit/{course_id}")
@@ -623,26 +663,24 @@ def add_material(file_type, course_id):
     c.execute("SELECT id FROM materials WHERE course_id=? AND filename=?", (course_id, filename))
     if c.fetchone():
         conn.close()
-        flash("A material with that filename already exists for this course.", "error")
+        flash("A material with that filename already exists.", "error")
         return redirect(f"/admin/courses/edit/{course_id}")
 
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
-    bucket = "materials"
     file_bytes = file.read()
     content_type = "application/pdf" if file_type == "pdf" else "audio/mpeg"
-
-    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+    upload_url = f"{supabase_url}/storage/v1/object/materials/{filename}"
     headers = {"Authorization": f"Bearer {supabase_key}", "Content-Type": content_type, "x-upsert": "true"}
 
     import requests as req
     response = req.post(upload_url, headers=headers, data=file_bytes)
     if response.status_code not in (200, 201):
-        flash(f"Upload to Supabase failed: {response.text}", "error")
+        flash(f"Upload failed: {response.text}", "error")
         conn.close()
         return redirect(f"/admin/courses/edit/{course_id}")
 
-    file_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
+    file_url = f"{supabase_url}/storage/v1/object/public/materials/{filename}"
     c.execute("INSERT INTO materials (course_id, filename, file_type, title, file_url) VALUES (?, ?, ?, ?, ?)",
               (course_id, filename, file_type, title, file_url))
     conn.commit()
@@ -656,20 +694,18 @@ def add_material(file_type, course_id):
         c2.execute("""
             SELECT u.name, u.email FROM users u
             JOIN payments p ON u.id = p.user_id
-            WHERE u.role != 'admin'
-            AND COALESCE(p.admin_override_status, p.status) = 'paid'
+            WHERE u.role != 'admin' AND COALESCE(p.admin_override_status, p.status) = 'paid'
             AND u.level = ? AND u.semester = ?
         """, (course["level"], course["semester"]))
         paid_users = c2.fetchall()
         conn2.close()
         for u in paid_users:
             send_new_material_email(to_email=u["email"], name=u["name"], material_title=title,
-                                    course_title=course["course_title"] if course else "your course",
-                                    file_type=file_type, course_id=course_id)
+                                    course_title=course["course_title"], file_type=file_type, course_id=course_id)
     except Exception as e:
-        print("New material email failed:", e)
+        print("Email failed:", e)
 
-    flash("Material uploaded successfully!", "success")
+    flash("Material uploaded!", "success")
     return redirect(f"/admin/courses/edit/{course_id}")
 
 @admin_bp.route("/courses/material/delete/<int:material_id>", methods=["POST"])
@@ -682,14 +718,12 @@ def delete_material(material_id):
     if not material:
         conn.close()
         abort(404)
-
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
     if supabase_url and supabase_key:
         import requests as req
         req.delete(f"{supabase_url}/storage/v1/object/materials/{material['filename']}",
                    headers={"Authorization": f"Bearer {supabase_key}"})
-
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))
     conn.commit()
     conn.close()
