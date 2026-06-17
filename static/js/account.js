@@ -88,10 +88,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                         const li = document.createElement("li");
                         const a = document.createElement("a");
                         a.textContent = `${course.code} — ${course.title}`;
+                        // Always show the course name; lock clicking if unpaid
                         if (isPaid) {
                             a.href = `/course/${course.id}`;
                         } else {
                             a.href = "#";
+                            a.style.opacity = "0.6";
                             a.addEventListener("click", e => {
                                 e.preventDefault();
                                 showToast("Complete payment to access this course ❌", "error");
@@ -219,6 +221,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         url.searchParams.delete("payment");
         window.history.replaceState({}, document.title, url);
         setTimeout(async () => {
+            await loadUserInfo();
             await checkPaymentStatus(true);
             await loadCourses();
             await loadRerunPasses();
