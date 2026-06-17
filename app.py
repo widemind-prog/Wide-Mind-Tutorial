@@ -213,13 +213,13 @@ def get_user_accessible_courses(user_id):
         payment["status"] == "paid" or payment["admin_override_status"] == "paid"
     )
 
-    main_courses = []
-    if main_paid:
-        c.execute("""
-            SELECT id, course_code, course_title, description, level, semester
-            FROM courses WHERE level=? AND semester=? ORDER BY id DESC
-        """, (user["level"], user["semester"]))
-        main_courses = c.fetchall()
+    # Always fetch courses for the user's level/semester
+    # Payment lock is enforced at the course page and stream level
+    c.execute("""
+        SELECT id, course_code, course_title, description, level, semester
+        FROM courses WHERE level=? AND semester=? ORDER BY id DESC
+    """, (user["level"], user["semester"]))
+    main_courses = c.fetchall()
 
     # Check rerun passes
     c.execute("""
