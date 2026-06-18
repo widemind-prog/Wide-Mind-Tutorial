@@ -2,21 +2,23 @@
 {% block title %}Courses | Wide Mind Tutorial{% endblock %}
 
 {% block content %}
-<section class="courses-section">
+<section class="account-section">
 
-    <h2 class="courses-heading">Courses</h2>
-
-    <!-- SEARCH BOX -->
-    <div class="courses-search-wrap">
-        <div class="courses-search-box">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <!-- SEARCH BOX — uses existing form/input styles -->
+    <div class="courses-box" style="padding: 12px 16px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-magnifying-glass" style="color:#8B7500; font-size:15px; flex-shrink:0;"></i>
             <input
                 type="text"
                 id="course-search"
                 placeholder="Search courses..."
                 autocomplete="off"
+                style="margin:0; padding:8px 4px; border:none; box-shadow:none;
+                       background:transparent; font-size:15px; width:100%;"
             >
-            <button id="clear-search" style="display:none;" title="Clear">
+            <button id="clear-search"
+                    style="display:none; background:none; border:none; padding:0;
+                           margin:0; cursor:pointer; font-size:14px; width:auto;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -24,94 +26,27 @@
 
     <div id="toast" class="toast"></div>
 
-    <!-- COURSE LIST -->
-    <div id="courses-container">
-        <div id="courses-loading" style="text-align:center; padding:30px; color:#aaa;">
-            Loading courses...
-        </div>
-        <div id="courses-list" style="display:none;"></div>
-        <div id="courses-empty" style="display:none; text-align:center; padding:30px; color:#aaa;">
-            No courses found.
-        </div>
+    <!-- COURSES LIST -->
+    <div id="courses-loading" class="courses-box" style="text-align:center; color:#aaa;">
+        Loading courses...
     </div>
 
-    <!-- RERUN PASS PURCHASE (400L/500L only — shown by JS) -->
-    <div id="rerun-pass-section" style="display:none; margin-top:24px;">
-        <h3 style="font-size:15px; font-weight:700; margin-bottom:12px; color:#8B7500;">
-            🔁 Rerun Passes
-        </h3>
-        <p style="font-size:13px; color:#777; margin-bottom:14px;">
-            Pay once to unlock all courses from a lower level in your current semester.
-        </p>
-        <div id="rerun-pass-cards"></div>
+    <div id="courses-list" style="width:95%; max-width:340px;"></div>
+
+    <div id="courses-empty" class="courses-box" style="display:none; text-align:center; color:#aaa;">
+        No courses found.
+    </div>
+
+    <!-- RERUN PASS SECTION — 400L/500L paid only, shown by JS -->
+    <div id="rerun-pass-section" style="display:none; width:95%; max-width:340px;">
+        <div class="courses-box">
+            <h3>🔁 Rerun Passes</h3>
+            <p>Pay once to unlock all courses from a lower level in your current semester.</p>
+            <div id="rerun-pass-cards"></div>
+        </div>
     </div>
 
 </section>
-
-<style>
-.courses-section { padding: 16px; max-width: 600px; margin: 0 auto; }
-.courses-heading { font-size: 22px; font-weight: 800; margin-bottom: 16px; color: #3c2f1f; }
-
-.courses-search-wrap { margin-bottom: 18px; }
-.courses-search-box {
-    display: flex; align-items: center; gap: 10px;
-    background: #fff; border: 1.5px solid #e6d8b5; border-radius: 12px;
-    padding: 10px 14px;
-}
-.search-icon { color: #8B7500; font-size: 15px; }
-#course-search {
-    flex: 1; border: none; outline: none; font-size: 15px;
-    background: transparent; color: #3c2f1f;
-}
-#clear-search {
-    background: none; border: none; cursor: pointer;
-    color: #aaa; font-size: 14px; padding: 0;
-}
-
-.course-group-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: #8B7500;
-    border-bottom: 2px solid #e6d8b5;
-    padding-bottom: 6px; margin: 18px 0 10px;
-}
-.course-item {
-    background: #fff; border: 1px solid #e6d8b5; border-radius: 12px;
-    padding: 14px 16px; margin-bottom: 10px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px;
-}
-.course-item-info { flex: 1; }
-.course-item-code { font-size: 12px; color: #8B7500; font-weight: 700; margin-bottom: 2px; }
-.course-item-title { font-size: 15px; font-weight: 600; color: #3c2f1f; }
-.course-item-badge {
-    font-size: 10px; background: #f8f0dc; color: #8B7500;
-    border-radius: 6px; padding: 2px 8px; white-space: nowrap;
-}
-.course-item-badge.rerun { background: #fff3cd; color: #856404; }
-.course-item-link {
-    display: flex; align-items: center; gap: 6px;
-    text-decoration: none; color: inherit; width: 100%;
-}
-.course-item-link:hover .course-item-title { color: #8B7500; }
-.course-item-locked { opacity: 0.65; cursor: pointer; }
-
-/* Rerun pass cards */
-.rerun-pass-card {
-    background: #fffaf0; border: 1px solid #e6d8b5;
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
-}
-.rerun-pass-row { display: flex; justify-content: space-between; align-items: center; }
-.rerun-pass-label { font-weight: 700; font-size: 14px; color: #3c2f1f; }
-.rerun-pass-active { color: green; font-size: 13px; font-weight: 600; }
-.rerun-pass-price { font-size: 16px; font-weight: 800; color: #8B7500; margin-top: 6px; }
-.btn-buy-rerun {
-    background: linear-gradient(135deg, #8B7500, #d4af37);
-    color: #fff; border: none; border-radius: 9px;
-    padding: 9px 20px; font-size: 13px; font-weight: 700;
-    cursor: pointer; margin-top: 10px; width: 100%;
-}
-.btn-buy-rerun:disabled { opacity: 0.6; cursor: not-allowed; }
-</style>
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
@@ -131,21 +66,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function showToast(msg, isError = false) {
         toastEl.textContent = msg;
-        toastEl.className = "toast show" + (isError ? " toast-error" : "");
-        setTimeout(() => toastEl.className = "toast", 3500);
+        toastEl.className = "toast show";
+        if (isError) toastEl.style.background = "crimson";
+        else toastEl.style.background = "";
+        setTimeout(() => { toastEl.className = "toast"; toastEl.style.background = ""; }, 3500);
     }
 
-    // Load payment status
-    async function loadPaymentStatus() {
-        try {
-            const res = await fetch("/api/payment/status", { credentials: "same-origin" });
-            if (!res.ok) return;
-            const data = await res.json();
-            isPaid = (data.status === "paid" || data.status === "admin");
-        } catch(e) {}
-    }
-
-    // Load user info
     async function loadUserInfo() {
         try {
             const res = await fetch("/api/auth/me", { credentials: "same-origin" });
@@ -155,7 +81,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch(e) {}
     }
 
-    // Load rerun pass statuses
+    async function loadPaymentStatus() {
+        try {
+            const res = await fetch("/api/payment/status", { credentials: "same-origin" });
+            if (!res.ok) return;
+            const data = await res.json();
+            isPaid = (data.status === "paid" || data.status === "admin");
+        } catch(e) {}
+    }
+
     async function loadRerunPasses() {
         if (userLevel < 400 || !isPaid) return;
         try {
@@ -170,26 +104,38 @@ document.addEventListener("DOMContentLoaded", async () => {
             data.passes.forEach(pass => {
                 rerunPassStatus[pass.rerun_level] = pass.status;
                 const purchased = pass.status === "paid";
+
+                // Build card using existing .courses-box inner list style
                 const card = document.createElement("div");
-                card.className = "rerun-pass-card";
+                card.style.cssText = "border-top: 1px solid #eee; padding: 14px 0;";
                 card.innerHTML = `
-                    <div class="rerun-pass-row">
-                        <span class="rerun-pass-label">🔁 ${pass.rerun_level}L Rerun Pass</span>
-                        ${purchased ? '<span class="rerun-pass-active">✅ Active</span>' : ''}
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>🔁 ${pass.rerun_level}L Rerun Pass</strong>
+                        <span style="font-size:13px; color:${purchased ? 'green' : '#aaa'};">
+                            ${purchased ? '✅ Active' : 'Not purchased'}
+                        </span>
                     </div>
-                    <div class="rerun-pass-price">${pass.amount_display}</div>
-                    <p style="font-size:12px;color:#888;margin:4px 0 8px;">
+                    <p style="margin:4px 0 8px; font-size:13px;">
                         ${purchased
-                            ? `Unlocks all ${pass.rerun_level}L courses this semester`
-                            : `Pay once to access all ${pass.rerun_level}L courses this semester`}
+                            ? `All ${pass.rerun_level}L courses this semester are unlocked`
+                            : `Unlock all ${pass.rerun_level}L courses this semester`}
                     </p>
-                    ${!purchased ? `<button class="btn-buy-rerun" data-level="${pass.rerun_level}">Buy ${pass.rerun_level}L Rerun Pass</button>` : ""}
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#8B7500; font-size:16px;">${pass.amount_display}</strong>
+                        ${!purchased
+                            ? `<button class="btn btn-pay-now btn-rerun-buy"
+                                       data-level="${pass.rerun_level}"
+                                       style="width:auto; padding:8px 18px; font-size:13px; margin:0;">
+                                   Buy Pass
+                               </button>`
+                            : ''}
+                    </div>
                 `;
                 rerunCards.appendChild(card);
             });
 
             // Buy handlers
-            document.querySelectorAll(".btn-buy-rerun").forEach(btn => {
+            document.querySelectorAll(".btn-rerun-buy").forEach(btn => {
                 btn.addEventListener("click", async () => {
                     const level = btn.getAttribute("data-level");
                     btn.disabled = true;
@@ -207,29 +153,26 @@ document.addEventListener("DOMContentLoaded", async () => {
                         } else {
                             showToast(d.error || "Payment failed ❌", true);
                             btn.disabled = false;
-                            btn.textContent = `Buy ${level}L Rerun Pass`;
+                            btn.textContent = "Buy Pass";
                         }
                     } catch(e) {
                         showToast("Payment initiation failed ❌", true);
                         btn.disabled = false;
-                        btn.textContent = `Buy ${level}L Rerun Pass`;
+                        btn.textContent = "Buy Pass";
                     }
                 });
             });
         } catch(e) {}
     }
 
-    // Render courses from API
     function renderCourses(courses) {
         coursesList.innerHTML = "";
+        coursesLoading.style.display = "none";
 
         if (!courses || courses.length === 0) {
-            coursesList.style.display = "none";
             coursesEmpty.style.display = "block";
             return;
         }
-
-        coursesList.style.display = "block";
         coursesEmpty.style.display = "none";
 
         // Group by level
@@ -239,7 +182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             groups[c.level].push(c);
         });
 
-        // Sort levels descending (own level first)
+        // Own level first (descending)
         const sortedLevels = Object.keys(groups).sort((a, b) => b - a);
 
         sortedLevels.forEach(lvl => {
@@ -247,74 +190,82 @@ document.addEventListener("DOMContentLoaded", async () => {
             const hasRerunPass = rerunPassStatus[lvl] === "paid";
             const semLabel = groups[lvl][0].semester === 1 ? "1st" : "2nd";
 
-            // Group header
-            const label = document.createElement("div");
-            label.className = "course-group-label";
-            label.textContent = isOwnLevel
-                ? `${lvl}L — ${semLabel} Semester (Your Level)`
-                : `${lvl}L — ${semLabel} Semester (Rerun)`;
-            coursesList.appendChild(label);
+            // Group box
+            const box = document.createElement("div");
+            box.className = "courses-box";
+            box.style.marginBottom = "12px";
+
+            // Group heading
+            const heading = document.createElement("h3");
+            heading.style.cssText = "font-size:13px; margin-bottom:10px;";
+            heading.textContent = isOwnLevel
+                ? `${lvl}L — ${semLabel} Semester`
+                : `🔁 ${lvl}L — ${semLabel} Semester (Rerun)`;
+            box.appendChild(heading);
+
+            // Course list
+            const ul = document.createElement("ul");
+            ul.style.listStyle = "none";
+            ul.style.padding = "0";
+            ul.style.margin = "0";
 
             groups[lvl].forEach(course => {
-                const item = document.createElement("div");
-                item.className = "course-item";
+                const li = document.createElement("li");
+                li.style.cssText = "padding:10px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;";
 
-                // Access logic:
-                // Own level → needs main payment
-                // Lower level → needs rerun pass for that level
                 const canAccess = isOwnLevel ? isPaid : hasRerunPass;
 
                 if (canAccess) {
-                    item.innerHTML = `
-                        <a class="course-item-link" href="/course/${course.id}">
-                            <div class="course-item-info">
-                                <div class="course-item-code">${course.code}</div>
-                                <div class="course-item-title">${course.title}</div>
-                            </div>
-                            <span class="course-item-badge ${isOwnLevel ? '' : 'rerun'}">
-                                ${isOwnLevel ? course.level + 'L' : '🔁 Rerun'}
-                            </span>
+                    li.innerHTML = `
+                        <a href="/course/${course.id}"
+                           style="text-decoration:none; flex:1; color:inherit;">
+                            <div style="font-size:12px; color:#8B7500; font-weight:700;">${course.code}</div>
+                            <div style="font-size:14px; font-weight:600;">${course.title}</div>
                         </a>
+                        <i class="fa-solid fa-chevron-right" style="color:#ccc; font-size:12px;"></i>
                     `;
                 } else {
-                    const lockReason = isOwnLevel
-                        ? "Complete your main payment to access this course"
-                        : `Purchase the ${lvl}L Rerun Pass to access this course`;
-                    item.innerHTML = `
-                        <div class="course-item-link course-item-locked" title="${lockReason}">
-                            <div class="course-item-info">
-                                <div class="course-item-code">${course.code}</div>
-                                <div class="course-item-title">${course.title}</div>
-                            </div>
-                            <span class="course-item-badge ${isOwnLevel ? '' : 'rerun'}">
-                                🔒 ${isOwnLevel ? 'Pay to unlock' : 'Get Rerun Pass'}
-                            </span>
+                    const lockMsg = isOwnLevel
+                        ? "Complete payment to access"
+                        : `Buy ${lvl}L Rerun Pass to access`;
+                    li.style.opacity = "0.55";
+                    li.style.cursor = "pointer";
+                    li.innerHTML = `
+                        <div style="flex:1;">
+                            <div style="font-size:12px; color:#8B7500; font-weight:700;">${course.code}</div>
+                            <div style="font-size:14px; font-weight:600;">${course.title}</div>
                         </div>
+                        <i class="fa-solid fa-lock" style="color:#aaa; font-size:12px;"></i>
                     `;
-                    item.addEventListener("click", () => {
-                        showToast(lockReason, true);
+                    li.addEventListener("click", () => {
+                        showToast(lockMsg, true);
                         if (!isOwnLevel && isPaid) {
-                            // Scroll to rerun pass section
                             rerunSection.scrollIntoView({ behavior: "smooth" });
                         }
                     });
                 }
 
-                coursesList.appendChild(item);
+                // Remove border on last item
+                li.addEventListener("DOMNodeInserted", () => {});
+                ul.appendChild(li);
             });
+
+            // Remove last li border
+            if (ul.lastChild) ul.lastChild.style.borderBottom = "none";
+
+            box.appendChild(ul);
+            coursesList.appendChild(box);
         });
     }
 
-    // Fetch and render
     async function fetchCourses(query = "") {
         try {
             const url = query
                 ? `/api/courses/search?q=${encodeURIComponent(query)}`
                 : `/api/courses/search`;
             const res = await fetch(url, { credentials: "same-origin" });
-            if (!res.ok) return;
+            if (!res.ok) { coursesLoading.style.display = "none"; return; }
             const data = await res.json();
-            coursesLoading.style.display = "none";
             renderCourses(data.courses);
         } catch(e) {
             coursesLoading.style.display = "none";
@@ -322,10 +273,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // Search input handler
     searchInput.addEventListener("input", () => {
         const val = searchInput.value.trim();
-        clearBtn.style.display = val ? "block" : "none";
+        clearBtn.style.display = val ? "inline" : "none";
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => fetchCourses(val), 300);
     });
@@ -336,7 +286,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         fetchCourses("");
     });
 
-    // Init
+    // Init — order matters: user info first, then payment, then render
     await loadUserInfo();
     await loadPaymentStatus();
     await fetchCourses();
