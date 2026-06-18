@@ -54,9 +54,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (payAmountEl && payment.amount_display) {
                 payAmountEl.textContent = payment.amount_display;
             }
-            if (payment.status === "paid" || payment.status === "admin") {
+            if (payment.status === "paid") {
                 isPaid = true;
-                paymentStatusEl.textContent = payment.status === "admin" ? "ADMIN ✅" : "PAID ✅";
+                paymentStatusEl.textContent = "PAID ✅";
                 paymentStatusEl.classList.add("paid-animate");
                 paymentStatusEl.style.color = "green";
                 payBtn.style.display = "none";
