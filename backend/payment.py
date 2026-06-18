@@ -248,7 +248,7 @@ def payment_status():
     override = payment["admin_override_status"]
     status = payment["status"]
     if override == "paid" or status == "paid":
-        display_status = "admin" if override == "paid" else "paid"
+        display_status = "paid"
     else:
         display_status = "unpaid"
 
