@@ -264,6 +264,67 @@ def courses_page():
                            main_courses=data["main_courses"],
                            rerun_courses=data["rerun_courses"])
 
+@app.route("/api/courses/search")
+def search_courses():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    query = request.args.get("q", "").strip().lower()
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT level, semester FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+    if not user:
+        conn.close()
+        return jsonify({"error": "User not found"}), 404
+
+    user_level = int(user["level"])
+    user_semester = user["semester"]
+
+    # Eligible levels: user's own level + all lower levels, same semester
+    eligible_levels = [str(lvl) for lvl in [300, 400, 500] if lvl <= user_level]
+
+    placeholders = ",".join("?" for _ in eligible_levels)
+    params = eligible_levels + [user_semester]
+
+    if query:
+        sql = f"""
+            SELECT id, course_code, course_title, level, semester
+            FROM courses
+            WHERE level IN ({placeholders}) AND semester=?
+            AND (LOWER(course_code) LIKE ? OR LOWER(course_title) LIKE ?)
+            ORDER BY level ASC, id DESC
+        """
+        params += [f"%{query}%", f"%{query}%"]
+    else:
+        sql = f"""
+            SELECT id, course_code, course_title, level, semester
+            FROM courses
+            WHERE level IN ({placeholders}) AND semester=?
+            ORDER BY level ASC, id DESC
+        """
+
+    c.execute(sql, params)
+    results = c.fetchall()
+    conn.close()
+
+    return jsonify({
+        "courses": [
+            {
+                "id": r["id"],
+                "code": r["course_code"],
+                "title": r["course_title"],
+                "level": r["level"],
+                "semester": r["semester"],
+                "is_own_level": r["level"] == user["level"]
+            }
+            for r in results
+        ],
+        "user_level": str(user_level),
+        "user_semester": user_semester
+    })
+
 @app.route("/api/courses/my")
 def my_courses():
     if "user_id" not in session:
