@@ -124,7 +124,6 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         course_id INTEGER NOT NULL, filename TEXT NOT NULL,
         file_type TEXT NOT NULL, title TEXT NOT NULL,
-        file_url TEXT,
         FOREIGN KEY(course_id) REFERENCES courses(id))""")
 
     conn.execute("""CREATE TABLE IF NOT EXISTS payments (
@@ -181,7 +180,6 @@ def init_db():
         "ALTER TABLE users ADD COLUMN semester INTEGER DEFAULT 2",
         "ALTER TABLE courses ADD COLUMN level TEXT NOT NULL DEFAULT '400'",
         "ALTER TABLE courses ADD COLUMN semester INTEGER NOT NULL DEFAULT 2",
-        "ALTER TABLE materials ADD COLUMN file_url TEXT",
     ]
     for sql in migrations:
         try:
