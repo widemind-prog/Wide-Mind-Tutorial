@@ -3,70 +3,115 @@
 
 {% block content %}
 <div class="admin-dashboard">
-    <h1 class="dashboard-title">Admin Dashboard</h1>
-    <p class="dashboard-subtitle">Manage users and courses</p>
+    <h1 class="dashboard-title">Dashboard</h1>
 
-    <div class="dashboard-boxes">
+    <!-- LEVEL BREAKDOWN -->
+    <div class="dashboard-section-label">Students by Level</div>
+    <div class="stats-grid" id="level-stats-grid">
+        {% for lvl in ['300', '400', '500'] %}
+        {% set stats = level_stats[lvl] %}
+        <div class="stat-card" style="cursor:default;">
+            <h3>{{ lvl }}L</h3>
+            <p style="font-size:22px;">{{ stats.total }}</p>
+            <div style="font-size:12px; margin-top:4px;">
+                <span style="color:green;">{{ stats.paid }} paid</span>
+                &nbsp;·&nbsp;
+                <span style="color:#c0392b;">{{ stats.unpaid }} unpaid</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 
-        <!-- USERS -->
+    <!-- SECONDARY STATS -->
+    <div class="stats-grid" style="margin-top:10px;">
+        <div class="stat-card" style="cursor:default;">
+            <h3>Rerun Passes</h3>
+            <p style="font-size:22px;">{{ rerun_total }}</p>
+            <div style="font-size:12px; margin-top:4px; color:#aaa;">
+                {{ rerun_300 }} × 300L &nbsp;·&nbsp; {{ rerun_400 }} × 400L
+            </div>
+        </div>
+        <a href="/admin/messages" class="stat-card {% if unread > 0 %}unpaid{% endif %}">
+            <h3>Messages</h3>
+            <p style="font-size:22px;">{{ unread }}</p>
+            <div style="font-size:12px; margin-top:4px; color:#aaa;">unread</div>
+        </a>
+    </div>
+
+    <!-- RECENT REGISTRATIONS -->
+    {% if recent_users %}
+    <div class="dashboard-section-label" style="margin-top:18px;">Recent Registrations</div>
+    <div class="admin-box" style="padding:0; overflow:hidden;">
+        {% for u in recent_users %}
+        <div style="padding:12px 16px; {% if not loop.last %}border-bottom:1px solid var(--border-color, #e6d8b5);{% endif %}
+                    display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:600; font-size:14px;">{{ u.name }}</div>
+                <div style="font-size:12px; color:#aaa;">{{ u.email }}</div>
+            </div>
+            <div style="text-align:right; font-size:12px;">
+                <div style="font-weight:700; color:#8B7500;">{{ u.level }}L · {{ 'S1' if u.semester == 1 else 'S2' }}</div>
+                <div style="color:{% if u.payment_status == 'paid' %}green{% else %}#c0392b{% endif %};">
+                    {{ u.payment_status|upper }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- NAV -->
+    <div class="dashboard-boxes" style="margin-top:20px;">
         <a href="/admin/users" class="dashboard-box">
             <h3>Users</h3>
             <ul>
-                <li>View all users</li>
-                <li>Suspend users</li>
-                <li>Delete users</li>
-                <li>Manage payments</li>
-                <li>Edit level &amp; semester</li>
+                <li>Search &amp; filter by level</li>
+                <li>Manage payments &amp; rerun passes</li>
+                <li>Bulk migration</li>
             </ul>
         </a>
-
-        <!-- COURSES -->
         <a href="/admin/courses" class="dashboard-box">
             <h3>Courses</h3>
             <ul>
-                <li>Add/Edit/Delete courses</li>
-                <li>Upload course materials</li>
-                <li>Organised by level &amp; semester</li>
+                <li>Search &amp; filter by level/semester</li>
+                <li>Upload materials</li>
             </ul>
         </a>
-
-        <!-- MIGRATION -->
         <a href="/admin/users/migrate" class="dashboard-box">
-            <h3>Level Migration</h3>
+            <h3>Migration</h3>
             <ul>
-                <li>Promote 400L → 500L in bulk</li>
-                <li>Custom level/semester migration</li>
-                <li>Move groups of students at once</li>
+                <li>Promote level groups</li>
+                <li>Custom migration</li>
             </ul>
         </a>
-
-        <!-- NOTIFICATIONS -->
         <a href="/admin/notifications" class="dashboard-box">
             <h3>Notifications</h3>
             <ul>
-                <li>Send notification to users</li>
-                <li>Send critical alerts</li>
-                <li>Push + Email system</li>
+                <li>Send by level &amp; semester</li>
+                <li>Push + email alerts</li>
             </ul>
         </a>
-
-        <!-- MESSAGES -->
-        <a href="/admin/messages" class="dashboard-box">
-            <h3>Messages{% if unread and unread > 0 %}<span class="badge">{{ unread }}</span>{% endif %}</h3>
+        <a href="/admin/messages" class="dashboard-box {% if unread > 0 %}unpaid{% endif %}">
+            <h3>Messages {% if unread > 0 %}<span class="badge">{{ unread }}</span>{% endif %}</h3>
             <ul>
                 <li>View contact messages</li>
-                <li>Reply to users</li>
-                <li>Mark messages as read</li>
             </ul>
         </a>
-
     </div>
 
-    <button id="logout-btn" class="btn">Logout</button>
+    <button id="logout-btn" class="btn" style="margin-top:20px;">Logout</button>
 </div>
 
+<style>
+.dashboard-section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: #8B7500;
+    margin-bottom: 8px;
+}
+</style>
+
 <script>
-document.getElementById("logout-btn").addEventListener("click", function() {
+document.getElementById("logout-btn").addEventListener("click", () => {
     window.location.href = "/logout";
 });
 </script>
