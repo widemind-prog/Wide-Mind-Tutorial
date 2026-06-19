@@ -1,63 +1,211 @@
 {% extends "base.html" %}
-{% block title %}Send Notification{% endblock %}
+{% block title %}Admin – Notifications{% endblock %}
 
 {% block content %}
+<section class="admin-dashboard">
+    <h1 class="dashboard-title">Send Notification</h1>
 
-<h2>Send Notification</h2>
+    <form method="POST" action="/admin/notifications/send" class="admin-box">
 
-<form method="POST" action="{{ url_for('admin_bp.send_notification') }}">
+        <!-- TARGET SELECTOR -->
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:8px;">Send To</label>
 
-    <label>
-        <input type="checkbox" name="send_all" value="1" id="send_all_toggle">
-        Send to ALL users
-    </label>
+        <div class="filter-tab-bar" id="target-tabs" style="margin-bottom:14px;">
+            <button type="button" class="filter-tab active" data-target="all">All Students</button>
+            <button type="button" class="filter-tab" data-target="group">Level Group</button>
+            <button type="button" class="filter-tab" data-target="individual">Individual</button>
+        </div>
 
-    <br><br>
+        <!-- Hidden inputs -->
+        <input type="hidden" name="send_all" id="input-send-all" value="1">
+        <input type="hidden" name="target_level" id="input-target-level" value="">
+        <input type="hidden" name="target_semester" id="input-target-semester" value="">
+        <input type="hidden" name="user_id" id="input-user-id" value="">
 
-    <div id="single_user_select">
-        <label>User</label>
-        <select name="user_id">
-            {% for user in users %}
-                <option value="{{ user.id }}">
-                    {{ user.name }} ({{ user.email }})
-                </option>
-            {% endfor %}
-        </select>
-    </div>
+        <!-- GROUP SELECTOR (hidden by default) -->
+        <div id="group-selector" style="display:none; margin-bottom:14px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Select Level & Semester</label>
+            <div style="display:flex;gap:8px;">
+                <select id="group-level" style="flex:1;">
+                    <option value="">All Levels</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
+                <select id="group-semester" style="flex:1;">
+                    <option value="">All Semesters</option>
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+            </div>
+            <div id="group-count" style="font-size:12px;color:#aaa;margin-top:6px;"></div>
+        </div>
 
-    <br>
+        <!-- INDIVIDUAL SELECTOR (hidden by default) -->
+        <div id="individual-selector" style="display:none; margin-bottom:14px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Search Student</label>
+            <div class="admin-box" style="padding:8px 12px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-magnifying-glass" style="color:#8B7500;font-size:13px;"></i>
+                    <input type="text" id="user-search-notif"
+                           placeholder="Search name or email..."
+                           style="border:none;outline:none;background:transparent;
+                                  font-size:14px;width:100%;margin:0;padding:4px 0;box-shadow:none;">
+                </div>
+            </div>
+            <div id="user-search-results"
+                 style="max-height:180px;overflow-y:auto;"></div>
+            <div id="selected-user-display" style="display:none;margin-top:6px;
+                 padding:8px 12px;border-radius:8px;background:#f0e8d0;font-size:13px;font-weight:600;">
+            </div>
+        </div>
 
-    <label>Title</label>
-    <input type="text" name="title" required>
+        <!-- MESSAGE FIELDS -->
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:4px;">Title</label>
+        <input type="text" name="title" placeholder="Notification title" required style="margin-bottom:12px;">
 
-    <br><br>
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:4px;">Message</label>
+        <textarea name="message" rows="4" placeholder="Notification message..." required style="margin-bottom:12px;"></textarea>
 
-    <label>Message</label>
-    <textarea name="message" required></textarea>
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:4px;">Link (optional)</label>
+        <input type="text" name="link" placeholder="e.g. /courses" style="margin-bottom:12px;">
 
-    <br><br>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:14px;cursor:pointer;">
+            <input type="checkbox" name="is_critical" value="1"
+                   style="width:auto;margin:0;box-shadow:none;">
+            Critical alert (also sends email)
+        </label>
 
-    <label>Link (optional)</label>
-    <input type="text" name="link" placeholder="/dashboard">
+        <div id="send-summary" style="font-size:13px;color:#8B7500;font-weight:600;margin-bottom:12px;"></div>
 
-    <br><br>
+        <button type="submit" id="send-btn">Send Notification</button>
+    </form>
 
-    <label>
-        <input type="checkbox" name="is_critical" value="1">
-        Critical (Email if offline)
-    </label>
+    <a href="/admin/" class="back-login-btn" style="margin-top:16px;display:inline-block;">← Dashboard</a>
+</section>
 
-    <br><br>
-
-    <button type="submit">Send Notification</button>
-
-</form>
+<style>
+.filter-tab-bar { display:flex;gap:6px;flex-wrap:wrap; }
+.filter-tab {
+    padding:7px 14px;border-radius:20px;border:1.5px solid #e6d8b5;
+    background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:inherit;
+}
+.filter-tab.active {
+    background:linear-gradient(135deg,#8B7500,#d4af37);color:#fff;border-color:transparent;
+}
+.user-result-item {
+    padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;
+    display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px solid #eee;
+}
+.user-result-item:hover { background:#f5f5f5; }
+.user-result-item:last-child { border-bottom:none; }
+</style>
 
 <script>
-document.getElementById("send_all_toggle").addEventListener("change", function() {
-    document.getElementById("single_user_select").style.display =
-        this.checked ? "none" : "block";
+const ALL_USERS = {{ users_json | safe }};
+let activeTarget = "all";
+let selectedUserId = null;
+let selectedUserName = "";
+
+const sendSummary = document.getElementById("send-summary");
+const groupCount = document.getElementById("group-count");
+
+function updateSummary() {
+    if (activeTarget === "all") {
+        const count = ALL_USERS.filter(u => u.role !== "admin").length;
+        sendSummary.textContent = `Will send to all ${count} students`;
+    } else if (activeTarget === "group") {
+        const lvl = document.getElementById("group-level").value;
+        const sem = document.getElementById("group-semester").value;
+        document.getElementById("input-target-level").value = lvl;
+        document.getElementById("input-target-semester").value = sem;
+
+        const count = ALL_USERS.filter(u => {
+            if (u.role === "admin") return false;
+            if (lvl && u.level !== lvl) return false;
+            if (sem && String(u.semester) !== sem) return false;
+            return true;
+        }).length;
+
+        const lvlLabel = lvl ? `${lvl}L` : "All Levels";
+        const semLabel = sem ? (sem === "1" ? "1st Semester" : "2nd Semester") : "All Semesters";
+        sendSummary.textContent = `Will send to ${count} students — ${lvlLabel}, ${semLabel}`;
+        groupCount.textContent = `${count} student${count !== 1 ? "s" : ""} match this group`;
+    } else if (activeTarget === "individual") {
+        if (selectedUserId) {
+            sendSummary.textContent = `Will send to ${selectedUserName}`;
+        } else {
+            sendSummary.textContent = "Select a student above";
+        }
+    }
+}
+
+// Target tabs
+document.querySelectorAll(".filter-tab[data-target]").forEach(tab => {
+    tab.addEventListener("click", () => {
+        document.querySelectorAll(".filter-tab[data-target]").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeTarget = tab.getAttribute("data-target");
+
+        document.getElementById("group-selector").style.display = activeTarget === "group" ? "block" : "none";
+        document.getElementById("individual-selector").style.display = activeTarget === "individual" ? "block" : "none";
+
+        // Reset hidden inputs
+        document.getElementById("input-send-all").value = activeTarget === "all" ? "1" : "";
+        document.getElementById("input-user-id").value = "";
+        document.getElementById("input-target-level").value = "";
+        document.getElementById("input-target-semester").value = "";
+
+        updateSummary();
+    });
 });
+
+// Group selectors
+document.getElementById("group-level").addEventListener("change", updateSummary);
+document.getElementById("group-semester").addEventListener("change", updateSummary);
+
+// Individual user search
+const userSearchInput = document.getElementById("user-search-notif");
+const userSearchResults = document.getElementById("user-search-results");
+const selectedUserDisplay = document.getElementById("selected-user-display");
+
+userSearchInput.addEventListener("input", () => {
+    const q = userSearchInput.value.trim().toLowerCase();
+    userSearchResults.innerHTML = "";
+    if (!q) return;
+
+    const matches = ALL_USERS.filter(u =>
+        u.role !== "admin" &&
+        (u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    ).slice(0, 8);
+
+    matches.forEach(u => {
+        const item = document.createElement("div");
+        item.className = "user-result-item";
+        item.innerHTML = `
+            <div>
+                <div style="font-weight:600;">${u.name}</div>
+                <div style="font-size:12px;color:#aaa;">${u.email}</div>
+            </div>
+            <span style="font-size:11px;color:#8B7500;font-weight:700;">${u.level}L S${u.semester}</span>
+        `;
+        item.addEventListener("click", () => {
+            selectedUserId = u.id;
+            selectedUserName = u.name;
+            document.getElementById("input-user-id").value = u.id;
+            userSearchResults.innerHTML = "";
+            userSearchInput.value = "";
+            selectedUserDisplay.style.display = "block";
+            selectedUserDisplay.textContent = `✓ ${u.name} (${u.email}) — ${u.level}L S${u.semester}`;
+            updateSummary();
+        });
+        userSearchResults.appendChild(item);
+    });
+});
+
+updateSummary();
 </script>
 
+<div id="admin-toast" class="toast"></div>
 {% endblock %}
