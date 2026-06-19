@@ -3,143 +3,343 @@
 
 {% block content %}
 <section class="admin-dashboard">
-    <h1 class="dashboard-title">User Management</h1>
+    <h1 class="dashboard-title">Users</h1>
 
-    <!-- STATS -->
-    <div class="stats-grid">
-        <a href="/admin/users/all" class="stat-card"><h3>Total</h3><p>{{ total_users }}</p></a>
-        <a href="/admin/users/paid" class="stat-card paid"><h3>Paid</h3><p>{{ paid_users }}</p></a>
-        <a href="/admin/users/unpaid" class="stat-card unpaid"><h3>Unpaid</h3><p>{{ unpaid_users }}</p></a>
-        <a href="/admin/users/suspended" class="stat-card suspended"><h3>Suspended</h3><p>{{ suspended_users }}</p></a>
-    </div>
-
-    <!-- ACTION BUTTONS -->
-    <div style="margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
-        <a href="/admin/users/migrate"
-           style="display:inline-block; background:linear-gradient(135deg,#8B7500,#d4af37);
-                  color:#fff; padding:12px 20px; border-radius:10px; font-weight:600;
-                  font-size:14px; text-decoration:none;">
-            <i class="fa-solid fa-arrows-rotate" style="margin-right:8px;"></i>Bulk Level Migration
-        </a>
-        <form method="POST" action="/admin/users/mark-all-unpaid"
-              onsubmit="return confirm('Mark ALL students unpaid? This also resets all rerun passes.');">
-            <button type="submit"
-                    style="background:#a00000; color:#fff; padding:12px 20px; border-radius:10px;
-                           font-weight:600; font-size:14px; border:none; cursor:pointer;">
-                <i class="fa-solid fa-xmark" style="margin-right:8px;"></i>Mark All Unpaid
+    <!-- SEARCH -->
+    <div class="admin-box" style="padding:10px 14px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-magnifying-glass" style="color:#8B7500;"></i>
+            <input type="text" id="user-search" placeholder="Search name or email..."
+                   style="border:none; outline:none; background:transparent;
+                          font-size:15px; width:100%; margin:0; padding:6px 0; box-shadow:none;">
+            <button id="user-search-clear" style="display:none; background:none; border:none;
+                    cursor:pointer; font-size:14px; padding:0; width:auto; margin:0; color:#aaa;">
+                <i class="fa-solid fa-xmark"></i>
             </button>
-        </form>
-    </div>
-
-    <!-- USER LIST -->
-    <div class="admin-box">
-        {% if users %}
-        <div class="users-grid">
-            {% for user in users %}
-            <div class="user-card">
-                <strong>{{ user.name }}</strong><br>
-                <small>{{ user.email }}</small><br>
-                <small>
-                    Level: <strong>{{ user.level or "N/A" }}</strong> &nbsp;·&nbsp;
-                    Semester: <strong>{{ '1st' if user.semester == 1 else ('2nd' if user.semester == 2 else 'N/A') }}</strong>
-                </small><br>
-                {% if user.role != "admin" %}
-                <small style="color:#777;">Main Fee: ₦{{ "{:,.2f}".format((user.amount or 0) / 100) }}</small><br>
-                {% endif %}
-
-                <p style="margin:4px 0; color:{% if user.is_suspended %}red{% else %}green{% endif %};">
-                    {{ "Suspended" if user.is_suspended else "Active" }}
-                </p>
-
-                {% if user.role != "admin" %}
-                <p style="margin:4px 0;">Payment:
-                    {% if user.payment_status == "paid" %}
-                        <strong style="color:green;">Paid</strong>
-                    {% else %}
-                        <strong style="color:red;">Unpaid</strong>
-                    {% endif %}
-                </p>
-
-                <!-- RERUN PASSES -->
-                {% set user_passes = rerun_by_user.get(user.id, []) %}
-                {% if user.level in ('400', '500') %}
-                <div style="margin:6px 0; font-size:12px;">
-                    <strong>Rerun Passes:</strong>
-                    {% set eligible = [] %}
-                    {% if user.level == '400' %}{% set eligible = ['300'] %}{% endif %}
-                    {% if user.level == '500' %}{% set eligible = ['300', '400'] %}{% endif %}
-
-                    {% for lvl in eligible %}
-                        {% set pass_status = namespace(val='unpaid') %}
-                        {% for p in user_passes %}
-                            {% if p.level == lvl %}{% set pass_status.val = p.status %}{% endif %}
-                        {% endfor %}
-                        <span style="display:inline-flex; align-items:center; gap:6px;
-                                     background:#f8f0dc; border-radius:6px; padding:3px 8px; margin:3px 2px;">
-                            🔁 {{ lvl }}L
-                            <span style="color:{% if pass_status.val == 'paid' %}green{% else %}#aaa{% endif %};">
-                                {{ "✅" if pass_status.val == 'paid' else "—" }}
-                            </span>
-                            <form method="POST" action="/admin/users/rerun/toggle/{{ user.id }}/{{ lvl }}"
-                                  style="display:inline; margin:0; padding:0; box-shadow:none; background:none;">
-                                <button type="submit"
-                                        style="font-size:10px; padding:2px 8px; background:{% if pass_status.val == 'paid' %}#a00000{% else %}#0a7c2f{% endif %}; border-radius:4px;">
-                                    {{ "Revoke" if pass_status.val == 'paid' else "Grant" }}
-                                </button>
-                            </form>
-                        </span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% endif %}
-
-                <!-- ACTION BUTTONS -->
-                <div class="user-actions" style="margin-top:8px;">
-                    <button type="button" class="btn-suspend" data-url="/admin/users/suspend/{{ user.id }}">
-                        {{ "Unsuspend" if user.is_suspended else "Suspend" }}
-                    </button>
-                    {% if user.role != "admin" %}
-                    <button type="button" class="btn-payment"
-                            data-url="/admin/users/mark-paid/{{ user.id }}"
-                            style="background:#0a7c2f;">
-                        {{ "Mark Unpaid" if user.payment_status == "paid" else "Mark Paid" }}
-                    </button>
-                    {% endif %}
-                    <button type="button" class="btn-delete"
-                            data-url="/admin/users/delete/{{ user.id }}"
-                            style="background:#a00000;">Delete</button>
-                </div>
-
-                <!-- EDIT LEVEL/SEMESTER -->
-                {% if user.role != "admin" %}
-                <details style="margin-top:10px;">
-                    <summary style="font-size:12px; color:#8B7500; cursor:pointer;">Edit Level / Semester</summary>
-                    <form method="POST" action="/admin/users/edit-level/{{ user.id }}"
-                          style="margin-top:8px; background:transparent; box-shadow:none; padding:0;">
-                        <select name="level" required style="margin-bottom:6px;">
-                            <option value="300" {% if user.level == '300' %}selected{% endif %}>300 Level</option>
-                            <option value="400" {% if user.level == '400' %}selected{% endif %}>400 Level</option>
-                            <option value="500" {% if user.level == '500' %}selected{% endif %}>500 Level</option>
-                        </select>
-                        <select name="semester" required style="margin-bottom:6px;">
-                            <option value="1" {% if user.semester == 1 %}selected{% endif %}>1st Semester</option>
-                            <option value="2" {% if user.semester == 2 %}selected{% endif %}>2nd Semester</option>
-                        </select>
-                        <button type="submit" style="font-size:12px; padding:6px 14px;">Save</button>
-                    </form>
-                </details>
-                {% endif %}
-            </div>
-            {% endfor %}
         </div>
-        {% else %}
-        <p>No users found.</p>
-        {% endif %}
     </div>
 
-    <a href="/admin/" class="back-login-btn">← Back to Dashboard</a>
+    <!-- LEVEL FILTER TABS -->
+    <div class="filter-tab-bar" id="level-tabs">
+        <button class="filter-tab active" data-level="all">All</button>
+        <button class="filter-tab" data-level="300">300L</button>
+        <button class="filter-tab" data-level="400">400L</button>
+        <button class="filter-tab" data-level="500">500L</button>
+    </div>
+
+    <!-- STATUS FILTER TABS -->
+    <div class="filter-tab-bar filter-tab-bar-secondary" id="status-tabs" style="margin-bottom:14px;">
+        <button class="filter-tab-secondary active" data-status="all">All</button>
+        <button class="filter-tab-secondary" data-status="paid">Paid</button>
+        <button class="filter-tab-secondary" data-status="unpaid">Unpaid</button>
+        <button class="filter-tab-secondary" data-status="suspended">Suspended</button>
+    </div>
+
+    <!-- COUNT + ACTIONS -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <div id="user-count" style="font-size:13px; color:#aaa;"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="/admin/users/migrate"
+               style="font-size:13px; background:linear-gradient(135deg,#8B7500,#d4af37);
+                      color:#fff; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:600;">
+                <i class="fa-solid fa-arrows-rotate" style="margin-right:5px;"></i>Migrate
+            </a>
+            <form method="POST" action="/admin/users/mark-all-unpaid" style="margin:0;"
+                  onsubmit="return confirm('Mark ALL students unpaid? Rerun passes also reset.');">
+                <button type="submit"
+                        style="font-size:13px; background:#a00000; color:#fff;
+                               padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600;">
+                    <i class="fa-solid fa-xmark" style="margin-right:5px;"></i>All Unpaid
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- USER CARDS -->
+    <div id="users-grid" class="users-grid"></div>
+    <div id="users-empty" style="display:none; text-align:center; padding:30px; color:#aaa;">
+        No users match this filter.
+    </div>
+
+    <a href="/admin/" class="back-login-btn" style="margin-top:16px; display:inline-block;">← Back to Dashboard</a>
 </section>
 
+<!-- USER CARD TEMPLATE (hidden) -->
+<template id="user-card-tpl">
+    <div class="user-card" data-name="" data-email="" data-level="" data-status="" data-suspended="">
+        <div class="user-card-header">
+            <div>
+                <div class="user-card-name"></div>
+                <div class="user-card-email"></div>
+            </div>
+            <div class="user-card-badge"></div>
+        </div>
+        <div class="user-card-meta"></div>
+        <div class="user-card-rerun"></div>
+        <div class="user-card-actions"></div>
+        <details class="user-card-edit">
+            <summary>Edit Level / Semester</summary>
+            <form method="POST" class="user-card-edit-form" style="background:transparent;box-shadow:none;padding:8px 0 0;">
+                <select name="level" required style="margin-bottom:6px;">
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
+                <select name="semester" required style="margin-bottom:6px;">
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+                <button type="submit" style="font-size:12px;padding:6px 14px;">Save</button>
+            </form>
+        </details>
+    </div>
+</template>
+
+<style>
+.filter-tab-bar {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.filter-tab {
+    padding: 7px 14px; border-radius: 20px; border: 1.5px solid #e6d8b5;
+    background: transparent; font-size: 13px; font-weight: 600; cursor: pointer;
+    color: inherit; transition: all 0.15s;
+}
+.filter-tab.active {
+    background: linear-gradient(135deg,#8B7500,#d4af37); color: #fff; border-color: transparent;
+}
+.filter-tab-bar-secondary { margin-top: 4px; }
+.filter-tab-secondary {
+    padding: 5px 12px; border-radius: 20px; border: 1.5px solid #e6d8b5;
+    background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;
+    color: inherit; transition: all 0.15s;
+}
+.filter-tab-secondary.active {
+    background: #3c2f1f; color: #fff; border-color: transparent;
+}
+
+.user-card { margin-bottom: 12px; }
+.user-card-header {
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;
+}
+.user-card-name { font-weight: 700; font-size: 15px; }
+.user-card-email { font-size: 12px; color: #aaa; margin-top: 2px; }
+.user-card-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; white-space: nowrap;
+}
+.badge-paid { background: #d4edda; color: #155724; }
+.badge-unpaid { background: #f8d7da; color: #721c24; }
+.badge-suspended { background: #fff3cd; color: #856404; }
+.user-card-meta { font-size: 13px; margin-bottom: 8px; color: #777; }
+.user-card-rerun { font-size: 12px; margin-bottom: 8px; }
+.user-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.user-card-actions button {
+    font-size: 12px; padding: 6px 12px; border-radius: 7px; border: none;
+    cursor: pointer; font-weight: 600; color: #fff;
+}
+.user-card-edit summary {
+    font-size: 12px; color: #8B7500; cursor: pointer; margin-bottom: 4px;
+}
+</style>
+
+<script>
+const ALL_USERS = {{ users_json | safe }};
+const RERUN_BY_USER = {{ rerun_json | safe }};
+
+let activeLevel = "all";
+let activeStatus = "all";
+let searchQuery = "";
+
+function getEffectiveStatus(u) {
+    if (u.is_suspended) return "suspended";
+    if (u.payment_status === "paid") return "paid";
+    return "unpaid";
+}
+
+function matchesFilters(u) {
+    if (u.role === "admin") return false;
+    if (activeLevel !== "all" && u.level !== activeLevel) return false;
+    if (activeStatus !== "all" && getEffectiveStatus(u) !== activeStatus) return false;
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+    }
+    return true;
+}
+
+function renderUsers() {
+    const grid = document.getElementById("users-grid");
+    const empty = document.getElementById("users-empty");
+    const countEl = document.getElementById("user-count");
+    grid.innerHTML = "";
+
+    const filtered = ALL_USERS.filter(matchesFilters);
+    countEl.textContent = `${filtered.length} student${filtered.length !== 1 ? "s" : ""}`;
+
+    // Update tab counts
+    document.querySelectorAll(".filter-tab[data-level]").forEach(tab => {
+        const lvl = tab.getAttribute("data-level");
+        const count = ALL_USERS.filter(u => {
+            if (u.role === "admin") return false;
+            if (lvl !== "all" && u.level !== lvl) return false;
+            if (activeStatus !== "all" && getEffectiveStatus(u) !== activeStatus) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                if (!u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+            }
+            return true;
+        }).length;
+        tab.textContent = lvl === "all" ? `All (${count})` : `${lvl}L (${count})`;
+    });
+
+    document.querySelectorAll(".filter-tab-secondary[data-status]").forEach(tab => {
+        const st = tab.getAttribute("data-status");
+        const count = ALL_USERS.filter(u => {
+            if (u.role === "admin") return false;
+            if (activeLevel !== "all" && u.level !== activeLevel) return false;
+            if (st !== "all" && getEffectiveStatus(u) !== st) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                if (!u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+            }
+            return true;
+        }).length;
+        tab.textContent = st === "all" ? `All (${count})` : st.charAt(0).toUpperCase() + st.slice(1) + ` (${count})`;
+    });
+
+    if (filtered.length === 0) {
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+
+    filtered.forEach(u => {
+        const status = getEffectiveStatus(u);
+        const semLabel = u.semester == 1 ? "1st" : "2nd";
+        const feeDisplay = u.amount ? "₦" + (u.amount / 100).toLocaleString("en-NG", {minimumFractionDigits:2}) : "—";
+
+        // Rerun passes
+        const passes = RERUN_BY_USER[u.id] || [];
+        const eligibleLevels = u.level === "400" ? ["300"] : u.level === "500" ? ["300","400"] : [];
+
+        let rerunHtml = "";
+        if (eligibleLevels.length > 0) {
+            rerunHtml = '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+            eligibleLevels.forEach(lvl => {
+                const p = passes.find(x => x.level === lvl);
+                const active = p && p.status === "paid";
+                rerunHtml += `
+                    <span style="display:inline-flex;align-items:center;gap:5px;
+                                 background:#f0e8d0;border-radius:6px;padding:3px 8px;font-size:11px;">
+                        🔁 ${lvl}L
+                        <span style="color:${active ? 'green' : '#aaa'};">${active ? "✅" : "—"}</span>
+                        <form method="POST" action="/admin/users/rerun/toggle/${u.id}/${lvl}"
+                              style="display:inline;margin:0;padding:0;background:none;box-shadow:none;">
+                            <button type="submit"
+                                    style="font-size:10px;padding:2px 7px;border-radius:4px;border:none;cursor:pointer;
+                                           color:#fff;background:${active ? '#a00000' : '#0a7c2f'};">
+                                ${active ? "Revoke" : "Grant"}
+                            </button>
+                        </form>
+                    </span>`;
+            });
+            rerunHtml += '</div>';
+        }
+
+        const badgeClass = status === "paid" ? "badge-paid" : status === "suspended" ? "badge-suspended" : "badge-unpaid";
+        const badgeText = status === "paid" ? "PAID" : status === "suspended" ? "SUSPENDED" : "UNPAID";
+
+        const card = document.createElement("div");
+        card.className = "user-card admin-box";
+        card.style.marginBottom = "10px";
+        card.innerHTML = `
+            <div class="user-card-header">
+                <div>
+                    <div class="user-card-name">${u.name}</div>
+                    <div class="user-card-email">${u.email}</div>
+                </div>
+                <span class="user-card-badge ${badgeClass}">${badgeText}</span>
+            </div>
+            <div class="user-card-meta">
+                ${u.level}L &nbsp;·&nbsp; ${semLabel} Semester &nbsp;·&nbsp; Fee: ${feeDisplay}
+            </div>
+            ${rerunHtml ? `<div class="user-card-rerun">${rerunHtml}</div>` : ""}
+            <div class="user-card-actions">
+                <form method="POST" action="/admin/users/suspend/${u.id}" style="margin:0;padding:0;background:none;box-shadow:none;">
+                    <button type="submit" style="background:${u.is_suspended ? '#0a7c2f' : '#856404'};">
+                        ${u.is_suspended ? "Unsuspend" : "Suspend"}
+                    </button>
+                </form>
+                <form method="POST" action="/admin/users/mark-paid/${u.id}" style="margin:0;padding:0;background:none;box-shadow:none;">
+                    <button type="submit" style="background:${status === 'paid' ? '#555' : '#0a7c2f'};">
+                        ${status === "paid" ? "Mark Unpaid" : "Mark Paid"}
+                    </button>
+                </form>
+                <form method="POST" action="/admin/users/delete/${u.id}"
+                      onsubmit="return confirm('Permanently delete ${u.name}?')"
+                      style="margin:0;padding:0;background:none;box-shadow:none;">
+                    <button type="submit" style="background:#a00000;">Delete</button>
+                </form>
+            </div>
+            <details style="margin-top:4px;">
+                <summary style="font-size:12px;color:#8B7500;cursor:pointer;">Edit Level / Semester</summary>
+                <form method="POST" action="/admin/users/edit-level/${u.id}"
+                      style="margin-top:8px;background:transparent;box-shadow:none;padding:0;">
+                    <select name="level" required style="margin-bottom:6px;">
+                        <option value="300" ${u.level==="300"?"selected":""}>300 Level</option>
+                        <option value="400" ${u.level==="400"?"selected":""}>400 Level</option>
+                        <option value="500" ${u.level==="500"?"selected":""}>500 Level</option>
+                    </select>
+                    <select name="semester" required style="margin-bottom:6px;">
+                        <option value="1" ${u.semester==1?"selected":""}>1st Semester</option>
+                        <option value="2" ${u.semester==2?"selected":""}>2nd Semester</option>
+                    </select>
+                    <button type="submit" style="font-size:12px;padding:6px 14px;">Save</button>
+                </form>
+            </details>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+// Tab events
+document.querySelectorAll(".filter-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+        document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeLevel = tab.getAttribute("data-level");
+        renderUsers();
+    });
+});
+
+document.querySelectorAll(".filter-tab-secondary").forEach(tab => {
+    tab.addEventListener("click", () => {
+        document.querySelectorAll(".filter-tab-secondary").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeStatus = tab.getAttribute("data-status");
+        renderUsers();
+    });
+});
+
+// Search
+const searchInput = document.getElementById("user-search");
+const searchClear = document.getElementById("user-search-clear");
+let debounce;
+searchInput.addEventListener("input", () => {
+    searchQuery = searchInput.value.trim();
+    searchClear.style.display = searchQuery ? "inline" : "none";
+    clearTimeout(debounce);
+    debounce = setTimeout(renderUsers, 200);
+});
+searchClear.addEventListener("click", () => {
+    searchInput.value = "";
+    searchQuery = "";
+    searchClear.style.display = "none";
+    renderUsers();
+});
+
+// Init
+renderUsers();
+</script>
+
 <div id="admin-toast" class="toast"></div>
-<script src="/static/js/admin.js"></script>
 {% endblock %}
