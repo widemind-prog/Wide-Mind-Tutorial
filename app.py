@@ -63,15 +63,12 @@ def inject_now():
 # =====================
 def get_access_state(user_id):
     """
-    When TRIAL_ENABLED=false:
-      - paid   -> full access
-      - unpaid -> payment wall (no trial logic)
-
-    When TRIAL_ENABLED=true (launch day+):
-      1. Paid          -> full access
-      2. Active trial  -> TRIAL_COURSE_ID only
-      3. Trial expired -> payment wall
-      4. Unverified    -> /verify-email
+    Returns dict describing the user's current access state.
+    Order:
+      1. Paid -> full access
+      2. Active trial -> trial access (TRIAL_COURSE_ID only)
+      3. Verified + trial expired -> payment wall
+      4. Not verified -> needs email verification
     """
     conn = get_db()
     c = conn.cursor()
@@ -94,11 +91,6 @@ def get_access_state(user_id):
     if is_paid:
         return {"state": "paid"}
 
-    # Trial system is off — treat everyone as verified, no trial
-    if not TRIAL_ENABLED:
-        return {"state": "unpaid"}
-
-    # Trial system is on
     if not user["is_verified"]:
         return {"state": "unverified"}
 
@@ -107,6 +99,7 @@ def get_access_state(user_id):
         return {"state": "trial", "trial": trial, "trial_course_id": TRIAL_COURSE_ID}
 
     return {"state": "trial_expired"}
+
 
 # =====================
 # BEFORE REQUEST
