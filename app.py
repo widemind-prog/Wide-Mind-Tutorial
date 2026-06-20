@@ -348,13 +348,26 @@ def get_user_accessible_courses(user_id):
         conn.close()
         return None
 
+    # FIX: normalize level/semester before querying. Strict "=" matching was
+    # silently returning zero rows whenever stored values had extra whitespace
+    # or mismatched types (e.g. level "400" vs " 400", semester as text vs int).
+    user_level = str(user["level"]).strip()
+    try:
+        user_semester = int(str(user["semester"]).strip())
+    except (TypeError, ValueError):
+        user_semester = user["semester"]
+
     c.execute("SELECT status, admin_override_status FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
     payment = c.fetchone()
     main_paid = payment and (payment["status"] == "paid" or payment["admin_override_status"] == "paid")
 
+    # FIX: TRIM() + normalized params so stray whitespace in stored course rows
+    # no longer causes a silent empty result.
     c.execute("""SELECT id, course_code, course_title, description, level, semester
-                 FROM courses WHERE level=? AND semester=? ORDER BY id DESC""",
-              (user["level"], user["semester"]))
+                 FROM courses
+                 WHERE TRIM(level)=? AND semester=?
+                 ORDER BY id DESC""",
+              (user_level, user_semester))
     main_courses = c.fetchall()
 
     c.execute("SELECT rerun_level, status, admin_override_status FROM rerun_passes WHERE user_id=?", (user_id,))
@@ -365,12 +378,15 @@ def get_user_accessible_courses(user_id):
         if effective == "paid":
             lvl = p["rerun_level"]
             c.execute("""SELECT id, course_code, course_title, description, level, semester
-                         FROM courses WHERE level=? AND semester=? ORDER BY id DESC""",
-                      (lvl, user["semester"]))
+                         FROM courses
+                         WHERE TRIM(level)=? AND semester=?
+                         ORDER BY id DESC""",
+                      (str(lvl).strip(), user_semester))
             rerun_courses[lvl] = c.fetchall()
 
     conn.close()
     return {"user": user, "main_paid": main_paid, "main_courses": main_courses, "rerun_courses": rerun_courses}
+
 
 # =====================
 # COURSE PAGE — access decision enforced
