@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Verify Email | Wide Mind Tutorial{% endblock %}
+
+{% block content %}
+<section class="account-section">
+    <div class="account-box" style="text-align:center;">
+
+        <div style="margin-bottom:20px;">
+            <i class="fa-solid fa-envelope-circle-check"
+               style="font-size:48px; color:#8B7500;"></i>
+        </div>
+
+        <h2 style="margin-bottom:6px;">Check Your Email</h2>
+        <p style="font-size:14px; margin-bottom:24px;">
+            We sent a 6-digit code to your email address.<br>
+            Enter it below to verify your account and start your free trial.
+        </p>
+
+        <div style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
+            <input type="text" id="otp-input" maxlength="6" placeholder="000000"
+                   inputmode="numeric" pattern="[0-9]*"
+                   style="text-align:center; font-size:28px; font-weight:700;
+                          letter-spacing:10px; width:100%; max-width:220px;">
+        </div>
+
+        <div id="otp-error"
+             style="display:none; color:crimson; font-size:13px; margin-bottom:12px;"></div>
+        <div id="otp-success"
+             style="display:none; color:green; font-size:13px; margin-bottom:12px;"></div>
+
+        <button id="verify-btn" class="btn-pay-now" style="width:100%; margin-bottom:14px;">
+            <i class="fa-solid fa-circle-check" style="margin-right:8px;"></i>Verify Email
+        </button>
+
+        <button id="resend-btn" class="btn"
+                style="width:100%; background:transparent; border:1.5px solid #e6d8b5;
+                       font-size:14px;">
+            <i class="fa-solid fa-rotate-right" style="margin-right:8px;"></i>
+            Resend Code
+        </button>
+
+        <p id="resend-countdown"
+           style="display:none; font-size:12px; color:#aaa; margin-top:10px;"></p>
+
+        <p style="font-size:12px; color:#aaa; margin-top:20px;">
+            Code expires in 10 minutes. Check your spam folder if you don't see it.
+        </p>
+    </div>
+</section>
+
+{% block scripts %}
+<script>
+(function () {
+    const otpInput = document.getElementById("otp-input");
+    const verifyBtn = document.getElementById("verify-btn");
+    const resendBtn = document.getElementById("resend-btn");
+    const errorEl = document.getElementById("otp-error");
+    const successEl = document.getElementById("otp-success");
+    const countdownEl = document.getElementById("resend-countdown");
+
+    let resendTimer = null;
+
+    function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.style.display = "block";
+        successEl.style.display = "none";
+    }
+
+    function showSuccess(msg) {
+        successEl.textContent = msg;
+        successEl.style.display = "block";
+        errorEl.style.display = "none";
+    }
+
+    function startResendCooldown(seconds) {
+        resendBtn.disabled = true;
+        countdownEl.style.display = "block";
+        let remaining = seconds;
+
+        resendTimer = setInterval(function () {
+            remaining--;
+            countdownEl.textContent = "Resend available in " + remaining + "s";
+            if (remaining <= 0) {
+                clearInterval(resendTimer);
+                resendBtn.disabled = false;
+                countdownEl.style.display = "none";
+            }
+        }, 1000);
+    }
+
+    // Only allow digits
+    otpInput.addEventListener("input", function () {
+        otpInput.value = otpInput.value.replace(/\D/g, "").slice(0, 6);
+    });
+
+    // Verify
+    verifyBtn.addEventListener("click", async function () {
+        const otp = otpInput.value.trim();
+        if (otp.length !== 6) {
+            showError("Please enter the full 6-digit code.");
+            return;
+        }
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Verifying...';
+        errorEl.style.display = "none";
+
+        try {
+            const res = await fetch("/api/otp/verify", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ otp: otp })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showSuccess("Email verified! Starting your free trial...");
+                setTimeout(function () {
+                    window.location.href = data.redirect || "/account";
+                }, 1000);
+            } else {
+                showError(data.error || "Verification failed. Try again.");
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fa-solid fa-circle-check" style="margin-right:8px;"></i>Verify Email';
+            }
+        } catch (e) {
+            showError("Network error. Please try again.");
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<i class="fa-solid fa-circle-check" style="margin-right:8px;"></i>Verify Email';
+        }
+    });
+
+    // Resend
+    resendBtn.addEventListener("click", async function () {
+        resendBtn.disabled = true;
+        errorEl.style.display = "none";
+
+        try {
+            const res = await fetch("/api/otp/send", {
+                method: "POST",
+                credentials: "same-origin"
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showSuccess("New code sent to your email.");
+                startResendCooldown(60);
+            } else {
+                showError(data.error || "Could not send code.");
+                resendBtn.disabled = false;
+            }
+        } catch (e) {
+            showError("Network error. Please try again.");
+            resendBtn.disabled = false;
+        }
+    });
+
+    // Submit on Enter
+    otpInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") verifyBtn.click();
+    });
+})();
+</script>
+{% endblock %}
+{% endblock %}
