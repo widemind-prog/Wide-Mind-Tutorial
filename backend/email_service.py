@@ -4,7 +4,6 @@ from datetime import datetime
 
 
 def send_email(to_email, subject, body):
-
     api_key = os.environ.get("BREVO_API_KEY")
     from_email = os.environ.get("EMAIL_FROM", "no-reply@widemindtutorial.com")
     from_name = "Wide Mind Tutorial"
@@ -45,7 +44,6 @@ def send_email(to_email, subject, body):
   </div>
 </div>
 """
-
     try:
         response = requests.post(
             "https://api.brevo.com/v3/smtp/email",
@@ -67,10 +65,35 @@ def send_email(to_email, subject, body):
             print(f"[EMAIL] Brevo error: {response.text}")
             return False
         return True
-
     except Exception as e:
         print(f"[EMAIL] Failed: {type(e).__name__}: {e}")
         return False
+
+
+# =====================
+# OTP EMAIL
+# =====================
+def send_otp_email(to_email, name, otp):
+    first_name = name.split()[0].capitalize()
+    body = f"""
+    <p style="font-size:18px;font-weight:700;color:#8B7500;">Verify Your Email Address</p>
+    <p>Hi <strong>{first_name}</strong>,</p>
+    <p>Enter the code below to verify your email and start your <strong>24-hour free trial</strong>.</p>
+    <div style="text-align:center;margin:28px 0;">
+        <div style="display:inline-block;background:linear-gradient(135deg,#8B7500,#d4af37);
+                    color:#fff;font-size:36px;font-weight:800;letter-spacing:12px;
+                    padding:18px 32px;border-radius:12px;">
+            {otp}
+        </div>
+    </div>
+    <p style="text-align:center;font-size:13px;color:#777;">
+        This code expires in <strong>10 minutes</strong>.
+    </p>
+    <p style="font-size:13px;color:#aaa;">
+        If you did not create an account on Wide Mind Tutorial, you can safely ignore this email.
+    </p>
+    """
+    return send_email(to_email, "Your Wide Mind Tutorial Verification Code", body)
 
 
 # =====================
@@ -79,33 +102,29 @@ def send_email(to_email, subject, body):
 def send_welcome_email(to_email, name):
     first_name = name.split()[0].capitalize()
     body = f"""
-    <p style="font-size:18px;font-weight:700;color:#8B7500;">Welcome to Wide Mind Tutorial! 🎉</p>
+    <p style="font-size:18px;font-weight:700;color:#8B7500;">Welcome to Wide Mind Tutorial!</p>
     <p>Hi <strong>{first_name}</strong>,</p>
     <p>
-        We're excited to have you on board. Your account has been created successfully
-        and you're one step away from accessing all your course materials.
+        Your account has been created. Check your email for a verification code to activate
+        your <strong>24-hour free trial</strong>.
     </p>
-    <p><strong>Here's what you get with full access:</strong></p>
+    <p><strong>With full access you get:</strong></p>
     <ul style="padding-left:20px;line-height:2;">
-        <li>📄 Full PDF notes for all your courses</li>
-        <li>🎧 Audio lectures you can listen to anywhere</li>
-        <li>🔔 Real-time notifications for new materials</li>
+        <li>Full PDF notes for all your courses</li>
+        <li>Audio lectures you can listen to anywhere</li>
+        <li>Real-time notifications for new materials</li>
     </ul>
-    <p>
-        To unlock your access, simply log in and complete your payment.
-    </p>
     <div style="text-align:center;margin:24px 0;">
-        <a href="https://www.widemindtutorial.com"
+        <a href="https://www.widemindtutorial.com/verify-email"
            style="background:linear-gradient(135deg,#8B7500,#d4af37);color:#fff;
                   padding:14px 32px;border-radius:8px;text-decoration:none;
                   font-weight:bold;font-size:15px;">
-            Get Started →
+            Verify My Email
         </a>
     </div>
-    <p>If you have any questions, feel free to reach out via our contact page.</p>
-    <p>Welcome aboard! 💛<br><strong>Wide Mind Tutorial Team</strong></p>
+    <p>Welcome aboard!<br><strong>Wide Mind Tutorial Team</strong></p>
     """
-    return send_email(to_email, "Welcome to Wide Mind Tutorial! 🎉", body)
+    return send_email(to_email, "Welcome to Wide Mind Tutorial — Verify Your Email", body)
 
 
 # =====================
@@ -114,29 +133,26 @@ def send_welcome_email(to_email, name):
 def send_payment_success_email(to_email, name):
     first_name = name.split()[0].capitalize()
     body = f"""
-    <p style="font-size:18px;font-weight:700;color:#8B7500;">Payment Confirmed! ✅</p>
+    <p style="font-size:18px;font-weight:700;color:#8B7500;">Payment Confirmed!</p>
     <p>Hi <strong>{first_name}</strong>,</p>
-    <p>
-        Your payment has been received and your account is now <strong>fully active</strong>.
-        You now have complete access to all course materials.
-    </p>
+    <p>Your payment has been received and your account is now <strong>fully active</strong>.</p>
     <p><strong>You can now access:</strong></p>
     <ul style="padding-left:20px;line-height:2;">
-        <li>📄 PDF notes for all your courses</li>
-        <li>🎧 Audio lectures for all sessions</li>
-        <li>🔔 Push notifications for new uploads</li>
+        <li>PDF notes for all your courses</li>
+        <li>Audio lectures for all sessions</li>
+        <li>Push notifications for new uploads</li>
     </ul>
     <div style="text-align:center;margin:24px 0;">
         <a href="https://www.widemindtutorial.com/account"
            style="background:linear-gradient(135deg,#8B7500,#d4af37);color:#fff;
                   padding:14px 32px;border-radius:8px;text-decoration:none;
                   font-weight:bold;font-size:15px;">
-            Go to My Account →
+            Go to My Account
         </a>
     </div>
-    <p>Study hard and excel! 💛<br><strong>Wide Mind Tutorial Team</strong></p>
+    <p>Study hard and excel!<br><strong>Wide Mind Tutorial Team</strong></p>
     """
-    return send_email(to_email, "Payment Confirmed — Your Access is Active! ✅", body)
+    return send_email(to_email, "Payment Confirmed — Your Access is Active!", body)
 
 
 # =====================
@@ -144,33 +160,26 @@ def send_payment_success_email(to_email, name):
 # =====================
 def send_new_material_email(to_email, name, material_title, course_title, file_type, course_id):
     first_name = name.split()[0].capitalize()
-    icon = "📄" if file_type == "pdf" else "🎧"
     type_label = "PDF Notes" if file_type == "pdf" else "Audio Lecture"
     body = f"""
-    <p style="font-size:18px;font-weight:700;color:#8B7500;">New Material Available! {icon}</p>
+    <p style="font-size:18px;font-weight:700;color:#8B7500;">New Material Available!</p>
     <p>Hi <strong>{first_name}</strong>,</p>
-    <p>
-        A new <strong>{type_label}</strong> has just been added to your course materials.
-    </p>
+    <p>A new <strong>{type_label}</strong> has just been added to your course materials.</p>
     <div style="background:#fff8e1;border:1px solid #e6d8b5;border-radius:10px;
                 padding:16px;margin:20px 0;">
         <p style="margin:0;font-size:14px;color:#555;">Course</p>
         <p style="margin:4px 0 12px;font-weight:700;color:#3c2f1f;font-size:16px;">{course_title}</p>
         <p style="margin:0;font-size:14px;color:#555;">Material</p>
-        <p style="margin:4px 0 0;font-weight:700;color:#3c2f1f;font-size:16px;">{icon} {material_title}</p>
+        <p style="margin:4px 0 0;font-weight:700;color:#3c2f1f;font-size:16px;">{material_title}</p>
     </div>
     <div style="text-align:center;margin:24px 0;">
         <a href="https://www.widemindtutorial.com/course/{course_id}"
            style="background:linear-gradient(135deg,#8B7500,#d4af37);color:#fff;
                   padding:14px 32px;border-radius:8px;text-decoration:none;
                   font-weight:bold;font-size:15px;">
-            View Material →
+            View Material
         </a>
     </div>
-    <p>Keep studying! 💛<br><strong>Wide Mind Tutorial Team</strong></p>
+    <p>Keep studying!<br><strong>Wide Mind Tutorial Team</strong></p>
     """
-    return send_email(
-        to_email,
-        f"New {type_label} Available — {course_title} {icon}",
-        body
-    )
+    return send_email(to_email, f"New {type_label} Available — {course_title}", body)
