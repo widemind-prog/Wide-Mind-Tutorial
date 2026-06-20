@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (registerForm) {
         registerForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-
             const res = await fetch("/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -16,13 +15,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     email: registerForm.email.value,
                     password: registerForm.password.value,
                     department: registerForm.department.value,
-                    level: registerForm.level.value
+                    level: registerForm.level.value,
+                    semester: registerForm.semester.value   // FIX: was missing — backend requires this field
                 })
             });
-
             const data = await res.json();
             const msgEl = document.getElementById("register-msg");
-
             if (res.ok) {
                 msgEl.style.color = "green";
                 msgEl.textContent = "Registration successful! Redirecting...";
@@ -39,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------
     const passwordInput = document.getElementById("password");
     const toggleIcon = document.querySelector(".toggle-password-icon");
-
     if (passwordInput && toggleIcon) {
         toggleIcon.addEventListener("click", () => {
             const isHidden = passwordInput.type === "password";
