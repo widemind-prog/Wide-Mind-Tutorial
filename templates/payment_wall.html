@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Full Access Required | Wide Mind Tutorial{% endblock %}
+
+{% block content %}
+<section class="account-section">
+    <div class="account-box" style="text-align:center;">
+
+        <i class="fa-solid fa-lock"
+           style="font-size:44px; color:#8B7500; margin-bottom:16px; display:block;"></i>
+
+        {% if is_trial %}
+        <h2 style="margin-bottom:8px;">Trial Access Only</h2>
+        <p style="font-size:14px; margin-bottom:6px;">
+            Your 24-hour trial gives you access to the sample course only.
+        </p>
+        <p style="font-size:14px; margin-bottom:20px;">
+            Pay once to unlock <strong>all courses</strong> for your level.
+        </p>
+        {% if trial_course_id %}
+        <a href="/course/{{ trial_course_id }}"
+           style="display:block; text-align:center; background:#f0e8d0;
+                  color:#8B7500; padding:12px; border-radius:10px;
+                  font-weight:600; font-size:14px; text-decoration:none; margin-bottom:16px;">
+            <i class="fa-solid fa-play" style="margin-right:8px;"></i>
+            Continue with Sample Course
+        </a>
+        {% endif %}
+        {% else %}
+        <h2 style="margin-bottom:8px;">Your Trial Has Ended</h2>
+        <p style="font-size:14px; margin-bottom:20px;">
+            Complete payment to regain full access to all your courses.
+        </p>
+        {% endif %}
+
+        <button id="pay-wall-btn" class="btn-pay-now" style="width:100%;">
+            <i class="fa-solid fa-credit-card" style="margin-right:8px;"></i>
+            Pay Now to Unlock Full Access
+        </button>
+
+        <a href="/account"
+           style="display:block; margin-top:14px; font-size:13px; color:#aaa; text-decoration:none;">
+            <i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i>Back to Account
+        </a>
+    </div>
+</section>
+
+{% block scripts %}
+<script>
+(function () {
+    document.getElementById("pay-wall-btn").addEventListener("click", async function () {
+        var btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Initializing...';
+        try {
+            var res = await fetch("/api/payment/init", {
+                method: "POST", credentials: "same-origin"
+            });
+            var data = await res.json();
+            if (data.status && data.data && data.data.authorization_url) {
+                window.location.href = data.data.authorization_url;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-credit-card" style="margin-right:8px;"></i>Pay Now to Unlock Full Access';
+            }
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-credit-card" style="margin-right:8px;"></i>Pay Now to Unlock Full Access';
+        }
+    });
+})();
+</script>
+{% endblock %}
+{% endblock %}
