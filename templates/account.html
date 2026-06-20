@@ -13,18 +13,242 @@
         <p>Semester: <span id="semester">Loading...</span></p>
         <p>Payment Status: <strong id="payment-status">Checking...</strong></p>
         <button type="button" id="pay-btn" class="btn-pay-now" style="display:none;">
-            Pay Now <span id="pay-amount"></span> 💳
+            <i class="fa-solid fa-credit-card" style="margin-right:8px;"></i>
+            Pay Now <span id="pay-amount"></span>
         </button>
     </div>
 
-    <!-- MAIN COURSES -->
-    <div class="courses-box">
-        <div id="toast" class="toast"></div>
-        <h3>Your Courses</h3>
-        <ul id="courses-main">
-            <li>Loading courses...</li>
-        </ul>
+    <!-- TRIAL BANNER -->
+    <div id="trial-banner" style="display:none;" class="courses-box">
+        <div id="trial-active-banner" style="display:none;">
+            <i class="fa-solid fa-hourglass-half" style="margin-right:8px; color:#8B7500;"></i>
+            <strong>Free Trial Active</strong> —
+            <span id="trial-countdown"></span> remaining
+        </div>
+        <div id="trial-expired-banner" style="display:none; color:crimson;">
+            <i class="fa-solid fa-circle-exclamation" style="margin-right:8px;"></i>
+            <strong>Trial Ended</strong> — Pay to regain full access
+        </div>
     </div>
 
-<script src="/static/js/account.js"></script>
+    <!-- PROGRESS CARD -->
+    <div class="courses-box" id="progress-card" style="display:none;">
+        <h3>
+            <i class="fa-solid fa-chart-simple" style="margin-right:8px; color:#8B7500;"></i>
+            Your Progress
+        </h3>
+
+        <!-- PROGRESS BAR -->
+        <div style="margin:14px 0 10px;">
+            <div style="display:flex; justify-content:space-between;
+                        font-size:12px; color:#aaa; margin-bottom:6px;">
+                <span id="progress-label">0 of 0 lessons completed</span>
+                <span id="progress-pct">0%</span>
+            </div>
+            <div style="height:8px; background:#e6d8b5; border-radius:6px; overflow:hidden;">
+                <div id="progress-bar"
+                     style="height:100%; width:0%;
+                            background:linear-gradient(90deg,#8B7500,#d4af37);
+                            border-radius:6px; transition:width 0.6s ease;"></div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+            <div class="stat-mini">
+                <i class="fa-solid fa-circle-check" style="color:green;"></i>
+                <div id="stat-completed">—</div>
+                <div class="stat-mini-label">Completed</div>
+            </div>
+            <div class="stat-mini">
+                <i class="fa-solid fa-clock" style="color:#8B7500;"></i>
+                <div id="stat-time">—</div>
+                <div class="stat-mini-label">Studied</div>
+            </div>
+            <div class="stat-mini">
+                <i class="fa-solid fa-circle-half-stroke" style="color:#aaa;"></i>
+                <div id="stat-pending">—</div>
+                <div class="stat-mini-label">Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div class="courses-box" id="progress-empty" style="display:none; text-align:center; color:#aaa;">
+        <i class="fa-solid fa-book-open"
+           style="font-size:32px; color:#e6d8b5; display:block; margin-bottom:10px;"></i>
+        No courses available for your level and semester yet.
+    </div>
+
+</section>
+
+<style>
+.stat-mini {
+    flex: 1; min-width: 80px;
+    background: #fffaf0; border: 1px solid #e6d8b5;
+    border-radius: 10px; padding: 10px 8px; text-align: center;
+}
+.stat-mini i { font-size: 18px; display: block; margin-bottom: 4px; }
+.stat-mini > div:nth-child(2) { font-size: 16px; font-weight: 700; }
+.stat-mini-label { font-size: 11px; color: #aaa; margin-top: 2px; }
+.paid-animate { animation: pop 0.6s ease-out; }
+@keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    70% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); }
+}
+</style>
+
+{% block scripts %}
+<script>
+(function () {
+    var paymentStatusEl = document.getElementById("payment-status");
+    var payBtn = document.getElementById("pay-btn");
+    var payAmountEl = document.getElementById("pay-amount");
+    var trialBanner = document.getElementById("trial-banner");
+    var trialActiveBanner = document.getElementById("trial-active-banner");
+    var trialExpiredBanner = document.getElementById("trial-expired-banner");
+    var trialCountdown = document.getElementById("trial-countdown");
+    var progressCard = document.getElementById("progress-card");
+    var progressEmpty = document.getElementById("progress-empty");
+    var progressBar = document.getElementById("progress-bar");
+    var progressLabel = document.getElementById("progress-label");
+    var progressPct = document.getElementById("progress-pct");
+    var statCompleted = document.getElementById("stat-completed");
+    var statTime = document.getElementById("stat-time");
+    var statPending = document.getElementById("stat-pending");
+
+    var countdownInterval = null;
+
+    function formatTime(seconds) {
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return h + "h " + m + "m";
+        if (m > 0) return m + "m";
+        return Math.floor(seconds) + "s";
+    }
+
+    function startTrialCountdown(secondsRemaining) {
+        function tick() {
+            if (secondsRemaining <= 0) {
+                clearInterval(countdownInterval);
+                trialActiveBanner.style.display = "none";
+                trialExpiredBanner.style.display = "block";
+                return;
+            }
+            trialCountdown.textContent = formatTime(secondsRemaining);
+            secondsRemaining--;
+        }
+        tick();
+        countdownInterval = setInterval(tick, 1000);
+    }
+
+    async function loadUserInfo() {
+        try {
+            var res = await fetch("/api/auth/me", { credentials: "same-origin" });
+            if (!res.ok) return;
+            var u = await res.json();
+            var nameEl = document.getElementById("username");
+            var deptEl = document.getElementById("department");
+            var levelEl = document.getElementById("level");
+            var semEl = document.getElementById("semester");
+            if (nameEl) nameEl.textContent = u.name;
+            if (deptEl) deptEl.textContent = u.department;
+            if (levelEl) levelEl.textContent = u.level ? u.level + " Level" : "N/A";
+            if (semEl) semEl.textContent = u.semester == 1 ? "1st Semester" : "2nd Semester";
+        } catch(e) {}
+    }
+
+    async function loadProgress() {
+        try {
+            var res = await fetch("/api/progress/summary", { credentials: "same-origin" });
+            if (!res.ok) return;
+            var d = await res.json();
+
+            // Payment status display
+            if (d.is_paid) {
+                paymentStatusEl.textContent = "PAID";
+                paymentStatusEl.style.color = "green";
+                paymentStatusEl.classList.add("paid-animate");
+                payBtn.style.display = "none";
+            } else {
+                paymentStatusEl.textContent = "UNPAID";
+                paymentStatusEl.style.color = "crimson";
+                payBtn.style.display = "block";
+                if (payAmountEl && d.amount_display) {
+                    payAmountEl.textContent = " " + d.amount_display;
+                }
+            }
+
+            // Trial banner
+            if (!d.is_paid) {
+                if (d.trial_active) {
+                    trialBanner.style.display = "block";
+                    trialActiveBanner.style.display = "block";
+                    startTrialCountdown(d.trial_seconds_remaining);
+                } else if (d.trial_expired) {
+                    trialBanner.style.display = "block";
+                    trialExpiredBanner.style.display = "block";
+                }
+            }
+
+            // Progress card
+            if (d.total_audios > 0) {
+                progressCard.style.display = "block";
+                progressEmpty.style.display = "none";
+
+                var pct = d.total_audios > 0
+                    ? Math.round((d.completed_count / d.total_audios) * 100)
+                    : 0;
+
+                progressBar.style.width = pct + "%";
+                progressLabel.textContent = d.completed_count + " of " + d.total_audios + " lessons completed";
+                progressPct.textContent = pct + "%";
+                statCompleted.textContent = d.completed_count + " lesson" + (d.completed_count !== 1 ? "s" : "");
+                statTime.textContent = formatTime(d.total_listened_seconds);
+                statPending.textContent = d.pending_count + " lesson" + (d.pending_count !== 1 ? "s" : "");
+            } else {
+                progressCard.style.display = "none";
+                progressEmpty.style.display = "block";
+            }
+        } catch(e) {
+            console.error("Progress load failed:", e);
+        }
+    }
+
+    // Pay button
+    if (payBtn) {
+        payBtn.addEventListener("click", async function () {
+            payBtn.disabled = true;
+            payBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Initializing...';
+            try {
+                var res = await fetch("/api/payment/init", {
+                    method: "POST", credentials: "same-origin"
+                });
+                var data = await res.json();
+                if (data.status && data.data && data.data.authorization_url) {
+                    window.location.href = data.data.authorization_url;
+                } else {
+                    payBtn.disabled = false;
+                    payBtn.innerHTML = '<i class="fa-solid fa-credit-card" style="margin-right:8px;"></i>Pay Now <span id="pay-amount">' + (payAmountEl ? payAmountEl.textContent : "") + "</span>";
+                }
+            } catch(e) {
+                payBtn.disabled = false;
+            }
+        });
+    }
+
+    // Handle payment callback redirect
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "callback" || params.get("payment") === "rerun_callback") {
+        var url = new URL(window.location);
+        url.searchParams.delete("payment");
+        window.history.replaceState({}, document.title, url);
+    }
+
+    // Init
+    loadUserInfo();
+    loadProgress();
+})();
+</script>
+{% endblock %}
 {% endblock %}
