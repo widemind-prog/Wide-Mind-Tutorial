@@ -77,22 +77,6 @@ def login():
         conn.close()
         return jsonify({"error": "Invalid email or password"}), 401
 
-    # Auto-start trial on login for existing unverified+unpaid users
-    # who have never had a trial started
-    is_paid = user["payment_status"] == "paid"
-    if not is_paid and not user["trial_started_at"] and not is_admin(user["id"]):
-        # For existing users registered before OTP feature:
-        # if they have no OTP record and no trial, verify them and start trial
-        c.execute("SELECT id FROM email_otps WHERE user_id=?", (user["id"],))
-        has_otp_record = c.fetchone()
-        if not has_otp_record:
-            # Legacy user — auto-verify and start trial
-            c.execute("""
-                UPDATE users SET is_verified=1, trial_started_at=datetime('now')
-                WHERE id=?
-            """, (user["id"],))
-            conn.commit()
-
     conn.close()
 
     session.permanent = True
@@ -101,17 +85,46 @@ def login():
     if is_admin(user["id"]):
         return jsonify({"redirect": "/admin"}), 200
 
-    # If not verified, send to verify page
-    conn2 = get_db()
-    c2 = conn2.cursor()
-    c2.execute("SELECT is_verified FROM users WHERE id=?", (user["id"],))
-    fresh = c2.fetchone()
-    conn2.close()
+    # FIX: Removed the old "auto-verify + start trial if no OTP record" branch.
+    # That heuristic incorrectly treated ANY unverified user with a missing/cleared
+    # OTP row as a "legacy" account and silently verified them + started their trial
+    # without them ever confirming their email. This is how trials were starting
+    # for users who never verified.
+    #
+    # New behavior: if the user isn't verified, always send them to verify-email.
+    # If they have no live (unexpired, unused) OTP waiting for them, fire off a
+    # fresh one automatically so they're not stuck without ever receiving a code.
+    if not user["is_verified"]:
+        conn2 = get_db()
+        c2 = conn2.cursor()
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        c2.execute("""
+            SELECT id FROM email_otps
+            WHERE user_id=? AND verified=0 AND expires_at > ?
+            ORDER BY id DESC LIMIT 1
+        """, (user["id"], now))
+        has_live_otp = c2.fetchone()
 
-    if not fresh["is_verified"]:
+        if not has_live_otp:
+            otp = str(random.randint(100000, 999999))
+            otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+            expires_at = (datetime.utcnow() + timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
+            c2.execute("SELECT name, email FROM users WHERE id=?", (user["id"],))
+            u2 = c2.fetchone()
+            c2.execute("""
+                INSERT INTO email_otps (user_id, otp_hash, expires_at, verified)
+                VALUES (?, ?, ?, 0)
+            """, (user["id"], otp_hash, expires_at))
+            conn2.commit()
+            try:
+                send_otp_email(u2["email"], u2["name"], otp)
+            except Exception as e:
+                print(f"[OTP] Send failed on login re-issue: {e}")
+        conn2.close()
         return jsonify({"redirect": "/verify-email"}), 200
 
     return jsonify({"redirect": "/account"}), 200
+
 
 # =====================
 # FORGOT PASSWORD
