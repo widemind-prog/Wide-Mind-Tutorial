@@ -16,17 +16,12 @@ class Row:
         self._values = values
         self._dict = dict(zip(columns, values))
     def __getitem__(self, key):
-        if isinstance(key, int):
-            return self._values[key]
+        if isinstance(key, int): return self._values[key]
         return self._dict[key]
-    def __iter__(self):
-        return iter(self._values)
-    def keys(self):
-        return self._columns
-    def get(self, key, default=None):
-        return self._dict.get(key, default)
-    def __repr__(self):
-        return str(self._dict)
+    def __iter__(self): return iter(self._values)
+    def keys(self): return self._columns
+    def get(self, key, default=None): return self._dict.get(key, default)
+    def __repr__(self): return str(self._dict)
 
 class TursoCursor:
     def __init__(self, conn):
@@ -45,14 +40,11 @@ class TursoCursor:
         self._rows = [Row(self._columns, [_parse_value(v) for v in row]) for row in rows]
         self.lastrowid = result.get("last_insert_rowid")
         return self
-    def fetchone(self):
-        return self._rows[0] if self._rows else None
-    def fetchall(self):
-        return self._rows
+    def fetchone(self): return self._rows[0] if self._rows else None
+    def fetchall(self): return self._rows
 
 class TursoConnection:
-    def __init__(self):
-        pass
+    def __init__(self): pass
     def _execute(self, sql, args=None):
         payload = {
             "requests": [
@@ -67,16 +59,13 @@ class TursoConnection:
         if result["type"] == "error":
             raise Exception(result["error"]["message"])
         return result.get("response", {}).get("result", {})
-    def cursor(self):
-        return TursoCursor(self)
+    def cursor(self): return TursoCursor(self)
     def execute(self, sql, params=()):
         c = self.cursor()
         c.execute(sql, params)
         return c
-    def commit(self):
-        pass
-    def close(self):
-        pass
+    def commit(self): pass
+    def close(self): pass
 
 def _turso_type(value):
     if value is None: return "null"
@@ -99,8 +88,7 @@ def _parse_value(v):
         return val
     return v
 
-def get_db():
-    return TursoConnection()
+def get_db(): return TursoConnection()
 
 def init_db():
     conn = get_db()
@@ -110,7 +98,10 @@ def init_db():
         name TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL, department TEXT, level TEXT,
         semester INTEGER DEFAULT 2,
-        role TEXT DEFAULT 'student', is_suspended INTEGER DEFAULT 0,
+        role TEXT DEFAULT 'student',
+        is_suspended INTEGER DEFAULT 0,
+        is_verified INTEGER DEFAULT 0,
+        trial_started_at TEXT DEFAULT NULL,
         push_enabled INTEGER DEFAULT 0)""")
 
     conn.execute("""CREATE TABLE IF NOT EXISTS courses (
@@ -141,9 +132,29 @@ def init_db():
         amount INTEGER NOT NULL,
         status TEXT DEFAULT 'unpaid',
         admin_override_status TEXT DEFAULT NULL,
-        reference TEXT,
-        paid_at DATETIME,
+        reference TEXT, paid_at DATETIME,
         FOREIGN KEY(user_id) REFERENCES users(id))""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS email_otps (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        otp_hash TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        verified INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY(user_id) REFERENCES users(id))""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        material_id INTEGER NOT NULL,
+        listened_seconds REAL DEFAULT 0,
+        completed INTEGER DEFAULT 0,
+        opened_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(user_id, material_id),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(material_id) REFERENCES materials(id))""")
 
     conn.execute("""CREATE TABLE IF NOT EXISTS contact_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,9 +186,11 @@ def init_db():
         expires_at TEXT NOT NULL,
         used INTEGER DEFAULT 0)""")
 
-    # Safe migrations
+    # Safe migrations for existing deployments
     migrations = [
         "ALTER TABLE users ADD COLUMN semester INTEGER DEFAULT 2",
+        "ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN trial_started_at TEXT DEFAULT NULL",
         "ALTER TABLE courses ADD COLUMN level TEXT NOT NULL DEFAULT '400'",
         "ALTER TABLE courses ADD COLUMN semester INTEGER NOT NULL DEFAULT 2",
     ]
