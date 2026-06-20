@@ -8,9 +8,9 @@ from datetime import datetime, timedelta
 
 auth_bp = Blueprint("auth_bp", __name__)
 
-# ---------------------
+# =====================
 # GET CURRENT USER
-# ---------------------
+# =====================
 @auth_bp.route("/me", methods=["GET"])
 def me():
     if "user_id" not in session:
@@ -18,10 +18,11 @@ def me():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute(
-        "SELECT name, department, level, semester, email, role FROM users WHERE id=?",
-        (session["user_id"],)
-    )
+    c.execute("""
+        SELECT name, department, level, semester, email, role,
+               is_verified, trial_started_at
+        FROM users WHERE id=?
+    """, (session["user_id"],))
     user = c.fetchone()
     conn.close()
 
@@ -34,12 +35,14 @@ def me():
         "department": user["department"],
         "level": user["level"],
         "semester": user["semester"],
-        "role": user["role"]
+        "role": user["role"],
+        "is_verified": bool(user["is_verified"]),
+        "trial_started_at": user["trial_started_at"]
     })
 
-# ---------------------
+# =====================
 # LOGIN
-# ---------------------
+# =====================
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json() or {}
@@ -51,38 +54,72 @@ def login():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute(
-        "SELECT id, password, is_suspended FROM users WHERE email=?",
-        (email,)
-    )
+    c.execute("""
+        SELECT u.id, u.password, u.is_suspended, u.is_verified,
+               u.trial_started_at,
+               COALESCE(p.admin_override_status, p.status) AS payment_status
+        FROM users u
+        LEFT JOIN payments p ON u.id=p.user_id
+        WHERE u.email=?
+        ORDER BY p.id DESC LIMIT 1
+    """, (email,))
     user = c.fetchone()
-    conn.close()
 
     if not user:
+        conn.close()
         return jsonify({"error": "Invalid email or password"}), 401
 
     if user["is_suspended"]:
+        conn.close()
         return jsonify({"error": "Account suspended"}), 403
 
     if not check_password_hash(user["password"], password):
+        conn.close()
         return jsonify({"error": "Invalid email or password"}), 401
+
+    # Auto-start trial on login for existing unverified+unpaid users
+    # who have never had a trial started
+    is_paid = user["payment_status"] == "paid"
+    if not is_paid and not user["trial_started_at"] and not is_admin(user["id"]):
+        # For existing users registered before OTP feature:
+        # if they have no OTP record and no trial, verify them and start trial
+        c.execute("SELECT id FROM email_otps WHERE user_id=?", (user["id"],))
+        has_otp_record = c.fetchone()
+        if not has_otp_record:
+            # Legacy user — auto-verify and start trial
+            c.execute("""
+                UPDATE users SET is_verified=1, trial_started_at=datetime('now')
+                WHERE id=?
+            """, (user["id"],))
+            conn.commit()
+
+    conn.close()
 
     session.permanent = True
     session["user_id"] = user["id"]
 
     if is_admin(user["id"]):
         return jsonify({"redirect": "/admin"}), 200
-    else:
-        return jsonify({"redirect": "/account"}), 200
 
-# ---------------------
+    # If not verified, send to verify page
+    conn2 = get_db()
+    c2 = conn2.cursor()
+    c2.execute("SELECT is_verified FROM users WHERE id=?", (user["id"],))
+    fresh = c2.fetchone()
+    conn2.close()
+
+    if not fresh["is_verified"]:
+        return jsonify({"redirect": "/verify-email"}), 200
+
+    return jsonify({"redirect": "/account"}), 200
+
+# =====================
 # FORGOT PASSWORD
-# ---------------------
+# =====================
 @auth_bp.route("/forgot-password", methods=["POST"])
 def forgot_password():
     data = request.get_json() or {}
     email = data.get("email", "").strip().lower()
-
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
@@ -90,7 +127,6 @@ def forgot_password():
     c = conn.cursor()
     c.execute("SELECT id, name FROM users WHERE email=?", (email,))
     user = c.fetchone()
-
     if not user:
         conn.close()
         return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
@@ -99,21 +135,9 @@ def forgot_password():
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     expires_at = (datetime.utcnow() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS password_resets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token_hash TEXT NOT NULL,
-            expires_at TEXT NOT NULL,
-            used INTEGER DEFAULT 0
-        )
-    """)
-
     c.execute("DELETE FROM password_resets WHERE user_id=?", (user["id"],))
-    c.execute(
-        "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
-        (user["id"], token_hash, expires_at)
-    )
+    c.execute("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+              (user["id"], token_hash, expires_at))
     conn.commit()
     conn.close()
 
@@ -130,19 +154,15 @@ def forgot_password():
                 Reset My Password
             </a>
         </div>
-        <p style="font-size:13px;color:#777;">
-            If you didn't request this, you can safely ignore this email.
-        </p>
-        <p style="font-size:12px;color:#999;word-break:break-all;">
-            Or copy this link: {reset_link}
-        </p>
+        <p style="font-size:13px;color:#777;">If you didn't request this, ignore this email.</p>
+        <p style="font-size:12px;color:#999;word-break:break-all;">Or copy: {reset_link}</p>
     """
     send_email(email, "Reset Your Password — Wide Mind Tutorial", body)
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
-# ---------------------
+# =====================
 # RESET PASSWORD
-# ---------------------
+# =====================
 @auth_bp.route("/reset-password", methods=["POST"])
 def reset_password():
     data = request.get_json() or {}
@@ -151,25 +171,18 @@ def reset_password():
 
     if not raw_token or not new_password:
         return jsonify({"error": "Token and password are required"}), 400
-
     if len(new_password) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 400
 
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     conn = get_db()
     c = conn.cursor()
-
-    c.execute("""
-        SELECT user_id, expires_at, used
-        FROM password_resets
-        WHERE token_hash=?
-    """, (token_hash,))
+    c.execute("SELECT user_id, expires_at, used FROM password_resets WHERE token_hash=?", (token_hash,))
     record = c.fetchone()
 
     if not record:
         conn.close()
         return jsonify({"error": "Invalid or expired reset link"}), 400
-
     if record["used"]:
         conn.close()
         return jsonify({"error": "This reset link has already been used"}), 400
