@@ -303,12 +303,18 @@ def toggle_suspend_user(user_id):
 def delete_user(user_id):
     conn = get_db()
     c = conn.cursor()
-    # "progress" has a FOREIGN KEY on user_id (and Turso/libSQL enforces FKs
-    # by default, unlike plain SQLite) — leaving it out of this cascade was
-    # causing a constraint violation -> 500 error as soon as a user had any
-    # listening history recorded.
-    for table in ["payments", "rerun_passes", "notifications", "push_subscriptions",
-                  "password_resets", "progress"]:
+    # Every table below has a real FOREIGN KEY(user_id) REFERENCES users(id)
+    # constraint in backend/db.py's schema, and Turso/libSQL enforces foreign
+    # keys by default (unlike plain SQLite, which defaults to OFF). ALL of
+    # them must be cleared before the users row itself can be deleted, or
+    # the delete throws "FOREIGN KEY constraint failed" -> 500 error.
+    # "email_otps" was the actual table still missing here — every verified
+    # user has at least one row there (it's written during signup OTP
+    # verification), so this failed for essentially every real account.
+    # If a new feature ever adds another `FOREIGN KEY(user_id) REFERENCES
+    # users(id)` table to db.py, it MUST be added to this list too.
+    for table in ["payments", "rerun_passes", "email_otps", "progress",
+                  "notifications", "push_subscriptions", "password_resets"]:
         c.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
