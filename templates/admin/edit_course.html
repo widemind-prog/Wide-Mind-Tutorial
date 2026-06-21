@@ -1,36 +1,58 @@
 {% extends "base.html" %}
 {% block title %}Edit Course{% endblock %}
-
 {% block content %}
 <h1 class="dashboard-title">Edit Course</h1>
-
 <!-- COURSE DETAILS -->
 <form method="POST" class="admin-box">
     <label>Course Code</label>
     <input type="text" name="course_code" value="{{ course.course_code }}" required>
-
     <label>Course Title</label>
     <input type="text" name="course_title" value="{{ course.course_title }}" required>
-
     <label>Description</label>
     <textarea name="description" rows="4">{{ course.description }}</textarea>
-
     <label>Level</label>
     <select name="level" required>
         <option value="300" {% if course.level == '300' %}selected{% endif %}>300 Level</option>
         <option value="400" {% if course.level == '400' %}selected{% endif %}>400 Level</option>
         <option value="500" {% if course.level == '500' %}selected{% endif %}>500 Level</option>
     </select>
-
     <label>Semester</label>
     <select name="semester" required>
         <option value="1" {% if course.semester == 1 %}selected{% endif %}>1st Semester</option>
         <option value="2" {% if course.semester == 2 %}selected{% endif %}>2nd Semester</option>
     </select>
-
     <button type="submit">Save Changes</button>
 </form>
-
+<!-- TRIAL COURSE STATUS -->
+<div class="admin-box" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div>
+        <h3 style="margin-bottom:4px;">Trial Course Status</h3>
+        {% if course.is_trial %}
+        <p style="font-size:13px; color:#0a7c2f; margin:0;">
+            <i class="fa-solid fa-star" style="margin-right:6px;"></i>
+            This is the trial course for <strong>{{ course.level }}L · {{ 'S1' if course.semester == 1 else 'S2' }}</strong>.
+            Students on a 24-hour trial at this level/semester see this course only.
+        </p>
+        {% else %}
+        <p style="font-size:13px; color:#777; margin:0;">
+            Not the trial course for {{ course.level }}L · {{ 'S1' if course.semester == 1 else 'S2' }}.
+            Setting this will replace any other trial course currently assigned to that level/semester.
+        </p>
+        {% endif %}
+    </div>
+    <form method="POST" action="/admin/courses/set-trial/{{ course.id }}"
+          style="margin:0;padding:0;background:none;box-shadow:none;"
+          {% if course.is_trial %}
+          onsubmit="return confirm('Remove this course as the trial course for {{ course.level }}L S{{ course.semester }}?')"
+          {% else %}
+          onsubmit="return confirm('Make this the trial course for {{ course.level }}L S{{ course.semester }}? Any existing trial course for that level/semester will be replaced.')"
+          {% endif %}>
+        <button type="submit" style="width:auto; padding:10px 18px;
+                background:{% if course.is_trial %}#856404{% else %}linear-gradient(135deg,#8B7500,#d4af37){% endif %}; color:#fff;">
+            {% if course.is_trial %}Unset Trial Course{% else %}Set as Trial Course{% endif %}
+        </button>
+    </form>
+</div>
 <!-- EXISTING MATERIALS -->
 <div class="admin-box">
     <h3>Existing Materials</h3>
@@ -51,7 +73,6 @@
     <p>No materials uploaded yet.</p>
     {% endif %}
 </div>
-
 <!-- ADD PDF -->
 <div class="admin-box">
     <h3>Upload PDF Material</h3>
@@ -68,7 +89,6 @@
         ⏳ Uploading... please wait, do not close this page.
     </p>
 </div>
-
 <!-- ADD AUDIO -->
 <div class="admin-box">
     <h3>Upload Audio Material</h3>
@@ -85,9 +105,7 @@
         ⏳ Uploading... please wait, do not close this page.
     </p>
 </div>
-
 <a href="/admin/courses" class="back-login-btn">← Back to Courses</a>
-
 <div id="admin-toast" class="toast"></div>
 <script src="/static/js/admin.js"></script>
 <script>
