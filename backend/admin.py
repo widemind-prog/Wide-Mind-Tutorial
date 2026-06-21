@@ -303,7 +303,12 @@ def toggle_suspend_user(user_id):
 def delete_user(user_id):
     conn = get_db()
     c = conn.cursor()
-    for table in ["payments", "rerun_passes", "notifications", "push_subscriptions", "password_resets"]:
+    # "progress" has a FOREIGN KEY on user_id (and Turso/libSQL enforces FKs
+    # by default, unlike plain SQLite) — leaving it out of this cascade was
+    # causing a constraint violation -> 500 error as soon as a user had any
+    # listening history recorded.
+    for table in ["payments", "rerun_passes", "notifications", "push_subscriptions",
+                  "password_resets", "progress"]:
         c.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
@@ -614,6 +619,13 @@ def edit_course(course_id):
 def delete_course(course_id):
     conn = get_db()
     c = conn.cursor()
+    # progress.material_id -> materials.id -> materials.course_id -> courses.id
+    # Turso/libSQL enforces foreign keys, so child rows must be cleared
+    # before the parent course can be deleted (same class of bug as the
+    # user-delete fix above).
+    c.execute("DELETE FROM progress WHERE material_id IN (SELECT id FROM materials WHERE course_id=?)",
+              (course_id,))
+    c.execute("DELETE FROM materials WHERE course_id=?", (course_id,))
     c.execute("DELETE FROM courses WHERE id=?", (course_id,))
     conn.commit()
     conn.close()
@@ -715,6 +727,7 @@ def delete_material(material_id):
         import requests as req
         req.delete(f"{supabase_url}/storage/v1/object/materials/{material['filename']}",
                    headers={"Authorization": f"Bearer {supabase_key}"})
+    c.execute("DELETE FROM progress WHERE material_id=?", (material_id,))
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))
     conn.commit()
     conn.close()
