@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var statCompleted = document.getElementById("stat-completed");
     var statTime = document.getElementById("stat-time");
     var statPending = document.getElementById("stat-pending");
+    var lessonsListEl = document.getElementById("lessons-list");
     var countdownInterval = null;
 
     function formatTime(seconds) {
@@ -54,6 +55,42 @@ document.addEventListener("DOMContentLoaded", function () {
             if (levelEl) levelEl.textContent = u.level ? u.level + " Level" : "N/A";
             if (semEl) semEl.textContent = u.semester == 1 ? "1st Semester" : "2nd Semester";
         } catch (e) {}
+    }
+
+    function escapeHtml(s) {
+        var div = document.createElement("div");
+        div.textContent = s == null ? "" : String(s);
+        return div.innerHTML;
+    }
+
+    // Renders the exact list of lessons the numbers on the progress card are
+    // counting — this is what makes "0 of 4 completed" accountable instead
+    // of an opaque aggregate: every lesson, its course, how long it was
+    // listened to, and a tap-through straight to where it left off.
+    function renderLessonsList(lessons) {
+        if (!lessonsListEl) return;
+        if (!lessons.length) {
+            lessonsListEl.innerHTML = "";
+            return;
+        }
+        lessonsListEl.innerHTML = lessons.map(function (l) {
+            var icon = l.completed
+                ? '<i class="fa-solid fa-circle-check lesson-row-icon" style="color:green;"></i>'
+                : (l.listened_seconds > 0
+                    ? '<i class="fa-solid fa-circle-play lesson-row-icon" style="color:#8B7500;"></i>'
+                    : '<i class="fa-regular fa-circle lesson-row-icon" style="color:#ccc;"></i>');
+            var timeLabel = l.completed
+                ? "Completed"
+                : (l.listened_seconds > 0 ? formatTime(l.listened_seconds) + " in" : "Not started");
+            return '<a class="lesson-row" href="/course/' + l.course_id + '">' +
+                icon +
+                '<div class="lesson-row-text">' +
+                    '<div class="lesson-row-title">' + escapeHtml(l.title) + '</div>' +
+                    '<div class="lesson-row-meta">' + escapeHtml(l.course_code) + '</div>' +
+                '</div>' +
+                '<div class="lesson-row-time">' + timeLabel + '</div>' +
+            '</a>';
+        }).join("");
     }
 
     async function loadProgress() {
@@ -121,6 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (statCompleted) statCompleted.textContent = d.completed_count + " lesson" + (d.completed_count !== 1 ? "s" : "");
                 if (statTime) statTime.textContent = formatTime(d.total_listened_seconds);
                 if (statPending) statPending.textContent = d.pending_count + " lesson" + (d.pending_count !== 1 ? "s" : "");
+                renderLessonsList(d.lessons || []);
             } else {
                 if (progressCard) progressCard.style.display = "none";
                 if (progressEmpty) progressEmpty.style.display = "block";
