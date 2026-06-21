@@ -57,15 +57,41 @@
 <div class="admin-box">
     <h3>Existing Materials</h3>
     {% if materials %}
-    <ul>
+    <ul style="list-style:none; padding:0; margin:0;">
         {% for material in materials %}
-        <li>
-            <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
-            <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="display:inline;">
-                <button type="submit" onclick="return confirm('Delete this file?')" style="background:#a00000;">
-                    Delete
-                </button>
-            </form>
+        <li style="display:flex; justify-content:space-between; align-items:center;
+                   flex-wrap:wrap; gap:8px; padding:10px 0; border-top:1px solid #eee;">
+            <div>
+                <strong>{{ material.title or material.filename }}</strong> ({{ material.file_type }})
+                <div style="font-size:12px; color:{{ '#a00000' if not material.duration_seconds else '#777' }}; margin-top:2px;">
+                    {% if material.duration_seconds %}
+                        Duration: {{ (material.duration_seconds / 60) | round(1) }} min
+                    {% else %}
+                        ⚠ No duration set — this material is excluded from progress
+                        calculations until a duration is added.
+                    {% endif %}
+                </div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <form method="POST" action="/admin/courses/material/edit-duration/{{ material.id }}"
+                      style="display:flex; gap:6px; align-items:center; margin:0; padding:0;
+                             background:none; box-shadow:none;">
+                    <input type="number" step="0.1" min="0.1" name="duration_minutes"
+                           placeholder="min"
+                           value="{{ (material.duration_seconds / 60) | round(1) if material.duration_seconds else '' }}"
+                           style="width:70px; margin:0; padding:6px 8px; font-size:12px;">
+                    <button type="submit" style="width:auto; padding:6px 12px; font-size:12px;
+                            background:linear-gradient(135deg,#8B7500,#d4af37); color:#fff;">
+                        Save
+                    </button>
+                </form>
+                <form method="POST" action="/admin/courses/material/delete/{{ material.id }}" style="margin:0;padding:0;background:none;box-shadow:none;">
+                    <button type="submit" onclick="return confirm('Delete this file?')"
+                            style="width:auto; padding:6px 12px; font-size:12px; background:#a00000;">
+                        Delete
+                    </button>
+                </form>
+            </div>
         </li>
         {% endfor %}
     </ul>
@@ -81,6 +107,8 @@
           enctype="multipart/form-data">
         <label>Title</label>
         <input type="text" name="title" placeholder="e.g. PSY501 Notes" required>
+        <label>Duration (minutes) — how much this PDF counts toward progress</label>
+        <input type="number" step="0.1" min="0.1" name="duration_minutes" placeholder="e.g. 5" required>
         <label>PDF File</label>
         <input type="file" name="file" accept=".pdf" required>
         <button type="submit" id="pdf-submit-btn">Upload PDF</button>
@@ -97,6 +125,8 @@
           enctype="multipart/form-data">
         <label>Title</label>
         <input type="text" name="title" placeholder="e.g. Sessions 1–5" required>
+        <label>Duration (minutes) — exact or approximate length of the audio</label>
+        <input type="number" step="0.1" min="0.1" name="duration_minutes" placeholder="e.g. 45" required>
         <label>Audio File (.mp3)</label>
         <input type="file" name="file" accept=".mp3,audio/*" required>
         <button type="submit" id="audio-submit-btn">Upload Audio</button>
