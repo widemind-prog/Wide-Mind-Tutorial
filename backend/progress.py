@@ -21,7 +21,20 @@ def get_trial_status(user):
         return {"active": True, "expired": False, "seconds_remaining": remaining}
     return {"active": False, "expired": True, "seconds_remaining": 0}
 # =====================
-# PROGRESS SUMMARY
+# PROGRESS SUMMARY — per-course percentage:
+#   course % = (seconds credited / total course duration seconds) * 100
+# Audio materials: credited seconds = MIN(listened_seconds, duration_seconds),
+#   capped so a stray over-report can never push a single lesson past 100%.
+# PDF materials: a one-time flip — either fully credited (opened) or not
+#   credited at all (never opened). No partial state exists for a PDF.
+# Every material's weight in the total is its own duration_seconds, set by
+# the admin at upload time (see admin.py add_material/edit_material). This
+# is a deliberate design choice: client-reported audio.duration is exactly
+# the kind of value that has caused every prior version of this feature to
+# misbehave (redirected streaming URLs, metadata not loaded yet, browser
+# quirks) — duration_seconds is instead a fixed, known fact set once by a
+# human, so the percentage is fully deterministic and never depends on what
+# happened to load correctly in any given browser session.
 # =====================
 @progress_bp.route("/api/progress/summary")
 def progress_summary():
@@ -29,7 +42,6 @@ def progress_summary():
         return jsonify({"error": "Not authenticated"}), 401
     conn = get_db()
     c = conn.cursor()
-    # User + payment
     c.execute("""
         SELECT u.name, u.level, u.semester, u.is_verified, u.trial_started_at,
                COALESCE(p.admin_override_status, p.status) AS payment_status
@@ -50,13 +62,11 @@ def progress_summary():
         if tc:
             trial_course = {"id": tc["id"], "code": tc["course_code"], "title": tc["course_title"]}
 
-    # Resolve the exact set of course IDs this user can currently open —
-    # mirrors check_course_access() in app.py so the progress card always
-    # matches what's actually unlockable, not just their home level/semester:
-    #   - paid users: their own level+semester, PLUS any lower level (same
-    #     semester) they hold a paid rerun pass for
-    #   - trial users: only the single course flagged as their trial course
-    #   - unpaid/expired-trial users: nothing yet
+    # Exact same access scope as check_course_access() in app.py:
+    #   - paid: own level+semester, plus any lower level (same semester)
+    #     they hold a paid rerun pass for
+    #   - trial: only the single course flagged as their trial course
+    #   - unpaid / expired trial: nothing
     course_ids = []
     if is_paid:
         c.execute("SELECT id FROM courses WHERE level=? AND semester=?",
@@ -74,58 +84,82 @@ def progress_summary():
     elif trial_course:
         course_ids = [trial_course["id"]]
 
+    courses_out = []
+    overall_credited = 0
+    overall_total = 0
     if course_ids:
         placeholders = ",".join("?" for _ in course_ids)
-        c.execute(f"""SELECT COUNT(id) AS total FROM materials
-                      WHERE file_type='audio' AND course_id IN ({placeholders})""", course_ids)
-        total_audios = c.fetchone()["total"] or 0
+        # Every material across the accessible courses, with this user's
+        # logged progress for it (0 if never touched — LEFT JOIN, not INNER).
         c.execute(f"""
-            SELECT SUM(pr.listened_seconds) AS total_seconds,
-                   SUM(CASE WHEN pr.completed=1 THEN 1 ELSE 0 END) AS completed_count
-            FROM progress pr
-            JOIN materials m ON pr.material_id=m.id
-            WHERE pr.user_id=? AND m.file_type='audio' AND m.course_id IN ({placeholders})
-        """, [session["user_id"]] + course_ids)
-        prog = c.fetchone()
-        total_listened = int(prog["total_seconds"] or 0)
-        completed_count = int(prog["completed_count"] or 0)
-
-        # Per-lesson breakdown — this is what actually makes the progress
-        # card accountable: not just "X of Y completed" as an abstract
-        # number, but the literal list of lessons it's counting, each with
-        # its own listened-seconds and a direct link to resume it.
-        c.execute(f"""
-            SELECT m.id AS material_id, m.title AS material_title,
-                   m.course_id AS course_id, co.course_code, co.course_title,
+            SELECT m.id AS material_id, m.course_id AS course_id, m.file_type,
+                   m.duration_seconds,
+                   co.course_code, co.course_title,
                    COALESCE(pr.listened_seconds, 0) AS listened_seconds,
                    COALESCE(pr.completed, 0) AS completed
             FROM materials m
             JOIN courses co ON m.course_id = co.id
             LEFT JOIN progress pr ON pr.material_id = m.id AND pr.user_id = ?
-            WHERE m.file_type='audio' AND m.course_id IN ({placeholders})
+            WHERE m.course_id IN ({placeholders})
             ORDER BY co.level DESC, co.id ASC, m.id ASC
         """, [session["user_id"]] + course_ids)
-        lessons = [{
-            "material_id": row["material_id"],
-            "title": row["material_title"],
-            "course_id": row["course_id"],
-            "course_code": row["course_code"],
-            "course_title": row["course_title"],
-            "listened_seconds": int(row["listened_seconds"] or 0),
-            "completed": bool(row["completed"])
-        } for row in c.fetchall()]
-    else:
-        total_audios = 0
-        total_listened = 0
-        completed_count = 0
-        lessons = []
-    pending_count = max(0, total_audios - completed_count)
+        rows = c.fetchall()
+
+        by_course = {}
+        for row in rows:
+            cid = row["course_id"]
+            if cid not in by_course:
+                by_course[cid] = {
+                    "course_id": cid,
+                    "course_code": row["course_code"],
+                    "course_title": row["course_title"],
+                    "credited_seconds": 0,
+                    "total_seconds": 0,
+                    "material_count": 0,
+                    "configured_count": 0,  # materials with a real duration_seconds set
+                }
+            entry = by_course[cid]
+            duration = int(row["duration_seconds"] or 0)
+            entry["material_count"] += 1
+            if duration <= 0:
+                # Admin hasn't set a duration for this material yet — it
+                # can't contribute to the percentage in either direction,
+                # so it's excluded from both numerator and denominator
+                # rather than silently treated as 0-length (which would
+                # otherwise let it inflate the denominator with no way to
+                # ever be credited).
+                continue
+            entry["configured_count"] += 1
+            entry["total_seconds"] += duration
+            if row["file_type"] == "pdf":
+                if row["completed"]:
+                    entry["credited_seconds"] += duration
+            else:
+                listened = float(row["listened_seconds"] or 0)
+                entry["credited_seconds"] += min(listened, duration)
+
+        for cid in course_ids:
+            entry = by_course.get(cid)
+            if not entry:
+                continue
+            pct = round((entry["credited_seconds"] / entry["total_seconds"]) * 100) if entry["total_seconds"] > 0 else 0
+            pct = max(0, min(100, pct))
+            overall_credited += entry["credited_seconds"]
+            overall_total += entry["total_seconds"]
+            courses_out.append({
+                "course_id": entry["course_id"],
+                "course_code": entry["course_code"],
+                "course_title": entry["course_title"],
+                "percent": pct,
+                "credited_seconds": int(entry["credited_seconds"]),
+                "total_seconds": int(entry["total_seconds"]),
+                "material_count": entry["material_count"],
+                "unconfigured_count": entry["material_count"] - entry["configured_count"],
+            })
+
+    overall_percent = round((overall_credited / overall_total) * 100) if overall_total > 0 else 0
+    overall_percent = max(0, min(100, overall_percent))
     conn.close()
-    # Always compute the amount live from the user's current level/price
-    # table — never trust payments.amount directly. A user's payment row can
-    # have a stale or NULL amount (e.g. an unpaid row seeded at registration,
-    # or one zeroed out by the admin "change level" force-re-pay flow), and
-    # the account page must always show the correct current fee regardless.
     amount = get_amount_for_level(user["level"])
     response = jsonify({
         "name": user["name"],
@@ -135,21 +169,21 @@ def progress_summary():
         "trial_expired": trial["expired"],
         "trial_seconds_remaining": trial["seconds_remaining"],
         "trial_course": trial_course,
-        "completed_count": completed_count,
-        "total_audios": total_audios,
-        "pending_count": pending_count,
-        "total_listened_seconds": total_listened,
-        "lessons": lessons,
+        "courses": courses_out,
+        "overall_percent": overall_percent,
+        "overall_credited_seconds": int(overall_credited),
+        "overall_total_seconds": int(overall_total),
         "amount": amount,
         "amount_display": f"₦{amount/100:,.2f}"
     })
-    # This endpoint drives the account page's progress card in real time —
-    # it must never be served stale from a browser/proxy cache after a
-    # reload, especially right after an admin marks the user paid.
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     return response
 # =====================
-# PROGRESS UPDATE
+# PROGRESS UPDATE — audio only. The client reports listened_seconds (current
+# playback position); duration is never taken from the client. It's looked
+# up from materials.duration_seconds (set once by the admin at upload time)
+# so an audio.duration that failed to load correctly in some browser can
+# never corrupt the stored progress. completed is derived server-side too.
 # =====================
 @progress_bp.route("/api/progress/update", methods=["POST"])
 def update_progress():
@@ -165,13 +199,23 @@ def update_progress():
     # endpoint must never produce again.
     data = request.get_json(force=True, silent=True) or {}
     material_id = data.get("material_id")
-    listened_seconds = float(data.get("listened_seconds", 0))
-    duration_seconds = float(data.get("duration_seconds", 0))
+    listened_seconds = float(data.get("listened_seconds", 0) or 0)
     if not material_id:
         return jsonify({"error": "material_id required"}), 400
-    completed = 1 if duration_seconds > 0 and (listened_seconds / duration_seconds) >= 0.9 else 0
     conn = get_db()
     c = conn.cursor()
+    c.execute("SELECT duration_seconds, file_type FROM materials WHERE id=?", (material_id,))
+    material = c.fetchone()
+    if not material:
+        conn.close()
+        return jsonify({"error": "material not found"}), 404
+    duration = int(material["duration_seconds"] or 0)
+    # Cap at the known duration so a stray client value (e.g. seeking past
+    # the reported end, or a metadata glitch) can never push a single
+    # material's credited time past its real length.
+    if duration > 0:
+        listened_seconds = min(listened_seconds, duration)
+    completed = 1 if duration > 0 and (listened_seconds / duration) >= 0.9 else 0
     # INSERT OR IGNORE then UPDATE pattern for UNIQUE constraint
     c.execute("""
         INSERT OR IGNORE INTO progress (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
@@ -188,21 +232,29 @@ def update_progress():
     conn.close()
     return jsonify({"saved": True, "completed": bool(completed)}), 200
 # =====================
-# PDF OPEN TRACKING
+# PDF OPEN TRACKING — one-time flip: opened or not opened, nothing in between
 # =====================
 @progress_bp.route("/api/progress/open-pdf", methods=["POST"])
 def open_pdf():
     if "user_id" not in session:
         return jsonify({"ok": True}), 200
-    data = request.get_json() or {}
+    data = request.get_json(force=True, silent=True) or {}
     material_id = data.get("material_id")
     if not material_id:
         return jsonify({"ok": True}), 200
     conn = get_db()
     c = conn.cursor()
+    # A PDF has no "partially read" concept here — the moment it's opened for
+    # the first time it flips straight to completed=1. INSERT OR IGNORE means
+    # this is genuinely one-time: re-opening the same PDF later does nothing
+    # further (the UPDATE below is a harmless no-op once completed is already 1).
     c.execute("""
         INSERT OR IGNORE INTO progress (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
-        VALUES (?, ?, 0, 0, datetime('now'), datetime('now'))
+        VALUES (?, ?, 0, 1, datetime('now'), datetime('now'))
+    """, (session["user_id"], material_id))
+    c.execute("""
+        UPDATE progress SET completed=1, updated_at=datetime('now')
+        WHERE user_id=? AND material_id=?
     """, (session["user_id"], material_id))
     conn.commit()
     conn.close()
