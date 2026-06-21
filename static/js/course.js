@@ -1,44 +1,87 @@
-document.addEventListener("DOMContentLoaded", () => {
-    // Select all audio elements on the page
-    const audios = document.querySelectorAll("audio");
+document.addEventListener("DOMContentLoaded", function () {
+    var toast = document.getElementById("toast");
 
-    audios.forEach(audio => {
-        const audioId = audio.getAttribute("id") || audio.src; // unique key for localStorage
+    function showToast(message, isError) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.background = isError ? "#a00000" : "#333";
+        toast.classList.add("show");
+        setTimeout(function () { toast.classList.remove("show"); }, 3000);
+    }
 
-        // Load saved playback position
-        const savedTime = localStorage.getItem(`audioTime_${audioId}`);
-        if (savedTime) {
-            audio.currentTime = parseFloat(savedTime);
-        }
+    // =====================
+    // AUDIO PROGRESS TRACKING
+    // =====================
+    function reportProgress(materialId, listenedSeconds, durationSeconds) {
+        fetch("/api/progress/update", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                material_id: materialId,
+                listened_seconds: listenedSeconds,
+                duration_seconds: durationSeconds
+            })
+        }).catch(function () {});
+    }
 
-        // Save playback position every second
-        audio.addEventListener("timeupdate", () => {
-            localStorage.setItem(`audioTime_${audioId}`, audio.currentTime);
+    document.querySelectorAll("audio[data-material-id]").forEach(function (audio) {
+        var materialId = parseInt(audio.getAttribute("data-material-id"));
+        var reportInterval = null;
+
+        // Disable right-click, dragging, download, and Picture-in-Picture
+        audio.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+            showToast("Right-click disabled on audio", true);
         });
-
-        // Optional: Remove saved time when audio ends
-        audio.addEventListener("ended", () => {
-            localStorage.removeItem(`audioTime_${audioId}`);
-        });
-
-        // Prevent right-click on audio
-        audio.addEventListener("contextmenu", e => e.preventDefault());
-
-        // Prevent dragging the audio element
-        audio.addEventListener("dragstart", e => e.preventDefault());
-
-        // Hide download option
+        audio.addEventListener("dragstart", function (e) { e.preventDefault(); });
         audio.setAttribute("controlsList", "nodownload");
-
-        // Disable Picture-in-Picture mode
         audio.setAttribute("disablePictureInPicture", "true");
-
-        // Force left-aligned audio controls
-        audio.style.display = "block";
-        audio.style.marginLeft = "0";
-        audio.style.marginRight = "auto";
-
-        // Optional: Add a subtle tooltip to inform users
         audio.title = "Right-click and download disabled";
+
+        audio.addEventListener("play", function () {
+            // Report every 10 seconds while playing
+            reportInterval = setInterval(function () {
+                if (!audio.paused && !audio.ended && audio.duration) {
+                    reportProgress(materialId, audio.currentTime, audio.duration);
+                }
+            }, 10000);
+        });
+
+        audio.addEventListener("pause", function () {
+            clearInterval(reportInterval);
+            if (audio.duration) {
+                reportProgress(materialId, audio.currentTime, audio.duration);
+            }
+        });
+
+        audio.addEventListener("ended", function () {
+            clearInterval(reportInterval);
+            if (audio.duration) {
+                reportProgress(materialId, audio.duration, audio.duration);
+            }
+        });
+
+        // Save on page unload
+        window.addEventListener("beforeunload", function () {
+            if (!audio.paused && audio.duration) {
+                reportProgress(materialId, audio.currentTime, audio.duration);
+            }
+        });
+    });
+
+    // =====================
+    // PDF OPEN TRACKING
+    // =====================
+    document.querySelectorAll("a.pdf-link[data-material-id]").forEach(function (link) {
+        link.addEventListener("click", function () {
+            var materialId = parseInt(link.getAttribute("data-material-id"));
+            fetch("/api/progress/open-pdf", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ material_id: materialId })
+            }).catch(function () {});
+        });
     });
 });
