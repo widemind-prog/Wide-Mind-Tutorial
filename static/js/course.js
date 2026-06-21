@@ -25,6 +25,27 @@ document.addEventListener("DOMContentLoaded", function () {
         }).catch(function () {});
     }
 
+    // A normal fetch() started inside a pagehide/beforeunload/visibilitychange
+    // handler can be silently cancelled mid-flight once the page starts
+    // tearing down — this is the #1 reason "I listened for 2 minutes, went
+    // back to /account, and progress shows 0" happens. navigator.sendBeacon
+    // is purpose-built to survive that: the browser guarantees the request
+    // is queued before the page unloads, even on a same-site link click.
+    function reportProgressOnExit(materialId, listenedSeconds, durationSeconds) {
+        var payload = JSON.stringify({
+            material_id: materialId,
+            listened_seconds: listenedSeconds,
+            duration_seconds: durationSeconds
+        });
+        if (navigator.sendBeacon) {
+            var blob = new Blob([payload], { type: "application/json" });
+            var ok = navigator.sendBeacon("/api/progress/update", blob);
+            if (ok) return;
+        }
+        // Fallback for browsers without sendBeacon support
+        reportProgress(materialId, listenedSeconds, durationSeconds);
+    }
+
     document.querySelectorAll("audio[data-material-id]").forEach(function (audio) {
         var materialId = parseInt(audio.getAttribute("data-material-id"));
         var storageKey = "audioTime_" + materialId;
@@ -75,13 +96,19 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         audio.addEventListener("play", function () {
-            // Report every 10 seconds while playing
+            // Report immediately so even a very short listen (under one
+            // interval tick) still registers something, then keep reporting
+            // every 5 seconds while playback continues.
+            if (audio.duration) {
+                lastReportedTime = audio.currentTime;
+                reportProgress(materialId, audio.currentTime, audio.duration);
+            }
             reportInterval = setInterval(function () {
                 if (!audio.paused && !audio.ended && audio.duration) {
                     lastReportedTime = audio.currentTime;
                     reportProgress(materialId, audio.currentTime, audio.duration);
                 }
-            }, 10000);
+            }, 5000);
         });
 
         audio.addEventListener("pause", function () {
@@ -114,28 +141,26 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        // Save on page unload. Use the larger of "current playback position"
-        // and "last time we already reported" — covers the case where the
-        // browser auto-paused the element (so audio.paused is already true)
-        // right after a seek-to-end, which would otherwise be skipped here.
-        window.addEventListener("beforeunload", function () {
+        // Flush progress on every exit path. "pagehide" is the one that
+        // actually fires reliably for normal same-site link navigation
+        // (e.g. tapping the Account tab in the bottom nav) across both
+        // desktop and mobile browsers, including iOS Safari — beforeunload
+        // is unreliable on mobile and visibilitychange's "hidden" state is
+        // never reached during an in-app navigation (the document stays
+        // visible right up until it's replaced). All three are wired here
+        // so backgrounding, tab-close, and link-navigation are all covered.
+        function flushOnExit() {
             if (!audio.duration) return;
             var pos = Math.max(audio.currentTime, lastReportedTime);
             if (pos > 0) {
-                reportProgress(materialId, pos, audio.duration);
+                lastReportedTime = pos;
+                reportProgressOnExit(materialId, pos, audio.duration);
             }
-        });
-
-        // Also flush progress when the tab is hidden/backgrounded — mobile
-        // browsers often don't reliably fire beforeunload at all.
+        }
+        window.addEventListener("pagehide", flushOnExit);
+        window.addEventListener("beforeunload", flushOnExit);
         document.addEventListener("visibilitychange", function () {
-            if (document.visibilityState === "hidden" && audio.duration) {
-                var pos = Math.max(audio.currentTime, lastReportedTime);
-                if (pos > 0) {
-                    lastReportedTime = pos;
-                    reportProgress(materialId, pos, audio.duration);
-                }
-            }
+            if (document.visibilityState === "hidden") flushOnExit();
         });
     });
 
