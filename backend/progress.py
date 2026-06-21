@@ -89,10 +89,36 @@ def progress_summary():
         prog = c.fetchone()
         total_listened = int(prog["total_seconds"] or 0)
         completed_count = int(prog["completed_count"] or 0)
+
+        # Per-lesson breakdown — this is what actually makes the progress
+        # card accountable: not just "X of Y completed" as an abstract
+        # number, but the literal list of lessons it's counting, each with
+        # its own listened-seconds and a direct link to resume it.
+        c.execute(f"""
+            SELECT m.id AS material_id, m.title AS material_title,
+                   m.course_id AS course_id, co.course_code, co.course_title,
+                   COALESCE(pr.listened_seconds, 0) AS listened_seconds,
+                   COALESCE(pr.completed, 0) AS completed
+            FROM materials m
+            JOIN courses co ON m.course_id = co.id
+            LEFT JOIN progress pr ON pr.material_id = m.id AND pr.user_id = ?
+            WHERE m.file_type='audio' AND m.course_id IN ({placeholders})
+            ORDER BY co.level DESC, co.id ASC, m.id ASC
+        """, [session["user_id"]] + course_ids)
+        lessons = [{
+            "material_id": row["material_id"],
+            "title": row["material_title"],
+            "course_id": row["course_id"],
+            "course_code": row["course_code"],
+            "course_title": row["course_title"],
+            "listened_seconds": int(row["listened_seconds"] or 0),
+            "completed": bool(row["completed"])
+        } for row in c.fetchall()]
     else:
         total_audios = 0
         total_listened = 0
         completed_count = 0
+        lessons = []
     pending_count = max(0, total_audios - completed_count)
     conn.close()
     # Always compute the amount live from the user's current level/price
@@ -113,6 +139,7 @@ def progress_summary():
         "total_audios": total_audios,
         "pending_count": pending_count,
         "total_listened_seconds": total_listened,
+        "lessons": lessons,
         "amount": amount,
         "amount_display": f"₦{amount/100:,.2f}"
     })
