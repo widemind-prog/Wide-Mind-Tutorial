@@ -7,23 +7,23 @@ document.addEventListener("DOMContentLoaded", function () {
     var trialExpiredBanner = document.getElementById("trial-expired-banner");
     var trialCountdown = document.getElementById("trial-countdown");
     var trialCourseLink = document.getElementById("trial-course-link");
-    var progressCard = document.getElementById("progress-card");
+    var progressOverall = document.getElementById("progress-overall");
     var progressEmpty = document.getElementById("progress-empty");
-    var progressBar = document.getElementById("progress-bar");
-    var progressLabel = document.getElementById("progress-label");
-    var progressPct = document.getElementById("progress-pct");
-    var statCompleted = document.getElementById("stat-completed");
-    var statTime = document.getElementById("stat-time");
-    var statPending = document.getElementById("stat-pending");
-    var lessonsListEl = document.getElementById("lessons-list");
+    var overallBar = document.getElementById("overall-bar");
+    var overallLabel = document.getElementById("overall-label");
+    var overallPct = document.getElementById("overall-pct");
+    var overallTime = document.getElementById("overall-time");
+    var courseProgressList = document.getElementById("course-progress-list");
     var countdownInterval = null;
 
     function formatTime(seconds) {
+        seconds = Math.max(0, Math.round(seconds || 0));
         var h = Math.floor(seconds / 3600);
         var m = Math.floor((seconds % 3600) / 60);
+        var s = seconds % 60;
         if (h > 0) return h + "h " + m + "m";
         if (m > 0) return m + "m";
-        return Math.floor(seconds) + "s";
+        return s + "s";
     }
 
     function startTrialCountdown(secondsRemaining) {
@@ -63,32 +63,39 @@ document.addEventListener("DOMContentLoaded", function () {
         return div.innerHTML;
     }
 
-    // Renders the exact list of lessons the numbers on the progress card are
-    // counting — this is what makes "0 of 4 completed" accountable instead
-    // of an opaque aggregate: every lesson, its course, how long it was
-    // listened to, and a tap-through straight to where it left off.
-    function renderLessonsList(lessons) {
-        if (!lessonsListEl) return;
-        if (!lessons.length) {
-            lessonsListEl.innerHTML = "";
+    // Renders one card per accessible course, each showing
+    // (credited seconds / total course duration) * 100 as a percentage bar.
+    // This mirrors exactly how the server computes it in progress.py:
+    // audio is capped at its own known duration, a PDF is a one-time flip
+    // that either counts its full weight or none of it. Tapping a card goes
+    // straight into that course.
+    function renderCourseProgress(courses) {
+        if (!courseProgressList) return;
+        if (!courses.length) {
+            courseProgressList.innerHTML = "";
             return;
         }
-        lessonsListEl.innerHTML = lessons.map(function (l) {
-            var icon = l.completed
-                ? '<i class="fa-solid fa-circle-check lesson-row-icon" style="color:green;"></i>'
-                : (l.listened_seconds > 0
-                    ? '<i class="fa-solid fa-circle-play lesson-row-icon" style="color:#8B7500;"></i>'
-                    : '<i class="fa-regular fa-circle lesson-row-icon" style="color:#ccc;"></i>');
-            var timeLabel = l.completed
-                ? "Completed"
-                : (l.listened_seconds > 0 ? formatTime(l.listened_seconds) + " in" : "Not started");
-            return '<a class="lesson-row" href="/course/' + l.course_id + '">' +
-                icon +
-                '<div class="lesson-row-text">' +
-                    '<div class="lesson-row-title">' + escapeHtml(l.title) + '</div>' +
-                    '<div class="lesson-row-meta">' + escapeHtml(l.course_code) + '</div>' +
+        courseProgressList.innerHTML = courses.map(function (c) {
+            var meta;
+            if (c.unconfigured_count > 0) {
+                meta = formatTime(c.credited_seconds) + " of " + formatTime(c.total_seconds) +
+                    " · " + c.unconfigured_count + " item" + (c.unconfigured_count !== 1 ? "s" : "") +
+                    " pending setup";
+            } else {
+                meta = formatTime(c.credited_seconds) + " of " + formatTime(c.total_seconds);
+            }
+            return '<a class="course-progress-card" href="/course/' + c.course_id + '">' +
+                '<div class="course-progress-head">' +
+                    '<div>' +
+                        '<div class="course-progress-code">' + escapeHtml(c.course_code) + '</div>' +
+                        '<div class="course-progress-title">' + escapeHtml(c.course_title) + '</div>' +
+                    '</div>' +
+                    '<div class="course-progress-pct">' + c.percent + '%</div>' +
                 '</div>' +
-                '<div class="lesson-row-time">' + timeLabel + '</div>' +
+                '<div class="course-progress-track">' +
+                    '<div class="course-progress-fill" style="width:' + c.percent + '%;"></div>' +
+                '</div>' +
+                '<div class="course-progress-meta">' + meta + '</div>' +
             '</a>';
         }).join("");
     }
@@ -145,23 +152,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
 
-            // Progress card
-            if (d.total_audios > 0) {
-                if (progressCard) progressCard.style.display = "block";
+            // Progress: overall summary + per-course cards
+            if (d.courses && d.courses.length > 0) {
+                if (progressOverall) progressOverall.style.display = "block";
                 if (progressEmpty) progressEmpty.style.display = "none";
-                var pct = d.total_audios > 0
-                    ? Math.round((d.completed_count / d.total_audios) * 100)
-                    : 0;
-                if (progressBar) progressBar.style.width = pct + "%";
-                if (progressLabel) progressLabel.textContent = d.completed_count + " of " + d.total_audios + " lessons completed";
-                if (progressPct) progressPct.textContent = pct + "%";
-                if (statCompleted) statCompleted.textContent = d.completed_count + " lesson" + (d.completed_count !== 1 ? "s" : "");
-                if (statTime) statTime.textContent = formatTime(d.total_listened_seconds);
-                if (statPending) statPending.textContent = d.pending_count + " lesson" + (d.pending_count !== 1 ? "s" : "");
-                renderLessonsList(d.lessons || []);
+                if (overallLabel) overallLabel.textContent = "Across " + d.courses.length + " course" + (d.courses.length !== 1 ? "s" : "");
+                if (overallPct) overallPct.textContent = d.overall_percent + "%";
+                if (overallBar) overallBar.style.width = d.overall_percent + "%";
+                if (overallTime) overallTime.textContent = formatTime(d.overall_credited_seconds) + " studied of " + formatTime(d.overall_total_seconds) + " available";
+                renderCourseProgress(d.courses);
             } else {
-                if (progressCard) progressCard.style.display = "none";
+                if (progressOverall) progressOverall.style.display = "none";
                 if (progressEmpty) progressEmpty.style.display = "block";
+                if (courseProgressList) courseProgressList.innerHTML = "";
             }
         } catch (e) {
             console.error("Progress load failed:", e);
