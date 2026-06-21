@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Admin – Courses{% endblock %}
-
 {% block content %}
 <section class="admin-dashboard">
     <h1 class="dashboard-title">Courses</h1>
-
     <!-- ADD COURSE FORM -->
     <details class="admin-box" id="add-course-details">
         <summary style="font-weight:700; font-size:15px; cursor:pointer; color:#8B7500;">
@@ -30,7 +28,6 @@
             <button type="submit" style="margin-top:4px;">Add Course</button>
         </form>
     </details>
-
     <!-- SEARCH -->
     <div class="admin-box" style="padding:10px 14px; margin-bottom:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -45,7 +42,6 @@
             </button>
         </div>
     </div>
-
     <!-- LEVEL FILTER -->
     <div class="filter-tab-bar" id="course-level-tabs" style="margin-bottom:8px;">
         <button class="filter-tab active" data-level="all">All</button>
@@ -53,24 +49,19 @@
         <button class="filter-tab" data-level="400">400L</button>
         <button class="filter-tab" data-level="500">500L</button>
     </div>
-
     <!-- SEMESTER FILTER -->
     <div class="filter-tab-bar" style="margin-bottom:14px;">
         <button class="filter-tab-secondary active" data-sem="all">All Semesters</button>
         <button class="filter-tab-secondary" data-sem="1">1st Semester</button>
         <button class="filter-tab-secondary" data-sem="2">2nd Semester</button>
     </div>
-
     <div id="course-count" style="font-size:13px;color:#aaa;margin-bottom:10px;"></div>
-
     <div id="courses-grid"></div>
     <div id="courses-empty" style="display:none;text-align:center;padding:30px;color:#aaa;">
         No courses match this filter.
     </div>
-
     <a href="/admin/" class="back-login-btn" style="margin-top:16px;display:inline-block;">← Dashboard</a>
 </section>
-
 <style>
 .filter-tab-bar { display:flex;gap:6px;flex-wrap:wrap; }
 .filter-tab {
@@ -100,13 +91,11 @@
     cursor:pointer;font-weight:600;text-decoration:none;
 }
 </style>
-
 <script>
 const ALL_COURSES = {{ courses_json | safe }};
 let activeLevel = "all";
 let activeSem = "all";
 let searchQuery = "";
-
 function matchesCourse(c) {
     if (activeLevel !== "all" && c.level !== activeLevel) return false;
     if (activeSem !== "all" && String(c.semester) !== activeSem) return false;
@@ -116,16 +105,13 @@ function matchesCourse(c) {
     }
     return true;
 }
-
 function renderCourses() {
     const grid = document.getElementById("courses-grid");
     const empty = document.getElementById("courses-empty");
     const countEl = document.getElementById("course-count");
     grid.innerHTML = "";
-
     const filtered = ALL_COURSES.filter(matchesCourse);
     countEl.textContent = `${filtered.length} course${filtered.length !== 1 ? "s" : ""}`;
-
     // Update tab counts
     document.querySelectorAll(".filter-tab[data-level]").forEach(tab => {
         const lvl = tab.getAttribute("data-level");
@@ -140,7 +126,6 @@ function renderCourses() {
         }).length;
         tab.textContent = lvl === "all" ? `All (${count})` : `${lvl}L (${count})`;
     });
-
     document.querySelectorAll(".filter-tab-secondary[data-sem]").forEach(tab => {
         const sem = tab.getAttribute("data-sem");
         const count = ALL_COURSES.filter(c => {
@@ -155,14 +140,11 @@ function renderCourses() {
         tab.textContent = sem === "all" ? `All Semesters (${count})` :
                           sem === "1" ? `1st Semester (${count})` : `2nd Semester (${count})`;
     });
-
     if (filtered.length === 0) { empty.style.display = "block"; return; }
     empty.style.display = "none";
-
     filtered.forEach(c => {
         const semLabel = c.semester == 1 ? "1st" : "2nd";
         const matCount = c.material_count || 0;
-
         const card = document.createElement("div");
         card.className = "course-card admin-box";
         card.innerHTML = `
@@ -176,6 +158,13 @@ function renderCourses() {
                     ${c.level}L · ${semLabel}
                 </span>
             </div>
+            ${c.is_trial ? `
+            <div style="margin-bottom:6px;">
+                <span style="font-size:11px;padding:3px 9px;border-radius:20px;
+                             background:#0a7c2f;color:#fff;font-weight:700;">
+                    <i class="fa-solid fa-star" style="margin-right:4px;"></i>Trial course (${c.level}L S${c.semester})
+                </span>
+            </div>` : ""}
             <div class="course-card-meta">
                 ${c.description || "No description"} &nbsp;·&nbsp;
                 <strong>${matCount}</strong> material${matCount !== 1 ? "s" : ""}
@@ -185,6 +174,14 @@ function renderCourses() {
                    style="background:linear-gradient(135deg,#8B7500,#d4af37);color:#fff;">
                     Edit / Upload
                 </a>
+                <form method="POST" action="/admin/courses/set-trial/${c.id}"
+                      style="margin:0;padding:0;background:none;box-shadow:none;"
+                      ${c.is_trial ? `onsubmit="return confirm('Remove ${c.course_code} as the trial course for ${c.level}L S${c.semester}?')"` :
+                                     `onsubmit="return confirm('Make ${c.course_code} the trial course for ${c.level}L S${c.semester}? Any existing trial course for that level+semester will be replaced.')"`}>
+                    <button type="submit" style="background:${c.is_trial ? '#856404' : '#3c2f1f'};color:#fff;">
+                        ${c.is_trial ? "Unset Trial" : "Set as Trial"}
+                    </button>
+                </form>
                 <form method="POST" action="/admin/courses/delete/${c.id}"
                       onsubmit="return confirm('Delete ${c.course_code}?')"
                       style="margin:0;padding:0;background:none;box-shadow:none;">
@@ -195,7 +192,6 @@ function renderCourses() {
         grid.appendChild(card);
     });
 }
-
 document.querySelectorAll(".filter-tab[data-level]").forEach(tab => {
     tab.addEventListener("click", () => {
         document.querySelectorAll(".filter-tab[data-level]").forEach(t => t.classList.remove("active"));
@@ -204,7 +200,6 @@ document.querySelectorAll(".filter-tab[data-level]").forEach(tab => {
         renderCourses();
     });
 });
-
 document.querySelectorAll(".filter-tab-secondary[data-sem]").forEach(tab => {
     tab.addEventListener("click", () => {
         document.querySelectorAll(".filter-tab-secondary[data-sem]").forEach(t => t.classList.remove("active"));
@@ -213,7 +208,6 @@ document.querySelectorAll(".filter-tab-secondary[data-sem]").forEach(tab => {
         renderCourses();
     });
 });
-
 const searchInput = document.getElementById("course-search");
 const searchClear = document.getElementById("course-search-clear");
 let debounce;
@@ -229,10 +223,8 @@ searchClear.addEventListener("click", () => {
     searchClear.style.display = "none";
     renderCourses();
 });
-
 renderCourses();
 </script>
-
 <div id="admin-toast" class="toast"></div>
 <script src="/static/js/admin.js"></script>
 {% endblock %}
