@@ -34,47 +34,29 @@
             <strong>Trial Ended</strong> — Pay to regain full access
         </div>
     </div>
-    <!-- PROGRESS CARD -->
-    <div class="courses-box" id="progress-card" style="display:none;">
+    <!-- PROGRESS: OVERALL SUMMARY -->
+    <div class="courses-box" id="progress-overall" style="display:none;">
         <h3>
             <i class="fa-solid fa-chart-simple" style="margin-right:8px; color:#8B7500;"></i>
             Your Progress
         </h3>
-        <!-- PROGRESS BAR -->
-        <div style="margin:14px 0 10px;">
+        <div style="margin:14px 0 4px;">
             <div style="display:flex; justify-content:space-between;
                         font-size:12px; color:#aaa; margin-bottom:6px;">
-                <span id="progress-label">0 of 0 lessons completed</span>
-                <span id="progress-pct">0%</span>
+                <span id="overall-label">Across 0 courses</span>
+                <span id="overall-pct">0%</span>
             </div>
             <div style="height:8px; background:#e6d8b5; border-radius:6px; overflow:hidden;">
-                <div id="progress-bar"
+                <div id="overall-bar"
                      style="height:100%; width:0%;
                             background:linear-gradient(90deg,#8B7500,#d4af37);
                             border-radius:6px; transition:width 0.6s ease;"></div>
             </div>
         </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
-            <div class="stat-mini">
-                <i class="fa-solid fa-circle-check" style="color:green;"></i>
-                <div id="stat-completed">—</div>
-                <div class="stat-mini-label">Completed</div>
-            </div>
-            <div class="stat-mini">
-                <i class="fa-solid fa-clock" style="color:#8B7500;"></i>
-                <div id="stat-time">—</div>
-                <div class="stat-mini-label">Studied</div>
-            </div>
-            <div class="stat-mini">
-                <i class="fa-solid fa-circle-half-stroke" style="color:#aaa;"></i>
-                <div id="stat-pending">—</div>
-                <div class="stat-mini-label">Pending</div>
-            </div>
-        </div>
-        <!-- LESSON-BY-LESSON BREAKDOWN — exactly which lessons the numbers
-             above are counting, each clickable straight into that course -->
-        <div id="lessons-list" style="margin-top:16px; display:flex; flex-direction:column; gap:8px;"></div>
+        <div id="overall-time" style="font-size:12px; color:#8B7500; font-weight:600; margin-top:8px;">—</div>
     </div>
+    <!-- PROGRESS: PER-COURSE CARDS -->
+    <div id="course-progress-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     <!-- EMPTY STATE -->
     <div class="courses-box" id="progress-empty" style="display:none; text-align:center; color:#aaa;">
         <i class="fa-solid fa-book-open"
@@ -83,31 +65,31 @@
     </div>
 </section>
 <style>
-.stat-mini {
-    flex: 1; min-width: 80px;
-    background: #fffaf0; border: 1px solid #e6d8b5;
-    border-radius: 10px; padding: 10px 8px; text-align: center;
-}
-.stat-mini i { font-size: 18px; display: block; margin-bottom: 4px; }
-.stat-mini > div:nth-child(2) { font-size: 16px; font-weight: 700; }
-.stat-mini-label { font-size: 11px; color: #aaa; margin-top: 2px; }
 .paid-animate { animation: pop 0.6s ease-out; }
 @keyframes pop {
     0% { transform: scale(0.6); opacity: 0; }
     70% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
 }
-.lesson-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border: 1px solid #e6d8b5; border-radius: 8px;
-    text-decoration: none; color: inherit; background: #fffaf0;
+.course-progress-card {
+    background: #fffaf0; border: 1px solid #e6d8b5; border-radius: 10px;
+    padding: 14px 16px; text-decoration: none; color: inherit; display: block;
 }
-.lesson-row:active { background: #f5ecd2; }
-.lesson-row-icon { font-size: 16px; width: 18px; text-align: center; flex-shrink: 0; }
-.lesson-row-text { flex: 1; min-width: 0; }
-.lesson-row-title { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lesson-row-meta { font-size: 11px; color: #aaa; margin-top: 2px; }
-.lesson-row-time { font-size: 11px; color: #8B7500; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+.course-progress-card:active { background: #f5ecd2; }
+.course-progress-head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+}
+.course-progress-code { font-size: 13px; font-weight: 700; color: #8B7500; }
+.course-progress-title { font-size: 12px; color: #777; margin-top: 1px; }
+.course-progress-pct { font-size: 15px; font-weight: 700; flex-shrink: 0; }
+.course-progress-track {
+    height: 7px; background: #e6d8b5; border-radius: 5px; overflow: hidden; margin-top: 8px;
+}
+.course-progress-fill {
+    height: 100%; border-radius: 5px; transition: width 0.6s ease;
+    background: linear-gradient(90deg,#8B7500,#d4af37);
+}
+.course-progress-meta { font-size: 11px; color: #aaa; margin-top: 6px; }
 </style>
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/account.js') }}"></script>
