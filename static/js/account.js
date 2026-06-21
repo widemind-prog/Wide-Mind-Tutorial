@@ -58,7 +58,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadProgress() {
         try {
-            var res = await fetch("/api/progress/summary", { credentials: "same-origin" });
+            var res = await fetch("/api/progress/summary", {
+                credentials: "same-origin",
+                cache: "no-store"
+            });
             if (!res.ok) return;
             var d = await res.json();
 
