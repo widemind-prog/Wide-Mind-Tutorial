@@ -616,7 +616,7 @@ def edit_course(course_id):
         flash("Course updated!", "success")
     c.execute("SELECT * FROM courses WHERE id=?", (course_id,))
     course = c.fetchone()
-    c.execute("SELECT id, filename, file_type, title FROM materials WHERE course_id=?", (course_id,))
+    c.execute("SELECT id, filename, file_type, title, duration_seconds FROM materials WHERE course_id=?", (course_id,))
     materials = c.fetchall()
     conn.close()
     return render_template("admin/edit_course.html", course=course, materials=materials)
@@ -672,8 +672,23 @@ def set_trial_course(course_id):
 def add_material(file_type, course_id):
     title = request.form.get("title", "").strip()
     file = request.files.get("file")
+    # Duration, entered by the admin in minutes (decimals allowed, e.g. 12.5
+    # for 12m30s) and stored in seconds. This is the single source of truth
+    # the progress percentage is calculated against — it deliberately does
+    # NOT come from reading the file's own metadata, since that has been the
+    # root cause of every unreliable progress reading so far (redirected
+    # streaming URLs, browsers that fail to load audio metadata, etc).
+    duration_minutes_raw = request.form.get("duration_minutes", "").strip()
+    try:
+        duration_seconds = int(round(float(duration_minutes_raw) * 60)) if duration_minutes_raw else 0
+    except ValueError:
+        duration_seconds = 0
     if not title or not file or file.filename == "":
         flash("Title and file are required.", "error")
+        return redirect(f"/admin/courses/edit/{course_id}")
+    if duration_seconds <= 0:
+        flash("Duration (in minutes) is required and must be greater than 0 — "
+              "it's what the student's progress percentage is calculated against.", "error")
         return redirect(f"/admin/courses/edit/{course_id}")
     filename = secure_filename(file.filename)
     conn = get_db()
@@ -696,8 +711,8 @@ def add_material(file_type, course_id):
         conn.close()
         return redirect(f"/admin/courses/edit/{course_id}")
     # Insert without file_url — URL is constructed at runtime from filename
-    c.execute("INSERT INTO materials (course_id, filename, file_type, title) VALUES (?, ?, ?, ?)",
-              (course_id, filename, file_type, title))
+    c.execute("INSERT INTO materials (course_id, filename, file_type, title, duration_seconds) VALUES (?, ?, ?, ?, ?)",
+              (course_id, filename, file_type, title, duration_seconds))
     conn.commit()
     conn.close()
     try:
@@ -737,6 +752,30 @@ def delete_material(material_id):
     c.execute("DELETE FROM materials WHERE id=?", (material_id,))
     conn.commit()
     conn.close()
+    return redirect(f"/admin/courses/edit/{material['course_id']}")
+@admin_bp.route("/courses/material/edit-duration/<int:material_id>", methods=["POST"])
+@admin_required
+def edit_material_duration(material_id):
+    duration_minutes_raw = request.form.get("duration_minutes", "").strip()
+    try:
+        duration_seconds = int(round(float(duration_minutes_raw) * 60)) if duration_minutes_raw else 0
+    except ValueError:
+        duration_seconds = 0
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT course_id FROM materials WHERE id=?", (material_id,))
+    material = c.fetchone()
+    if not material:
+        conn.close()
+        abort(404)
+    if duration_seconds <= 0:
+        conn.close()
+        flash("Duration must be greater than 0 minutes.", "error")
+        return redirect(f"/admin/courses/edit/{material['course_id']}")
+    c.execute("UPDATE materials SET duration_seconds=? WHERE id=?", (duration_seconds, material_id))
+    conn.commit()
+    conn.close()
+    flash("Duration updated.", "success")
     return redirect(f"/admin/courses/edit/{material['course_id']}")
 # [Auth.py](http://auth.py)
 from flask import Blueprint, jsonify, session, request
