@@ -101,7 +101,7 @@ def progress_summary():
     # or one zeroed out by the admin "change level" force-re-pay flow), and
     # the account page must always show the correct current fee regardless.
     amount = get_amount_for_level(user["level"])
-    return jsonify({
+    response = jsonify({
         "name": user["name"],
         "is_paid": is_paid,
         "is_verified": bool(user["is_verified"]),
@@ -116,6 +116,11 @@ def progress_summary():
         "amount": amount,
         "amount_display": f"₦{amount/100:,.2f}"
     })
+    # This endpoint drives the account page's progress card in real time —
+    # it must never be served stale from a browser/proxy cache after a
+    # reload, especially right after an admin marks the user paid.
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return response
 # =====================
 # PROGRESS UPDATE
 # =====================
@@ -123,7 +128,15 @@ def progress_summary():
 def update_progress():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
-    data = request.get_json() or {}
+    # force=True: tolerate requests that don't carry an exact
+    # "Content-Type: application/json" header. navigator.sendBeacon() (used
+    # by course.js to reliably flush progress on page-navigation/exit) sends
+    # its payload as a Blob, and not every browser stamps the Content-Type
+    # exactly the way Flask expects by default — without force=True those
+    # requests would silently return None here and the whole listen session
+    # would be lost, which is exactly the "0% after listening" symptom this
+    # endpoint must never produce again.
+    data = request.get_json(force=True, silent=True) or {}
     material_id = data.get("material_id")
     listened_seconds = float(data.get("listened_seconds", 0))
     duration_seconds = float(data.get("duration_seconds", 0))
