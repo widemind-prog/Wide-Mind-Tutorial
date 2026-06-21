@@ -1,12 +1,9 @@
 from flask import Blueprint, jsonify, session, request
-from backend.db import get_db
+from backend.db import get_db, get_trial_course_for
 import os
 from datetime import datetime, timedelta
-
 progress_bp = Blueprint("progress_bp", __name__)
-
 TRIAL_HOURS = 24
-
 def get_trial_status(user):
     """Returns dict with trial info given a user row."""
     trial_started_at = user["trial_started_at"]
@@ -22,8 +19,6 @@ def get_trial_status(user):
         remaining = int((expires - now).total_seconds())
         return {"active": True, "expired": False, "seconds_remaining": remaining}
     return {"active": False, "expired": True, "seconds_remaining": 0}
-
-
 # =====================
 # PROGRESS SUMMARY
 # =====================
@@ -31,10 +26,8 @@ def get_trial_status(user):
 def progress_summary():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
-
     conn = get_db()
     c = conn.cursor()
-
     # User + payment
     c.execute("""
         SELECT u.name, u.level, u.semester, u.is_verified, u.trial_started_at,
@@ -46,14 +39,16 @@ def progress_summary():
         ORDER BY p.id DESC LIMIT 1
     """, (session["user_id"],))
     user = c.fetchone()
-
     if not user:
         conn.close()
         return jsonify({"error": "User not found"}), 404
-
     is_paid = user["payment_status"] == "paid"
     trial = get_trial_status(user)
-
+    trial_course = None
+    if trial["active"]:
+        tc = get_trial_course_for(user["level"], user["semester"])
+        if tc:
+            trial_course = {"id": tc["id"], "code": tc["course_code"], "title": tc["course_title"]}
     # Total audios for this user's level+semester
     c.execute("""
         SELECT COUNT(m.id) AS total FROM materials m
@@ -61,7 +56,6 @@ def progress_summary():
         WHERE co.level=? AND co.semester=? AND m.file_type='audio'
     """, (user["level"], user["semester"]))
     total_audios = c.fetchone()["total"] or 0
-
     # Progress stats
     c.execute("""
         SELECT SUM(pr.listened_seconds) AS total_seconds,
@@ -77,9 +71,7 @@ def progress_summary():
     completed_count = int(prog["completed_count"] or 0)
     pending_count = max(0, total_audios - completed_count)
     conn.close()
-
     amount = user["amount"] or 0
-
     return jsonify({
         "name": user["name"],
         "is_paid": is_paid,
@@ -87,6 +79,7 @@ def progress_summary():
         "trial_active": trial["active"],
         "trial_expired": trial["expired"],
         "trial_seconds_remaining": trial["seconds_remaining"],
+        "trial_course": trial_course,
         "completed_count": completed_count,
         "total_audios": total_audios,
         "pending_count": pending_count,
@@ -94,8 +87,6 @@ def progress_summary():
         "amount": amount,
         "amount_display": f"₦{amount/100:,.2f}"
     })
-
-
 # =====================
 # PROGRESS UPDATE
 # =====================
@@ -103,26 +94,20 @@ def progress_summary():
 def update_progress():
     if "user_id" not in session:
         return jsonify({"error": "Not authenticated"}), 401
-
     data = request.get_json() or {}
     material_id = data.get("material_id")
     listened_seconds = float(data.get("listened_seconds", 0))
     duration_seconds = float(data.get("duration_seconds", 0))
-
     if not material_id:
         return jsonify({"error": "material_id required"}), 400
-
     completed = 1 if duration_seconds > 0 and (listened_seconds / duration_seconds) >= 0.9 else 0
-
     conn = get_db()
     c = conn.cursor()
-
     # INSERT OR IGNORE then UPDATE pattern for UNIQUE constraint
     c.execute("""
         INSERT OR IGNORE INTO progress (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
         VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
     """, (session["user_id"], material_id, listened_seconds, completed))
-
     c.execute("""
         UPDATE progress
         SET listened_seconds = MAX(listened_seconds, ?),
@@ -130,13 +115,9 @@ def update_progress():
             updated_at = datetime('now')
         WHERE user_id=? AND material_id=?
     """, (listened_seconds, completed, session["user_id"], material_id))
-
     conn.commit()
     conn.close()
-
     return jsonify({"saved": True, "completed": bool(completed)}), 200
-
-
 # =====================
 # PDF OPEN TRACKING
 # =====================
@@ -144,12 +125,10 @@ def update_progress():
 def open_pdf():
     if "user_id" not in session:
         return jsonify({"ok": True}), 200
-
     data = request.get_json() or {}
     material_id = data.get("material_id")
     if not material_id:
         return jsonify({"ok": True}), 200
-
     conn = get_db()
     c = conn.cursor()
     c.execute("""
@@ -159,3 +138,4 @@ def open_pdf():
     conn.commit()
     conn.close()
     return jsonify({"ok": True}), 200
+# Socket_events.py
