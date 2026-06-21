@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, session, request
 from backend.db import get_db, get_trial_course_for
+from backend.payment import get_amount_for_level
 import os
 from datetime import datetime, timedelta
 progress_bp = Blueprint("progress_bp", __name__)
@@ -31,8 +32,7 @@ def progress_summary():
     # User + payment
     c.execute("""
         SELECT u.name, u.level, u.semester, u.is_verified, u.trial_started_at,
-               COALESCE(p.admin_override_status, p.status) AS payment_status,
-               p.amount
+               COALESCE(p.admin_override_status, p.status) AS payment_status
         FROM users u
         LEFT JOIN payments p ON u.id=p.user_id
         WHERE u.id=?
@@ -95,7 +95,12 @@ def progress_summary():
         completed_count = 0
     pending_count = max(0, total_audios - completed_count)
     conn.close()
-    amount = user["amount"] or 0
+    # Always compute the amount live from the user's current level/price
+    # table — never trust payments.amount directly. A user's payment row can
+    # have a stale or NULL amount (e.g. an unpaid row seeded at registration,
+    # or one zeroed out by the admin "change level" force-re-pay flow), and
+    # the account page must always show the correct current fee regardless.
+    amount = get_amount_for_level(user["level"])
     return jsonify({
         "name": user["name"],
         "is_paid": is_paid,
