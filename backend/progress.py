@@ -49,26 +49,50 @@ def progress_summary():
         tc = get_trial_course_for(user["level"], user["semester"])
         if tc:
             trial_course = {"id": tc["id"], "code": tc["course_code"], "title": tc["course_title"]}
-    # Total audios for this user's level+semester
-    c.execute("""
-        SELECT COUNT(m.id) AS total FROM materials m
-        JOIN courses co ON m.course_id=co.id
-        WHERE co.level=? AND co.semester=? AND m.file_type='audio'
-    """, (user["level"], user["semester"]))
-    total_audios = c.fetchone()["total"] or 0
-    # Progress stats
-    c.execute("""
-        SELECT SUM(pr.listened_seconds) AS total_seconds,
-               SUM(CASE WHEN pr.completed=1 THEN 1 ELSE 0 END) AS completed_count
-        FROM progress pr
-        JOIN materials m ON pr.material_id=m.id
-        JOIN courses co ON m.course_id=co.id
-        WHERE pr.user_id=? AND m.file_type='audio'
-        AND co.level=? AND co.semester=?
-    """, (session["user_id"], user["level"], user["semester"]))
-    prog = c.fetchone()
-    total_listened = int(prog["total_seconds"] or 0)
-    completed_count = int(prog["completed_count"] or 0)
+
+    # Resolve the exact set of course IDs this user can currently open —
+    # mirrors check_course_access() in app.py so the progress card always
+    # matches what's actually unlockable, not just their home level/semester:
+    #   - paid users: their own level+semester, PLUS any lower level (same
+    #     semester) they hold a paid rerun pass for
+    #   - trial users: only the single course flagged as their trial course
+    #   - unpaid/expired-trial users: nothing yet
+    course_ids = []
+    if is_paid:
+        c.execute("SELECT id FROM courses WHERE level=? AND semester=?",
+                   (user["level"], user["semester"]))
+        course_ids.extend([row["id"] for row in c.fetchall()])
+        c.execute("""SELECT DISTINCT rerun_level FROM rerun_passes
+                     WHERE user_id=? AND (status='paid' OR admin_override_status='paid')""",
+                  (session["user_id"],))
+        rerun_levels = [row["rerun_level"] for row in c.fetchall()]
+        if rerun_levels:
+            placeholders = ",".join("?" for _ in rerun_levels)
+            c.execute(f"""SELECT id FROM courses WHERE semester=? AND level IN ({placeholders})""",
+                      [user["semester"]] + rerun_levels)
+            course_ids.extend([row["id"] for row in c.fetchall()])
+    elif trial_course:
+        course_ids = [trial_course["id"]]
+
+    if course_ids:
+        placeholders = ",".join("?" for _ in course_ids)
+        c.execute(f"""SELECT COUNT(id) AS total FROM materials
+                      WHERE file_type='audio' AND course_id IN ({placeholders})""", course_ids)
+        total_audios = c.fetchone()["total"] or 0
+        c.execute(f"""
+            SELECT SUM(pr.listened_seconds) AS total_seconds,
+                   SUM(CASE WHEN pr.completed=1 THEN 1 ELSE 0 END) AS completed_count
+            FROM progress pr
+            JOIN materials m ON pr.material_id=m.id
+            WHERE pr.user_id=? AND m.file_type='audio' AND m.course_id IN ({placeholders})
+        """, [session["user_id"]] + course_ids)
+        prog = c.fetchone()
+        total_listened = int(prog["total_seconds"] or 0)
+        completed_count = int(prog["completed_count"] or 0)
+    else:
+        total_audios = 0
+        total_listened = 0
+        completed_count = 0
     pending_count = max(0, total_audios - completed_count)
     conn.close()
     amount = user["amount"] or 0
@@ -138,4 +162,3 @@ def open_pdf():
     conn.commit()
     conn.close()
     return jsonify({"ok": True}), 200
-# Socket_events.py
