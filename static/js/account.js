@@ -1,240 +1,163 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    const paymentStatusEl = document.getElementById("payment-status");
-    const payBtn = document.getElementById("pay-btn");
-    const payAmountEl = document.getElementById("pay-amount");
-    const coursesList = document.getElementById("courses-main");
-    const rerunList = document.getElementById("courses-rerun");
-    const rerunSection = document.getElementById("rerun-section");
-    const rerunPassesEl = document.getElementById("rerun-passes");
-    const toastEl = document.getElementById("toast");
-    let isPaid = false;
-    let userLevel = null;
+document.addEventListener("DOMContentLoaded", function () {
+    var paymentStatusEl = document.getElementById("payment-status");
+    var payBtn = document.getElementById("pay-btn");
+    var payAmountEl = document.getElementById("pay-amount");
+    var trialBanner = document.getElementById("trial-banner");
+    var trialActiveBanner = document.getElementById("trial-active-banner");
+    var trialExpiredBanner = document.getElementById("trial-expired-banner");
+    var trialCountdown = document.getElementById("trial-countdown");
+    var trialCourseLink = document.getElementById("trial-course-link");
+    var progressCard = document.getElementById("progress-card");
+    var progressEmpty = document.getElementById("progress-empty");
+    var progressBar = document.getElementById("progress-bar");
+    var progressLabel = document.getElementById("progress-label");
+    var progressPct = document.getElementById("progress-pct");
+    var statCompleted = document.getElementById("stat-completed");
+    var statTime = document.getElementById("stat-time");
+    var statPending = document.getElementById("stat-pending");
+    var countdownInterval = null;
 
-    function getQueryParam(p) {
-        return new URLSearchParams(window.location.search).get(p);
+    function formatTime(seconds) {
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return h + "h " + m + "m";
+        if (m > 0) return m + "m";
+        return Math.floor(seconds) + "s";
     }
 
-    function showToast(msg, type = "info") {
-        if (!toastEl) return;
-        toastEl.textContent = msg;
-        toastEl.className = "toast show" + (type === "error" ? " toast-error" : "");
-        setTimeout(() => toastEl.className = "toast", 3500);
+    function startTrialCountdown(secondsRemaining) {
+        function tick() {
+            if (secondsRemaining <= 0) {
+                clearInterval(countdownInterval);
+                trialActiveBanner.style.display = "none";
+                trialExpiredBanner.style.display = "block";
+                return;
+            }
+            if (trialCountdown) trialCountdown.textContent = formatTime(secondsRemaining);
+            secondsRemaining--;
+        }
+        tick();
+        countdownInterval = setInterval(tick, 1000);
     }
 
     async function loadUserInfo() {
         try {
-            const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+            var res = await fetch("/api/auth/me", { credentials: "same-origin" });
             if (!res.ok) return;
-            const user = await res.json();
-            userLevel = parseInt(user.level);
-            const usernameEl = document.getElementById("username");
-            const departmentEl = document.getElementById("department");
-            const levelEl = document.getElementById("level");
-            const semesterEl = document.getElementById("semester");
-            if (usernameEl) usernameEl.textContent = user.name;
-            if (departmentEl) departmentEl.textContent = user.department;
-            if (levelEl) levelEl.textContent = user.level ? user.level + " Level" : "N/A";
-            if (semesterEl) semesterEl.textContent = user.semester == 1 ? "1st Semester" : user.semester == 2 ? "2nd Semester" : "N/A";
-        } catch (err) {
-            console.error("Failed to load user info:", err);
-        }
+            var u = await res.json();
+            var nameEl = document.getElementById("username");
+            var deptEl = document.getElementById("department");
+            var levelEl = document.getElementById("level");
+            var semEl = document.getElementById("semester");
+            if (nameEl) nameEl.textContent = u.name;
+            if (deptEl) deptEl.textContent = u.department;
+            if (levelEl) levelEl.textContent = u.level ? u.level + " Level" : "N/A";
+            if (semEl) semEl.textContent = u.semester == 1 ? "1st Semester" : "2nd Semester";
+        } catch (e) {}
     }
 
-    async function checkPaymentStatus(showToastOnSuccess = false) {
-        if (!paymentStatusEl || !payBtn) return;
+    async function loadProgress() {
         try {
-            const res = await fetch("/api/payment/status", { credentials: "same-origin" });
-            if (!res.ok) {
-                paymentStatusEl.textContent = "UNPAID ❌";
-                paymentStatusEl.style.color = "red";
-                payBtn.style.display = "inline-block";
-                return;
-            }
-            const payment = await res.json();
-            if (payAmountEl && payment.amount_display) {
-                payAmountEl.textContent = payment.amount_display;
-            }
-            if (payment.status === "paid") {
-                isPaid = true;
-                paymentStatusEl.textContent = "PAID ✅";
-                paymentStatusEl.classList.add("paid-animate");
-                paymentStatusEl.style.color = "green";
-                payBtn.style.display = "none";
-                if (showToastOnSuccess) showToast("Payment verified ✅");
+            var res = await fetch("/api/progress/summary", { credentials: "same-origin" });
+            if (!res.ok) return;
+            var d = await res.json();
+
+            // Payment status display
+            if (d.is_paid) {
+                if (paymentStatusEl) {
+                    paymentStatusEl.textContent = "PAID";
+                    paymentStatusEl.style.color = "green";
+                    paymentStatusEl.classList.add("paid-animate");
+                }
+                if (payBtn) payBtn.style.display = "none";
             } else {
-                isPaid = false;
-                paymentStatusEl.textContent = "UNPAID ❌";
-                paymentStatusEl.style.color = "red";
-                payBtn.style.display = "inline-block";
-            }
-        } catch (err) {
-            console.error("Payment status error:", err);
-        }
-    }
-
-    async function loadCourses() {
-        try {
-            const res = await fetch("/api/courses/my", { credentials: "same-origin" });
-            if (!res.ok) return;
-            const data = await res.json();
-
-            // Main courses
-            if (coursesList) {
-                coursesList.innerHTML = "";
-                if (!data.courses || data.courses.length === 0) {
-                    coursesList.innerHTML = "<li>No courses available for your level and semester yet.</li>";
-                } else {
-                    data.courses.forEach(course => {
-                        const li = document.createElement("li");
-                        const a = document.createElement("a");
-                        a.textContent = `${course.code} — ${course.title}`;
-                        // Always show the course name; lock clicking if unpaid
-                        if (isPaid) {
-                            a.href = `/course/${course.id}`;
-                        } else {
-                            a.href = "#";
-                            a.style.opacity = "0.6";
-                            a.addEventListener("click", e => {
-                                e.preventDefault();
-                                showToast("Complete payment to access this course ❌", "error");
-                            });
-                        }
-                        li.appendChild(a);
-                        coursesList.appendChild(li);
-                    });
+                if (paymentStatusEl) {
+                    paymentStatusEl.textContent = "UNPAID";
+                    paymentStatusEl.style.color = "crimson";
+                }
+                if (payBtn) payBtn.style.display = "block";
+                if (payAmountEl && d.amount_display) {
+                    payAmountEl.textContent = " " + d.amount_display;
                 }
             }
 
-            // Rerun courses
-            if (rerunList) {
-                rerunList.innerHTML = "";
-                if (data.rerun_courses && data.rerun_courses.length > 0) {
-                    if (rerunSection) rerunSection.style.display = "block";
-                    data.rerun_courses.forEach(course => {
-                        const li = document.createElement("li");
-                        const a = document.createElement("a");
-                        a.href = `/course/${course.id}`;
-                        a.innerHTML = `🔁 <span style="opacity:0.7;font-size:11px;">${course.rerun_level}L</span> ${course.code} — ${course.title}`;
-                        li.appendChild(a);
-                        rerunList.appendChild(li);
-                    });
-                }
-            }
-        } catch (err) {
-            console.error("Failed to load courses:", err);
-        }
-    }
-
-    async function loadRerunPasses() {
-        if (!rerunPassesEl) return;
-        // Only show for 400L and 500L students who have paid
-        if (!isPaid || !userLevel || userLevel < 400) return;
-
-        try {
-            const res = await fetch("/api/payment/rerun/status", { credentials: "same-origin" });
-            if (!res.ok) return;
-            const data = await res.json();
-            if (!data.passes || data.passes.length === 0) return;
-
-            rerunPassesEl.innerHTML = "";
-            if (rerunSection) rerunSection.style.display = "block";
-
-            data.passes.forEach(pass => {
-                const div = document.createElement("div");
-                div.className = "rerun-pass-card";
-                const isPurchased = pass.status === "paid";
-
-                div.innerHTML = `
-                    <div class="rerun-pass-info">
-                        <span class="rerun-pass-label">🔁 ${pass.rerun_level}L Rerun Pass</span>
-                        <span class="rerun-pass-status ${isPurchased ? 'purchased' : 'not-purchased'}">
-                            ${isPurchased ? "✅ Active" : "Not purchased"}
-                        </span>
-                    </div>
-                    <div class="rerun-pass-footer">
-                        <span class="rerun-pass-price">${pass.amount_display}</span>
-                        ${!isPurchased ? `<button class="btn-rerun-buy" data-level="${pass.rerun_level}">Buy Pass</button>` : ""}
-                    </div>
-                    ${isPurchased ? `<p class="rerun-pass-desc">Access all ${pass.rerun_level}L courses this semester</p>` : `<p class="rerun-pass-desc">Unlock all ${pass.rerun_level}L courses for this semester</p>`}
-                `;
-                rerunPassesEl.appendChild(div);
-            });
-
-            // Attach buy handlers
-            document.querySelectorAll(".btn-rerun-buy").forEach(btn => {
-                btn.addEventListener("click", async () => {
-                    const level = btn.getAttribute("data-level");
-                    btn.disabled = true;
-                    btn.textContent = "Initializing...";
-                    try {
-                        const res = await fetch("/api/payment/rerun/init", {
-                            method: "POST",
-                            credentials: "same-origin",
-                            headers: {"Content-Type": "application/json"},
-                            body: JSON.stringify({ rerun_level: level })
-                        });
-                        const data = await res.json();
-                        if (data.status && data.data && data.data.authorization_url) {
-                            window.location.href = data.data.authorization_url;
+            // Trial banner — active / expired, with a direct link to the
+            // course flagged as the trial course for this student's level+semester
+            if (!d.is_paid && trialBanner) {
+                if (d.trial_active) {
+                    trialBanner.style.display = "block";
+                    trialActiveBanner.style.display = "block";
+                    startTrialCountdown(d.trial_seconds_remaining);
+                    if (trialCourseLink) {
+                        if (d.trial_course && d.trial_course.id) {
+                            trialCourseLink.href = "/course/" + d.trial_course.id;
+                            trialCourseLink.style.display = "inline-flex";
+                            var labelEl = trialCourseLink.querySelector(".trial-course-label");
+                            if (labelEl) labelEl.textContent = "Open sample course: " + d.trial_course.code;
                         } else {
-                            showToast(data.error || "Payment initiation failed ❌", "error");
-                            btn.disabled = false;
-                            btn.textContent = "Buy Pass";
+                            // No trial course configured yet for this level/semester
+                            trialCourseLink.style.display = "none";
                         }
-                    } catch (err) {
-                        showToast("Payment initiation failed ❌", "error");
-                        btn.disabled = false;
-                        btn.textContent = "Buy Pass";
                     }
-                });
-            });
-        } catch (err) {
-            console.error("Failed to load rerun passes:", err);
+                } else if (d.trial_expired) {
+                    trialBanner.style.display = "block";
+                    trialExpiredBanner.style.display = "block";
+                }
+            }
+
+            // Progress card
+            if (d.total_audios > 0) {
+                if (progressCard) progressCard.style.display = "block";
+                if (progressEmpty) progressEmpty.style.display = "none";
+                var pct = d.total_audios > 0
+                    ? Math.round((d.completed_count / d.total_audios) * 100)
+                    : 0;
+                if (progressBar) progressBar.style.width = pct + "%";
+                if (progressLabel) progressLabel.textContent = d.completed_count + " of " + d.total_audios + " lessons completed";
+                if (progressPct) progressPct.textContent = pct + "%";
+                if (statCompleted) statCompleted.textContent = d.completed_count + " lesson" + (d.completed_count !== 1 ? "s" : "");
+                if (statTime) statTime.textContent = formatTime(d.total_listened_seconds);
+                if (statPending) statPending.textContent = d.pending_count + " lesson" + (d.pending_count !== 1 ? "s" : "");
+            } else {
+                if (progressCard) progressCard.style.display = "none";
+                if (progressEmpty) progressEmpty.style.display = "block";
+            }
+        } catch (e) {
+            console.error("Progress load failed:", e);
         }
     }
 
+    // Pay button
     if (payBtn) {
-        payBtn.addEventListener("click", async () => {
+        payBtn.addEventListener("click", async function () {
             payBtn.disabled = true;
-            payBtn.textContent = "Initializing...";
+            payBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Initializing...';
             try {
-                const res = await fetch("/api/payment/init", { method: "POST", credentials: "same-origin" });
-                const data = await res.json();
+                var res = await fetch("/api/payment/init", {
+                    method: "POST", credentials: "same-origin"
+                });
+                var data = await res.json();
                 if (data.status && data.data && data.data.authorization_url) {
                     window.location.href = data.data.authorization_url;
                 } else {
-                    showToast(data.message || "Payment initialization failed ❌", "error");
                     payBtn.disabled = false;
-                    payBtn.innerHTML = 'Pay Now <span id="pay-amount"></span> 💳';
+                    payBtn.innerHTML = '<i class="fa-solid fa-credit-card" style="margin-right:8px;"></i>Pay Now <span id="pay-amount">' + (payAmountEl ? payAmountEl.textContent : "") + "</span>";
                 }
-            } catch (err) {
-                showToast("Payment initiation failed ❌", "error");
+            } catch (e) {
                 payBtn.disabled = false;
-                payBtn.innerHTML = 'Pay Now <span id="pay-amount"></span> 💳';
             }
         });
     }
 
-    const paymentRedirect = getQueryParam("payment");
-    if (paymentRedirect === "callback" || paymentRedirect === "rerun_callback") {
-        const url = new URL(window.location);
+    // Handle payment callback redirect — strip the query param either way
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "callback" || params.get("payment") === "rerun_callback") {
+        var url = new URL(window.location);
         url.searchParams.delete("payment");
         window.history.replaceState({}, document.title, url);
-        setTimeout(async () => {
-            await loadUserInfo();
-            await checkPaymentStatus(true);
-            await loadCourses();
-            await loadRerunPasses();
-        }, 700);
-    } else {
-        await loadUserInfo();
-        await checkPaymentStatus(false);
-        await loadCourses();
-        await loadRerunPasses();
     }
 
-    const logoutBtn = document.getElementById("logout-btn");
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => { window.location.href = "/logout"; });
-    }
+    // Init
+    loadUserInfo();
+    loadProgress();
 });
