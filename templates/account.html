@@ -2,6 +2,7 @@
 {% block title %}Account | Wide Mind Tutorials{% endblock %}
 {% block content %}
 <section class="account-section">
+
     <!-- PROFILE BOX -->
     <div class="account-box">
         <img src="/static/images/avatar.png" alt="Profile Avatar" class="profile-avatar">
@@ -15,6 +16,7 @@
             Pay Now <span id="pay-amount"></span>
         </button>
     </div>
+
     <!-- TRIAL BANNER -->
     <div id="trial-banner" style="display:none;" class="courses-box">
         <div id="trial-active-banner" style="display:none;">
@@ -34,17 +36,26 @@
             <strong>Trial Ended</strong> — Pay to regain full access
         </div>
     </div>
-<!-- TOAST -->
-    <!-- COURSES -->
+
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+
+    <!-- COURSES BUTTON -->
     <div class="courses-box">
-       <div id="toast" class="toast"></div>
-        <h3>Your Courses</h3>
-        <ul id="courses">
-            <li>Loading courses...</li>
-        </ul>
+        <a href="/courses"
+           style="display:flex; align-items:center; justify-content:center; gap:10px;
+                  background:linear-gradient(135deg,#8B7500,#d4af37); color:#fff;
+                  padding:14px 20px; border-radius:10px; text-decoration:none;
+                  font-size:15px; font-weight:600;
+                  box-shadow:0 2px 8px rgba(139,117,0,0.25);">
+            <i class="fa-solid fa-book-open"></i>
+            View My Courses
+            <i class="fa-solid fa-arrow-right" style="margin-left:auto; font-size:13px;"></i>
+        </a>
     </div>
 
 </section>
+
 <style>
 .paid-animate { animation: pop 0.6s ease-out; }
 @keyframes pop {
@@ -52,27 +63,10 @@
     70% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); }
 }
-.course-progress-card {
-    background: #fffaf0; border: 1px solid #e6d8b5; border-radius: 10px;
-    padding: 14px 16px; text-decoration: none; color: inherit; display: block;
-}
-.course-progress-card:active { background: #f5ecd2; }
-.course-progress-head {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-}
-.course-progress-code { font-size: 13px; font-weight: 700; color: #8B7500; }
-.course-progress-title { font-size: 12px; color: #777; margin-top: 1px; }
-.course-progress-pct { font-size: 15px; font-weight: 700; flex-shrink: 0; }
-.course-progress-track {
-    height: 7px; background: #e6d8b5; border-radius: 5px; overflow: hidden; margin-top: 8px;
-}
-.course-progress-fill {
-    height: 100%; border-radius: 5px; transition: width 0.6s ease;
-    background: linear-gradient(90deg,#8B7500,#d4af37);
-}
-.course-progress-meta { font-size: 11px; color: #aaa; margin-top: 6px; }
 </style>
+
+{% endblock %}
+
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/account.js') }}"></script>
-{% endblock %}
 {% endblock %}
