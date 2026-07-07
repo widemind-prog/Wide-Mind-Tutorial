@@ -9,41 +9,38 @@ document.addEventListener("DOMContentLoaded", function () {
         setTimeout(function () { toast.classList.remove("show"); }, 3000);
     }
 
-    // =====================
-    // AUDIO PROGRESS TRACKING
-    // =====================
-    function reportProgress(materialId, listenedSeconds, durationSeconds) {
+    // Standard fetch-based progress report — used for all in-session events
+    // (play start, 5s interval, pause, end, seek). Reliable because the
+    // page is still alive and credentials are always sent.
+    function reportProgress(materialId, listenedSeconds) {
         fetch("/api/progress/update", {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 material_id: materialId,
-                listened_seconds: listenedSeconds,
-                duration_seconds: durationSeconds
+                listened_seconds: listenedSeconds
             })
         }).catch(function () {});
     }
 
-    // A normal fetch() started inside a pagehide/beforeunload/visibilitychange
-    // handler can be silently cancelled mid-flight once the page starts
-    // tearing down — this is the #1 reason "I listened for 2 minutes, went
-    // back to /account, and progress shows 0" happens. navigator.sendBeacon
-    // is purpose-built to survive that: the browser guarantees the request
-    // is queued before the page unloads, even on a same-site link click.
-    function reportProgressOnExit(materialId, listenedSeconds, durationSeconds) {
+    // Beacon-based flush — used ONLY as a last-resort backup on page exit.
+    // navigator.sendBeacon survives page teardown but doesn't guarantee
+    // session cookies on all Android browsers. Because regular fetch handles
+    // all in-session reports (play, pause, interval, seek), the beacon is
+    // just a safety net for uncaught exit scenarios — if it fails silently,
+    // the last fetch-based report (max 5s ago) was already written.
+    function reportProgressBeacon(materialId, listenedSeconds) {
         var payload = JSON.stringify({
             material_id: materialId,
-            listened_seconds: listenedSeconds,
-            duration_seconds: durationSeconds
+            listened_seconds: listenedSeconds
         });
         if (navigator.sendBeacon) {
             var blob = new Blob([payload], { type: "application/json" });
-            var ok = navigator.sendBeacon("/api/progress/update", blob);
-            if (ok) return;
+            navigator.sendBeacon("/api/progress/update", blob);
+        } else {
+            reportProgress(materialId, listenedSeconds);
         }
-        // Fallback for browsers without sendBeacon support
-        reportProgress(materialId, listenedSeconds, durationSeconds);
     }
 
     document.querySelectorAll("audio[data-material-id]").forEach(function (audio) {
@@ -52,28 +49,22 @@ document.addEventListener("DOMContentLoaded", function () {
         var reportInterval = null;
         var lastReportedTime = 0;
 
-        // Disable right-click, dragging, download, and Picture-in-Picture
+        // ---- ANTI-PIRACY ----
         audio.addEventListener("contextmenu", function (e) {
             e.preventDefault();
-            showToast("Right-click disabled on audio", true);
+            showToast("Right-click disabled", true);
         });
         audio.addEventListener("dragstart", function (e) { e.preventDefault(); });
         audio.setAttribute("controlsList", "nodownload");
         audio.setAttribute("disablePictureInPicture", "true");
-        audio.title = "Right-click and download disabled";
+        audio.title = "Download disabled";
 
-        // Resume from last position on this device. This is local-only
-        // memory for instant resume (works even before metadata round-trips
-        // to the server); it's separate from the server-side listened_seconds
-        // used for the account page's progress bar and completion tracking.
+        // ---- LOCAL RESUME (localStorage, device-only) ----
         var savedTime = null;
-        try {
-            savedTime = localStorage.getItem(storageKey);
-        } catch (e) {}
+        try { savedTime = localStorage.getItem(storageKey); } catch (e) {}
         if (savedTime) {
             var resumeTo = parseFloat(savedTime);
             if (audio.readyState >= 1) {
-                // Metadata already available
                 if (resumeTo > 0 && resumeTo < audio.duration) audio.currentTime = resumeTo;
             } else {
                 audio.addEventListener("loadedmetadata", function () {
@@ -81,80 +72,56 @@ document.addEventListener("DOMContentLoaded", function () {
                 }, { once: true });
             }
         }
+        function saveLocal(t) { try { localStorage.setItem(storageKey, t); } catch (e) {} }
+        function clearLocal() { try { localStorage.removeItem(storageKey); } catch (e) {} }
 
-        function saveLocalPosition(t) {
-            try { localStorage.setItem(storageKey, t); } catch (e) {}
-        }
-        function clearLocalPosition() {
-            try { localStorage.removeItem(storageKey); } catch (e) {}
-        }
-
-        // Update the local "last position" continuously while playing, so a
-        // refresh/crash mid-playback still resumes close to where you left off.
         audio.addEventListener("timeupdate", function () {
-            saveLocalPosition(audio.currentTime);
+            saveLocal(audio.currentTime);
         });
 
+        // ---- PROGRESS REPORTING ----
         audio.addEventListener("play", function () {
-            // Report immediately so even a very short listen (under one
-            // interval tick) still registers something, then keep reporting
-            // every 5 seconds while playback continues.
-            if (audio.duration) {
+            // Report immediately on play so even a sub-5s listen registers
+            if (audio.currentTime > 0) {
                 lastReportedTime = audio.currentTime;
-                reportProgress(materialId, audio.currentTime, audio.duration);
+                reportProgress(materialId, audio.currentTime);
             }
+            clearInterval(reportInterval);
             reportInterval = setInterval(function () {
-                if (!audio.paused && !audio.ended && audio.duration) {
+                if (!audio.paused && !audio.ended) {
                     lastReportedTime = audio.currentTime;
-                    reportProgress(materialId, audio.currentTime, audio.duration);
+                    reportProgress(materialId, audio.currentTime);
                 }
             }, 5000);
         });
 
         audio.addEventListener("pause", function () {
             clearInterval(reportInterval);
-            if (audio.duration) {
-                lastReportedTime = audio.currentTime;
-                reportProgress(materialId, audio.currentTime, audio.duration);
-            }
+            lastReportedTime = audio.currentTime;
+            reportProgress(materialId, audio.currentTime);
         });
 
         audio.addEventListener("ended", function () {
             clearInterval(reportInterval);
-            if (audio.duration) {
-                lastReportedTime = audio.duration;
-                reportProgress(materialId, audio.duration, audio.duration);
-            }
-            // Lesson finished — clear local resume point so it starts from
-            // the beginning next time instead of "resuming" at the very end.
-            clearLocalPosition();
+            lastReportedTime = audio.currentTime;
+            reportProgress(materialId, audio.currentTime);
+            clearLocal();
         });
 
-        // Catches manual scrubbing/skipping (e.g. dragging straight to the
-        // end) — "pause"/"ended" don't reliably fire for every seek, so
-        // without this a skip-to-end followed by quickly leaving the page
-        // could report nothing at all.
+        // Scrubbing/skipping — report immediately on every seek
         audio.addEventListener("seeked", function () {
-            if (audio.duration) {
-                lastReportedTime = audio.currentTime;
-                reportProgress(materialId, audio.currentTime, audio.duration);
-            }
+            lastReportedTime = audio.currentTime;
+            reportProgress(materialId, audio.currentTime);
         });
 
-        // Flush progress on every exit path. "pagehide" is the one that
-        // actually fires reliably for normal same-site link navigation
-        // (e.g. tapping the Account tab in the bottom nav) across both
-        // desktop and mobile browsers, including iOS Safari — beforeunload
-        // is unreliable on mobile and visibilitychange's "hidden" state is
-        // never reached during an in-app navigation (the document stays
-        // visible right up until it's replaced). All three are wired here
-        // so backgrounding, tab-close, and link-navigation are all covered.
+        // ---- EXIT FLUSH (belt-and-braces backup) ----
+        // The 5s interval + pause/seek already write regularly via fetch.
+        // These handlers catch the case where the user navigates away without
+        // pausing first. The beacon is a secondary safety net only.
         function flushOnExit() {
-            if (!audio.duration) return;
             var pos = Math.max(audio.currentTime, lastReportedTime);
             if (pos > 0) {
-                lastReportedTime = pos;
-                reportProgressOnExit(materialId, pos, audio.duration);
+                reportProgressBeacon(materialId, pos);
             }
         }
         window.addEventListener("pagehide", flushOnExit);
@@ -164,9 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // =====================
-    // PDF OPEN TRACKING
-    // =====================
+    // ---- PDF OPEN TRACKING ----
     document.querySelectorAll("a.pdf-link[data-material-id]").forEach(function (link) {
         link.addEventListener("click", function () {
             var materialId = parseInt(link.getAttribute("data-material-id"));
