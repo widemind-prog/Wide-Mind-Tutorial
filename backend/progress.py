@@ -239,3 +239,35 @@ def open_pdf():
     conn.commit()
     conn.close()
     return jsonify({"ok": True}), 200
+
+
+# =====================
+# DEBUG — remove after confirming progress writes work
+# Hit /api/progress/debug in your browser while logged in to see your raw rows
+# =====================
+@progress_bp.route("/api/progress/debug")
+def debug_progress():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT pr.material_id, pr.listened_seconds, pr.completed, pr.updated_at,
+               m.title, m.file_type, m.duration_seconds, m.course_id
+        FROM progress pr
+        JOIN materials m ON pr.material_id = m.id
+        WHERE pr.user_id = ?
+        ORDER BY pr.updated_at DESC
+    """, (session["user_id"],))
+    rows = c.fetchall()
+    conn.close()
+    return jsonify([{
+        "material_id": r["material_id"],
+        "title": r["title"],
+        "file_type": r["file_type"],
+        "listened_seconds": r["listened_seconds"],
+        "duration_seconds": r["duration_seconds"],
+        "completed": r["completed"],
+        "updated_at": r["updated_at"],
+        "course_id": r["course_id"]
+    } for r in rows])
