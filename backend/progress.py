@@ -177,41 +177,58 @@ def progress_summary():
 @progress_bp.route("/api/progress/update", methods=["POST"])
 def update_progress():
     if "user_id" not in session:
+        print("[PROGRESS] update_progress: no user_id in session")
         return jsonify({"error": "Not authenticated"}), 401
     data = request.get_json(force=True, silent=True) or {}
     material_id = data.get("material_id")
     listened_seconds = float(data.get("listened_seconds", 0) or 0)
+    print(f"[PROGRESS] update called: user={session['user_id']} material={material_id} listened={listened_seconds}")
     if not material_id:
+        print("[PROGRESS] update_progress: no material_id in payload")
         return jsonify({"error": "material_id required"}), 400
 
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT duration_seconds FROM materials WHERE id=?", (material_id,))
-    material = c.fetchone()
-    if not material:
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT duration_seconds FROM materials WHERE id=?", (material_id,))
+        material = c.fetchone()
+        if not material:
+            conn.close()
+            print(f"[PROGRESS] material {material_id} not found in DB")
+            return jsonify({"error": "material not found"}), 404
+
+        duration = int(material["duration_seconds"] or 0)
+        if duration > 0:
+            listened_seconds = min(listened_seconds, duration)
+        completed = 1 if duration > 0 and (listened_seconds / duration) >= 0.9 else 0
+        print(f"[PROGRESS] duration={duration} capped_listened={listened_seconds} completed={completed}")
+
+        c.execute("""
+            INSERT OR IGNORE INTO progress
+                (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, (session["user_id"], material_id, listened_seconds, completed))
+        print(f"[PROGRESS] INSERT done")
+
+        c.execute("""
+            UPDATE progress
+            SET listened_seconds = MAX(listened_seconds, ?),
+                completed = MAX(completed, ?),
+                updated_at = datetime('now')
+            WHERE user_id=? AND material_id=?
+        """, (listened_seconds, completed, session["user_id"], material_id))
+        print(f"[PROGRESS] UPDATE done")
+
+        conn.commit()
         conn.close()
-        return jsonify({"error": "material not found"}), 404
+        print(f"[PROGRESS] success: user={session['user_id']} material={material_id} listened={listened_seconds}")
+        return jsonify({"ok": True}), 200
 
-    duration = int(material["duration_seconds"] or 0)
-    if duration > 0:
-        listened_seconds = min(listened_seconds, duration)
-    completed = 1 if duration > 0 and (listened_seconds / duration) >= 0.9 else 0
-
-    c.execute("""
-        INSERT OR IGNORE INTO progress
-            (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-    """, (session["user_id"], material_id, listened_seconds, completed))
-    c.execute("""
-        UPDATE progress
-        SET listened_seconds = MAX(listened_seconds, ?),
-            completed = MAX(completed, ?),
-            updated_at = datetime('now')
-        WHERE user_id=? AND material_id=?
-    """, (listened_seconds, completed, session["user_id"], material_id))
-    conn.commit()
-    conn.close()
-    return jsonify({"ok": True}), 200
+    except Exception as e:
+        print(f"[PROGRESS] ERROR in update_progress: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 # =====================
