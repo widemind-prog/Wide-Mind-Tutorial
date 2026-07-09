@@ -49,7 +49,12 @@ class TursoConnection:
             ]
         }
         resp = requests.post(HTTP_URL, json=payload, headers=HEADERS, timeout=10)
-        resp.raise_for_status()
+        if not resp.ok:
+            import json as _json
+            print(f"[TURSO 400] SQL: {sql.strip()[:120]}")
+            print(f"[TURSO 400] ARGS: {args}")
+            print(f"[TURSO 400] RESPONSE BODY: {resp.text[:500]}")
+            resp.raise_for_status()
         data = resp.json()
         result = data["results"][0]
         if result["type"] == "error":
@@ -176,6 +181,8 @@ def init_db():
         "ALTER TABLE courses ADD COLUMN semester INTEGER NOT NULL DEFAULT 2",
         "ALTER TABLE courses ADD COLUMN is_trial INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE materials ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE progress ADD COLUMN opened_at TEXT",
+        "ALTER TABLE progress ADD COLUMN updated_at TEXT",
     ]
     for sql in migrations:
         try:
