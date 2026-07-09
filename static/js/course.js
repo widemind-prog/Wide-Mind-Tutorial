@@ -21,7 +21,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 material_id: materialId,
                 listened_seconds: listenedSeconds
             })
-        }).catch(function () {});
+        }).then(function(res) {
+            if (!res.ok) {
+                res.text().then(function(t) {
+                    console.error("[PROGRESS] update failed:", res.status, t);
+                });
+            } else {
+                console.log("[PROGRESS] update ok material=" + materialId + " listened=" + listenedSeconds);
+            }
+        }).catch(function(e) {
+            console.error("[PROGRESS] fetch error:", e);
+        });
     }
 
     // Beacon-based flush — used ONLY as a last-resort backup on page exit.
