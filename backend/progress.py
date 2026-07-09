@@ -203,20 +203,23 @@ def update_progress():
         completed = 1 if duration > 0 and (listened_seconds / duration) >= 0.9 else 0
         print(f"[PROGRESS] duration={duration} capped_listened={listened_seconds} completed={completed}")
 
+        from datetime import datetime as _dt
+        now_str = _dt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
         c.execute("""
             INSERT OR IGNORE INTO progress
                 (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
-            VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-        """, (session["user_id"], material_id, listened_seconds, completed))
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (session["user_id"], material_id, listened_seconds, completed, now_str, now_str))
         print(f"[PROGRESS] INSERT done")
 
         c.execute("""
             UPDATE progress
             SET listened_seconds = MAX(listened_seconds, ?),
                 completed = MAX(completed, ?),
-                updated_at = datetime('now')
+                updated_at = ?
             WHERE user_id=? AND material_id=?
-        """, (listened_seconds, completed, session["user_id"], material_id))
+        """, (listened_seconds, completed, now_str, session["user_id"], material_id))
         print(f"[PROGRESS] UPDATE done")
 
         conn.commit()
@@ -242,17 +245,19 @@ def open_pdf():
     material_id = data.get("material_id")
     if not material_id:
         return jsonify({"ok": True}), 200
+    from datetime import datetime as _dt
+    now_str = _dt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_db()
     c = conn.cursor()
     c.execute("""
         INSERT OR IGNORE INTO progress
             (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
-        VALUES (?, ?, 0, 1, datetime('now'), datetime('now'))
-    """, (session["user_id"], material_id))
+        VALUES (?, ?, 0, 1, ?, ?)
+    """, (session["user_id"], material_id, now_str, now_str))
     c.execute("""
-        UPDATE progress SET completed=1, updated_at=datetime('now')
+        UPDATE progress SET completed=1, updated_at=?
         WHERE user_id=? AND material_id=?
-    """, (session["user_id"], material_id))
+    """, (now_str, session["user_id"], material_id))
     conn.commit()
     conn.close()
     return jsonify({"ok": True}), 200
