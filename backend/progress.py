@@ -207,10 +207,9 @@ def update_progress():
         now_str = _dt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
         c.execute("""
-            INSERT OR IGNORE INTO progress
-                (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (session["user_id"], material_id, listened_seconds, completed, now_str, now_str))
+            INSERT OR IGNORE INTO progress (user_id, material_id, listened_seconds, completed)
+            VALUES (?, ?, ?, ?)
+        """, (session["user_id"], material_id, listened_seconds, completed))
         print(f"[PROGRESS] INSERT done")
 
         c.execute("""
@@ -250,10 +249,9 @@ def open_pdf():
     conn = get_db()
     c = conn.cursor()
     c.execute("""
-        INSERT OR IGNORE INTO progress
-            (user_id, material_id, listened_seconds, completed, opened_at, updated_at)
-        VALUES (?, ?, 0, 1, ?, ?)
-    """, (session["user_id"], material_id, now_str, now_str))
+        INSERT OR IGNORE INTO progress (user_id, material_id, listened_seconds, completed)
+        VALUES (?, ?, 0, 1)
+    """, (session["user_id"], material_id))
     c.execute("""
         UPDATE progress SET completed=1, updated_at=?
         WHERE user_id=? AND material_id=?
