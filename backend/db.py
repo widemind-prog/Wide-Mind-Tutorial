@@ -467,13 +467,15 @@ def verify_otp():
         conn.close()
         return jsonify({"error": "OTP has expired. Request a new one."}), 400
     # Mark OTP used, verify user, start trial
+    from datetime import datetime as _dt
+    now_str = _dt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     c.execute("UPDATE email_otps SET verified=1 WHERE id=?", (record["id"],))
     c.execute("""
         UPDATE users
         SET is_verified=1,
-            trial_started_at=datetime('now')
+            trial_started_at=?
         WHERE id=?
-    """, (session["user_id"],))
+    """, (now_str, session["user_id"]))
     conn.commit()
     conn.close()
     return jsonify({"message": "Email verified!", "redirect": "/account"}), 200
