@@ -381,16 +381,18 @@ def toggle_rerun_pass(user_id, rerun_level):
     c.execute("SELECT id, status, admin_override_status FROM rerun_passes WHERE user_id=? AND rerun_level=?",
               (user_id, rerun_level))
     existing = c.fetchone()
+    from datetime import datetime as _dt
+    now_str = _dt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     amount = get_rerun_amount(rerun_level)
     if not existing:
         c.execute("""INSERT INTO rerun_passes (user_id, rerun_level, amount, status, admin_override_status, paid_at)
-                     VALUES (?, ?, ?, 'unpaid', 'paid', datetime('now'))""", (user_id, rerun_level, amount))
+                     VALUES (?, ?, ?, 'unpaid', 'paid', ?)""", (user_id, rerun_level, amount, now_str))
         new_status = "paid"
     else:
         current = existing["admin_override_status"] if existing["admin_override_status"] else existing["status"]
         new_status = "unpaid" if current == "paid" else "paid"
-        c.execute("UPDATE rerun_passes SET admin_override_status=?, paid_at=datetime('now') WHERE id=?",
-                  (new_status, existing["id"]))
+        c.execute("UPDATE rerun_passes SET admin_override_status=?, paid_at=? WHERE id=?",
+                  (new_status, now_str, existing["id"]))
     conn.commit()
     conn.close()
     flash(f"{rerun_level}L rerun pass {'granted' if new_status == 'paid' else 'revoked'}", "success")
@@ -408,16 +410,18 @@ def toggle_payment(user_id):
         return redirect(url_for("admin_bp.users"))
     c.execute("SELECT id, status, admin_override_status FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
     payment = c.fetchone()
+    from datetime import datetime as _dt
+    now_str = _dt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     amount = get_amount_for_level(user["level"])
     if not payment:
-        c.execute("INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at) VALUES (?, ?, 'unpaid', 'paid', datetime('now'))",
-                  (user_id, amount))
+        c.execute("INSERT INTO payments (user_id, amount, status, admin_override_status, paid_at) VALUES (?, ?, 'unpaid', 'paid', ?)",
+                  (user_id, amount, now_str))
         new_status = "paid"
     else:
         current = payment["admin_override_status"] if payment["admin_override_status"] else payment["status"]
         new_status = "unpaid" if current == "paid" else "paid"
-        c.execute("UPDATE payments SET admin_override_status=?, paid_at=datetime('now') WHERE id=?",
-                  (new_status, payment["id"]))
+        c.execute("UPDATE payments SET admin_override_status=?, paid_at=? WHERE id=?",
+                  (new_status, now_str, payment["id"]))
     conn.commit()
     conn.close()
     flash(f"Payment marked as {new_status}", "success")
