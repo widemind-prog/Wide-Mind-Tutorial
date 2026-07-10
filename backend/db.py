@@ -74,6 +74,7 @@ def _turso_type(value):
     return "text"
 def _turso_value(value):
     if value is None: return None
+    if isinstance(value, float): return value  # Turso expects actual JSON number for f64, not a string
     return str(value)
 def _parse_value(v):
     if v is None or v == {"type": "null"}: return None
