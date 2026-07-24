@@ -114,18 +114,28 @@ def block_suspended_users():
             return redirect("/login-page")
 @app.before_request
 def enforce_single_device():
+    # Skip static assets and socket
     if request.path.startswith("/static") or \
        request.path.startswith("/socket.io") or \
        request.path.startswith("/service-worker"):
         return
+
+    # Skip the login and logout routes themselves
+    if request.path in ("/api/auth/login", "/logout", "/login-page"):
+        return
+
     if "user_id" in session and "session_token" in session:
         conn = get_db()
         c = conn.cursor()
         c.execute("SELECT session_token FROM users WHERE id=?", (session["user_id"],))
         user = c.fetchone()
         conn.close()
+
         if not user or user["session_token"] != session["session_token"]:
             session.clear()
+            # Return JSON for API routes, redirect for page routes
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Session expired", "redirect": "/login-page"}), 401
             return redirect("/login-page?reason=other_device")
 # =====================
 # PAGES
@@ -592,15 +602,19 @@ def settings():
     payment = c.fetchone()
     conn.close()
     payment_status = payment["status"] if payment else "unpaid"
-    return render_template("settings.html", user=user, payment_status=payment_status)
+    return render_template("settings.html", user=user, payment_status=payment_status
+
 @app.route("/logout")
 def logout():
     if "user_id" in session:
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("UPDATE users SET session_token=NULL WHERE id=?", (session["user_id"],))
-        conn.commit()
-        conn.close()
+        try:
+            conn = get_db()
+            c = conn.cursor()
+            c.execute("UPDATE users SET session_token=NULL WHERE id=?", (session["user_id"],))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[LOGOUT] DB error: {e}")
     session.clear()
     return redirect("/login-page")
 if __name__ == "__main__":
