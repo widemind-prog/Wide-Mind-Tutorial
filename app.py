@@ -580,6 +580,12 @@ def settings():
     return render_template("settings.html", user=user, payment_status=payment_status)
 @app.route("/logout")
 def logout():
+    if "user_id" in session:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("UPDATE users SET session_token=NULL WHERE id=?", (session["user_id"],))
+        conn.commit()
+        conn.close()
     session.clear()
     return redirect("/login-page")
 if __name__ == "__main__":
