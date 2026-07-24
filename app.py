@@ -112,6 +112,21 @@ def block_suspended_users():
         if user and user["is_suspended"]:
             session.clear()
             return redirect("/login-page")
+@app.before_request
+def enforce_single_device():
+    if request.path.startswith("/static") or \
+       request.path.startswith("/socket.io") or \
+       request.path.startswith("/service-worker"):
+        return
+    if "user_id" in session and "session_token" in session:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT session_token FROM users WHERE id=?", (session["user_id"],))
+        user = c.fetchone()
+        conn.close()
+        if not user or user["session_token"] != session["session_token"]:
+            session.clear()
+            return redirect("/login-page?reason=other_device")
 # =====================
 # PAGES
 # =====================
