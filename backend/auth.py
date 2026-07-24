@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, session, request
 from werkzeug.security import check_password_hash, generate_password_hash
 from backend.db import get_db, is_admin
-from backend.email_service import send_email
+from backend.email_service import send_email, send_otp_email
 import secrets
 import hashlib
+import random
 from datetime import datetime, timedelta
 
 auth_bp = Blueprint("auth_bp", __name__)
@@ -57,7 +58,8 @@ def login():
     c.execute("""
         SELECT u.id, u.password, u.is_suspended, u.is_verified,
                u.trial_started_at,
-               COALESCE(p.admin_override_status, p.status) AS payment_status
+               COALESCE(p.admin_override_status, p.status) AS payment_status,
+               p.amount
         FROM users u
         LEFT JOIN payments p ON u.id=p.user_id
         WHERE u.email=?
@@ -77,23 +79,19 @@ def login():
         conn.close()
         return jsonify({"error": "Invalid email or password"}), 401
 
+    # Generate unique session token — kicks out any other active session
+    token = secrets.token_hex(32)
+    c.execute("UPDATE users SET session_token=? WHERE id=?", (token, user["id"]))
+    conn.commit()
     conn.close()
 
     session.permanent = True
     session["user_id"] = user["id"]
+    session["session_token"] = token
 
     if is_admin(user["id"]):
         return jsonify({"redirect": "/admin"}), 200
 
-    # FIX: Removed the old "auto-verify + start trial if no OTP record" branch.
-    # That heuristic incorrectly treated ANY unverified user with a missing/cleared
-    # OTP row as a "legacy" account and silently verified them + started their trial
-    # without them ever confirming their email. This is how trials were starting
-    # for users who never verified.
-    #
-    # New behavior: if the user isn't verified, always send them to verify-email.
-    # If they have no live (unexpired, unused) OTP waiting for them, fire off a
-    # fresh one automatically so they're not stuck without ever receiving a code.
     if not user["is_verified"]:
         conn2 = get_db()
         c2 = conn2.cursor()
@@ -172,6 +170,7 @@ def forgot_password():
     """
     send_email(email, "Reset Your Password — Wide Mind Tutorial", body)
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+
 
 # =====================
 # RESET PASSWORD
