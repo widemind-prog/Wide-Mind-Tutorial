@@ -22,6 +22,8 @@
     <!-- LEVEL FILTER TABS -->
     <div class="filter-tab-bar" id="level-tabs">
         <button class="filter-tab active" data-level="all">All</button>
+        <button class="filter-tab" data-level="100">100L</button>
+        <button class="filter-tab" data-level="200">200L</button>
         <button class="filter-tab" data-level="300">300L</button>
         <button class="filter-tab" data-level="400">400L</button>
         <button class="filter-tab" data-level="500">500L</button>
@@ -44,6 +46,14 @@
                       color:#fff; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:600;">
                 <i class="fa-solid fa-arrows-rotate" style="margin-right:5px;"></i>Migrate
             </a>
+            <form method="POST" action="/admin/users/reset-all-trials" style="margin:0;"
+                  onsubmit="return confirm('Reset ALL trials? This will unverify all students and clear all OTPs. Only do this before launch.');">
+                <button type="submit"
+                        style="font-size:13px; background:#856404; color:#fff;
+                               padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600;">
+                    <i class="fa-solid fa-rotate-left" style="margin-right:5px;"></i>Reset Trials
+                </button>
+            </form>
             <form method="POST" action="/admin/users/mark-all-unpaid" style="margin:0;"
                   onsubmit="return confirm('Mark ALL students unpaid? Rerun passes also reset.');">
                 <button type="submit"
@@ -63,37 +73,6 @@
 
     <a href="/admin/" class="back-login-btn" style="margin-top:16px; display:inline-block;">← Back to Dashboard</a>
 </section>
-
-<!-- USER CARD TEMPLATE (hidden) -->
-<template id="user-card-tpl">
-    <div class="user-card" data-name="" data-email="" data-level="" data-status="" data-suspended="">
-        <div class="user-card-header">
-            <div>
-                <div class="user-card-name"></div>
-                <div class="user-card-email"></div>
-            </div>
-            <div class="user-card-badge"></div>
-        </div>
-        <div class="user-card-meta"></div>
-        <div class="user-card-rerun"></div>
-        <div class="user-card-actions"></div>
-        <details class="user-card-edit">
-            <summary>Edit Level / Semester</summary>
-            <form method="POST" class="user-card-edit-form" style="background:transparent;box-shadow:none;padding:8px 0 0;">
-                <select name="level" required style="margin-bottom:6px;">
-                    <option value="300">300 Level</option>
-                    <option value="400">400 Level</option>
-                    <option value="500">500 Level</option>
-                </select>
-                <select name="semester" required style="margin-bottom:6px;">
-                    <option value="1">1st Semester</option>
-                    <option value="2">2nd Semester</option>
-                </select>
-                <button type="submit" style="font-size:12px;padding:6px 14px;">Save</button>
-            </form>
-        </details>
-    </div>
-</template>
 
 <style>
 .filter-tab-bar {
@@ -116,7 +95,6 @@
 .filter-tab-secondary.active {
     background: #3c2f1f; color: #fff; border-color: transparent;
 }
-
 .user-card { margin-bottom: 12px; }
 .user-card-header {
     display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;
@@ -144,6 +122,14 @@
 <script>
 const ALL_USERS = {{ users_json | safe }};
 const RERUN_BY_USER = {{ rerun_json | safe }};
+
+// Rerun eligibility: levels that have at least one level below them
+const RERUN_ELIGIBLE = {
+    "200": ["100"],
+    "300": ["100", "200"],
+    "400": ["100", "200", "300"],
+    "500": ["100", "200", "300", "400"]
+};
 
 let activeLevel = "all";
 let activeStatus = "all";
@@ -175,7 +161,7 @@ function renderUsers() {
     const filtered = ALL_USERS.filter(matchesFilters);
     countEl.textContent = `${filtered.length} student${filtered.length !== 1 ? "s" : ""}`;
 
-    // Update tab counts
+    // Update level tab counts
     document.querySelectorAll(".filter-tab[data-level]").forEach(tab => {
         const lvl = tab.getAttribute("data-level");
         const count = ALL_USERS.filter(u => {
@@ -191,6 +177,7 @@ function renderUsers() {
         tab.textContent = lvl === "all" ? `All (${count})` : `${lvl}L (${count})`;
     });
 
+    // Update status tab counts
     document.querySelectorAll(".filter-tab-secondary[data-status]").forEach(tab => {
         const st = tab.getAttribute("data-status");
         const count = ALL_USERS.filter(u => {
@@ -217,9 +204,8 @@ function renderUsers() {
         const semLabel = u.semester == 1 ? "1st" : "2nd";
         const feeDisplay = u.amount ? "₦" + (u.amount / 100).toLocaleString("en-NG", {minimumFractionDigits:2}) : "—";
 
-        // Rerun passes
         const passes = RERUN_BY_USER[u.id] || [];
-        const eligibleLevels = u.level === "400" ? ["300"] : u.level === "500" ? ["300","400"] : [];
+        const eligibleLevels = RERUN_ELIGIBLE[u.level] || [];
 
         let rerunHtml = "";
         if (eligibleLevels.length > 0) {
@@ -230,7 +216,7 @@ function renderUsers() {
                 rerunHtml += `
                     <span style="display:inline-flex;align-items:center;gap:5px;
                                  background:#f0e8d0;border-radius:6px;padding:3px 8px;font-size:11px;">
-                        🔁 ${lvl}L
+                        <i class="fa-solid fa-rotate-right" style="font-size:9px;"></i> ${lvl}L
                         <span style="color:${active ? 'green' : '#aaa'};">${active ? "✅" : "—"}</span>
                         <form method="POST" action="/admin/users/rerun/toggle/${u.id}/${lvl}"
                               style="display:inline;margin:0;padding:0;background:none;box-shadow:none;">
@@ -247,6 +233,11 @@ function renderUsers() {
 
         const badgeClass = status === "paid" ? "badge-paid" : status === "suspended" ? "badge-suspended" : "badge-unpaid";
         const badgeText = status === "paid" ? "PAID" : status === "suspended" ? "SUSPENDED" : "UNPAID";
+
+        // Build edit-level options for all 5 levels
+        const levelOptions = ["100","200","300","400","500"].map(lvl =>
+            `<option value="${lvl}" ${u.level===lvl?"selected":""}>${lvl} Level</option>`
+        ).join("");
 
         const card = document.createElement("div");
         card.className = "user-card admin-box";
@@ -285,9 +276,7 @@ function renderUsers() {
                 <form method="POST" action="/admin/users/edit-level/${u.id}"
                       style="margin-top:8px;background:transparent;box-shadow:none;padding:0;">
                     <select name="level" required style="margin-bottom:6px;">
-                        <option value="300" ${u.level==="300"?"selected":""}>300 Level</option>
-                        <option value="400" ${u.level==="400"?"selected":""}>400 Level</option>
-                        <option value="500" ${u.level==="500"?"selected":""}>500 Level</option>
+                        ${levelOptions}
                     </select>
                     <select name="semester" required style="margin-bottom:6px;">
                         <option value="1" ${u.semester==1?"selected":""}>1st Semester</option>
@@ -337,7 +326,6 @@ searchClear.addEventListener("click", () => {
     renderUsers();
 });
 
-// Init
 renderUsers();
 </script>
 
