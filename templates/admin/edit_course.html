@@ -13,9 +13,8 @@
     <label>Level</label>
     <select name="level" required>
         <option value="100" {% if course.level == '100' %}selected{% endif %}>300 Level</option>
-<option value="200" {% if course.level == '200' %}selected{% endif %}>200 Level</option>
-
-<option value="300" {% if course.level == '300' %}selected{% endif %}>300 Level</option>
+        <option value="200" {% if course.level == '200' %}selected{% endif %}>200 Level</option>
+        <option value="300" {% if course.level == '300' %}selected{% endif %}>300 Level</option>
         <option value="400" {% if course.level == '400' %}selected{% endif %}>400 Level</option>
         <option value="500" {% if course.level == '500' %}selected{% endif %}>500 Level</option>
     </select>
