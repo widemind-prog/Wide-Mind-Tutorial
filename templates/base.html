@@ -47,15 +47,19 @@
         body { padding-bottom: 70px; }
         {% endif %}
 
-        /* LOGO — no click, just zoom on hover/tap */
+        /* LOGO — clickable, zoom on hover/tap */
         .header-logo {
-            cursor: default;
+            cursor: pointer;
             transition: transform 0.3s ease;
             display: block;
         }
         .header-logo:hover,
         .header-logo.tapped {
             transform: scale(1.12);
+        }
+        .logo-link {
+            display: inline-block;
+            text-decoration: none;
         }
 
         /* BOTTOM TAB BAR */
@@ -113,53 +117,25 @@
             color: #aaa;
             margin-top: 30px;
         }
-
-        /* LOGGED-OUT LOGIN DRAWER */
-        .login-drawer {
-            position: fixed;
-            bottom: -100%;
-            left: 0;
-            right: 0;
-            background: #fff;
-            border-radius: 20px 20px 0 0;
-            padding: 24px 20px 36px;
-            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
-            z-index: 900;
-            transition: bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .login-drawer.open { bottom: 0; }
-
-        .drawer-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 899;
-        }
-        .drawer-overlay.open { display: block; }
-
-        .drawer-handle {
-            width: 40px;
-            height: 4px;
-            background: #ddd;
-            border-radius: 4px;
-            margin: 0 auto 20px;
-        }
-
-        body.dark .login-drawer {
-            background: #1a1a1a;
-            border-top: 1px solid #333;
-        }
     </style>
 </head>
 
 <body>
 
 <header class="site-header">
-    <img src="{{ url_for('static', filename='images/logo.png') }}"
-         alt="Wide Mind Tutorials"
-         class="header-logo"
-         id="site-logo">
+    {% if session.get("is_admin") %}
+        <a href="/admin" class="logo-link">
+    {% elif session.get("user_id") %}
+        <a href="/account" class="logo-link">
+    {% else %}
+        <a href="/" class="logo-link">
+    {% endif %}
+        <img src="{{ url_for('static', filename='images/logo.png') }}"
+             alt="Wide Mind Tutorials"
+             class="header-logo"
+             id="site-logo">
+    </a>
+
     <div class="header-right">
 {% if session.get("user_id") and not session.get("is_admin") %}
     <div class="notification-wrapper">
@@ -205,29 +181,6 @@
 </nav>
 {% endif %}
 
-{% if not session.get("user_id") %}
-<!-- LOGIN DRAWER — shown when logged-out user taps logo -->
-<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-<div class="login-drawer" id="loginDrawer">
-    <div class="drawer-handle"></div>
-    <h3 style="margin:0 0 4px; color:#3c2f1f;">Welcome Back</h3>
-    <p style="margin:0 0 20px; font-size:13px; color:#888;">Sign in to access your courses</p>
-
-    <a href="/login-page"
-       style="display:block; text-align:center; background:linear-gradient(135deg,#8B7500,#d4af37);
-              color:#fff; padding:14px; border-radius:10px; font-weight:600;
-              font-size:15px; text-decoration:none; margin-bottom:10px;">
-        <i class="fa-solid fa-right-to-bracket" style="margin-right:8px;"></i>Login
-    </a>
-    <a href="/register-page"
-       style="display:block; text-align:center; background:#fffaf0;
-              border:1px solid #e6d8b5; color:#8B7500; padding:14px;
-              border-radius:10px; font-weight:600; font-size:15px; text-decoration:none;">
-        <i class="fa-solid fa-user-plus" style="margin-right:8px;"></i>Create Account
-    </a>
-</div>
-{% endif %}
-
 <div id="toast" class="toast"></div>
 <div id="admin-toast" class="admin-toast"></div>
 
@@ -261,29 +214,13 @@ const VAPID_PUBLIC_KEY = "{{ config.VAPID_PUBLIC_KEY }}";
 {% endif %}
 
 <script>
-// Logo tap — zoom effect + open drawer if logged out
+// Logo tap zoom effect
 var logo = document.getElementById("site-logo");
 if (logo) {
     logo.addEventListener("click", function() {
-        // Zoom effect
         logo.classList.add("tapped");
         setTimeout(function() { logo.classList.remove("tapped"); }, 400);
-
-        {% if not session.get("user_id") %}
-        // Open login drawer for logged-out users
-        openDrawer();
-        {% endif %}
     });
-}
-
-function openDrawer() {
-    document.getElementById("loginDrawer").classList.add("open");
-    document.getElementById("drawerOverlay").classList.add("open");
-}
-
-function closeDrawer() {
-    document.getElementById("loginDrawer").classList.remove("open");
-    document.getElementById("drawerOverlay").classList.remove("open");
 }
 </script>
 
