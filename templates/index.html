@@ -1,19 +1,16 @@
 {% extends "base.html" %}
-
 {% block title %}Welcome | Wide Mind Tutorials{% endblock %}
 
 {% block content %}
 
-<section class="hero-section">
-    <h1>Learn Smarter</h1>
-    <i class="fa-solid fa-brain" style="font-size:48px; color:#8B7500; display:block; text-align:center; margin:10px 0;"></i>
-    <h2>Learn Deeper</h2>
-
-    <p class="hero-description">
-        Wide Mind Tutorials provides structured, psychology-focused learning materials for better understanding and academic success!
+<!-- HERO -->
+<section class="hero-section" style="text-align:center; padding:10px 0 20px;">
+    <i class="fa-solid fa-brain" style="font-size:42px; color:#8B7500; display:block; margin:0 auto 12px;"></i>
+    <h1 style="margin-bottom:6px;">Wide Mind Tutorial</h1>
+    <p style="font-size:15px; color:#666; margin:0 0 20px; font-weight:500;">
+        Psychology study materials — built through your semester.
     </p>
-
-    <div class="cta-buttons">
+    <div class="cta-buttons" style="margin-bottom:28px;">
         <a href="/register-page" class="btn primary">
             Get Started <span class="btn-icon"><i class="fa-solid fa-rocket"></i></span>
         </a>
@@ -21,7 +18,85 @@
             Login <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
         </a>
     </div>
-
 </section>
+
+<!-- WHAT YOU GET -->
+<div style="display:grid; gap:12px; margin-bottom:24px;">
+
+    <div class="hero-description" style="padding:16px 18px; margin:0;">
+        <div style="display:flex; align-items:flex-start; gap:14px;">
+            <i class="fa-solid fa-file-pdf" style="font-size:22px; color:#8B7500; margin-top:2px; flex-shrink:0;"></i>
+            <div>
+                <p style="margin:0 0 3px; font-weight:700; font-size:14px; color:#3c2f1f;">Full PDF Notes</p>
+                <p style="margin:0; font-size:13px; color:#777; line-height:1.5;">
+                    Comprehensive notes for every course — available from the start of semester.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-description" style="padding:16px 18px; margin:0;">
+        <div style="display:flex; align-items:flex-start; gap:14px;">
+            <i class="fa-solid fa-headphones" style="font-size:22px; color:#8B7500; margin-top:2px; flex-shrink:0;"></i>
+            <div>
+                <p style="margin:0 0 3px; font-weight:700; font-size:14px; color:#3c2f1f;">Audio Lectures</p>
+                <p style="margin:0; font-size:13px; color:#777; line-height:1.5;">
+                    Listen anywhere, any time. New sessions added as the semester advances.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-description" style="padding:16px 18px; margin:0;">
+        <div style="display:flex; align-items:flex-start; gap:14px;">
+            <i class="fa-solid fa-lock" style="font-size:22px; color:#8B7500; margin-top:2px; flex-shrink:0;"></i>
+            <div>
+                <p style="margin:0 0 3px; font-weight:700; font-size:14px; color:#3c2f1f;">Secure & Non-downloadable</p>
+                <p style="margin:0; font-size:13px; color:#777; line-height:1.5;">
+                    Materials are protected. Stream PDFs and audio — no downloads.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="hero-description" style="margin:0 0 24px; padding:18px 20px;">
+    <h3 style="font-size:13px; margin:0 0 14px; color:#8B7500; letter-spacing:1px;">
+        HOW IT WORKS
+    </h3>
+    <div style="display:flex; justify-content:space-between; gap:8px; text-align:center;">
+        <div style="flex:1;">
+            <i class="fa-solid fa-user-plus" style="font-size:20px; color:#8B7500; display:block; margin-bottom:6px;"></i>
+            <p style="margin:0; font-size:12px; font-weight:600; color:#3c2f1f;">Register</p>
+        </div>
+        <div style="color:#ccc; font-size:18px; padding-top:4px;">›</div>
+        <div style="flex:1;">
+            <i class="fa-solid fa-envelope-circle-check" style="font-size:20px; color:#8B7500; display:block; margin-bottom:6px;"></i>
+            <p style="margin:0; font-size:12px; font-weight:600; color:#3c2f1f;">Verify Email</p>
+        </div>
+        <div style="color:#ccc; font-size:18px; padding-top:4px;">›</div>
+        <div style="flex:1;">
+            <i class="fa-solid fa-book-open" style="font-size:20px; color:#8B7500; display:block; margin-bottom:6px;"></i>
+            <p style="margin:0; font-size:12px; font-weight:600; color:#3c2f1f;">Start Studying</p>
+        </div>
+    </div>
+</div>
+
+<!-- CLOSING CTA -->
+<div style="text-align:center; padding-bottom:10px;">
+    <p style="font-size:13px; color:#888; margin:0 0 14px;">
+        <i class="fa-solid fa-circle-check" style="color:#8B7500; margin-right:6px;"></i>
+        Free 24-hour trial on registration — no payment needed to start.
+    </p>
+    <a href="/register-page"
+       style="display:inline-block; background:linear-gradient(135deg,#8B7500,#d4af37);
+              color:#fff; padding:13px 28px; border-radius:10px; font-weight:600;
+              font-size:14px; text-decoration:none;">
+        Create Your Account
+        <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i>
+    </a>
+</div>
 
 {% endblock %}
