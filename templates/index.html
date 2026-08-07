@@ -2,101 +2,847 @@
 {% block title %}Welcome | Wide Mind Tutorials{% endblock %}
 
 {% block content %}
+<div class="wm-homepage">
 
-<!-- HERO -->
-<section class="hero-section" style="text-align:center; padding:10px 0 20px;">
-    <i class="fa-solid fa-brain" style="font-size:42px; color:#8B7500; display:block; margin:0 auto 12px;"></i>
-    <h1 style="margin-bottom:6px;">Wide Mind Tutorial</h1>
-    <p style="font-size:15px; color:#666; margin:0 0 20px; font-weight:500;">
-        Psychology study materials — built through your semester.
-    </p>
-    <div class="cta-buttons" style="margin-bottom:28px;">
-        <a href="/register-page" class="btn primary">
-            Get Started <span class="btn-icon"><i class="fa-solid fa-rocket"></i></span>
+    <!-- ===== HERO ===== -->
+    <section class="wm-hero">
+        <span class="wm-eyebrow">Wide Mind Tutorials</span>
+        <h1 class="wm-hero__heading">
+            Understand your courses.<br>
+            Build your semester.
+        </h1>
+        <p class="wm-hero__sub">
+            Wide Mind helps psychology students learn progressively throughout the semester —
+            structured notes, audio explanations and revision materials that grow with you.
+        </p>
+        <div class="wm-hero__cta">
+            <a href="/register-page" class="wm-btn wm-btn--primary">
+                <i class="fa-solid fa-rocket" style="margin-right:8px;"></i>Start Learning
+            </a>
+            <a href="/login-page" class="wm-btn wm-btn--ghost">
+                <i class="fa-solid fa-right-to-bracket" style="margin-right:7px;"></i>Login
+            </a>
+        </div>
+        <p class="wm-trial-note">
+            <i class="fa-solid fa-clock-rotate-left" style="color:#D6AD1A; margin-right:5px;"></i>
+            Free 24-hour trial on registration — no payment needed to start.
+        </p>
+    </section>
+
+    <!-- ===== PHILOSOPHY — GRID CARDS ===== -->
+    <section class="wm-section">
+        <span class="wm-label">Our approach</span>
+        <h2 class="wm-section__heading"><i class="fa-solid fa-circle-nodes" style="color:#D6AD1A; font-size:0.7em; margin-right:8px; vertical-align:middle;"></i>Built around how students actually learn.</h2>
+        <p class="wm-section__body">
+            Materials appear as the semester advances — so you're always working with
+            what's relevant right now.
+        </p>
+
+        <div class="wm-grid wm-grid--2">
+            <div class="wm-card wm-card--interactive">
+                <div class="wm-card__icon"><i class="fa-solid fa-book-open"></i></div>
+                <strong>Course material</strong>
+                <span>PDF notes available from the first week</span>
+            </div>
+            <div class="wm-card wm-card--interactive">
+                <div class="wm-card__icon"><i class="fa-solid fa-headphones"></i></div>
+                <strong>Audio sessions</strong>
+                <span>Recorded explanations added as topics are covered</span>
+            </div>
+            <div class="wm-card wm-card--interactive">
+                <div class="wm-card__icon"><i class="fa-solid fa-rotate"></i></div>
+                <strong>New lessons</strong>
+                <span>Content grows week by week throughout the semester</span>
+            </div>
+            <div class="wm-card wm-card--interactive wm-card--gold">
+                <div class="wm-card__icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                <strong>Exam preparation</strong>
+                <span>Revision resources added as exams approach</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== RESOURCES — GRID CARDS ===== -->
+    <section class="wm-section wm-section--tinted">
+        <span class="wm-label">Your learning environment</span>
+        <h2 class="wm-section__heading"><i class="fa-solid fa-layer-group" style="color:#D6AD1A; font-size:0.7em; margin-right:8px; vertical-align:middle;"></i>Three components. One system.</h2>
+
+        <div class="wm-grid wm-grid--1">
+            <div class="wm-card wm-card--resource wm-card--interactive">
+                <div class="wm-card__num">01</div>
+                <div class="wm-card__icon wm-card__icon--large">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <div class="wm-card__body">
+                    <strong>Understand</strong>
+                    <span>Simplified course materials that make core psychology ideas
+                    easier to follow and remember.</span>
+                </div>
+            </div>
+            <div class="wm-card wm-card--resource wm-card--interactive">
+                <div class="wm-card__num">02</div>
+                <div class="wm-card__icon wm-card__icon--large">
+                    <i class="fa-solid fa-headphones"></i>
+                </div>
+                <div class="wm-card__body">
+                    <strong>Listen</strong>
+                    <span>Recorded explanations you can revisit whenever you have time —
+                    on the bus, before bed, or the morning before an exam.</span>
+                </div>
+            </div>
+            <div class="wm-card wm-card--resource wm-card--interactive">
+                <div class="wm-card__num">03</div>
+                <div class="wm-card__icon wm-card__icon--large">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div class="wm-card__body">
+                    <strong>Prepare</strong>
+                    <span>Revision resources and exam-focused materials added
+                    as the semester progresses.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== PROGRESS PANEL ===== -->
+    <section class="wm-section">
+        <span class="wm-label">Your semester</span>
+        <h2 class="wm-section__heading"><i class="fa-solid fa-chart-simple" style="color:#D6AD1A; font-size:0.7em; margin-right:8px; vertical-align:middle;"></i>Progress, not perfection.</h2>
+        <p class="wm-section__body">You're not expected to finish everything today. Just keep moving.</p>
+
+        <div class="wm-progress-panel">
+            <div class="wm-progress-item">
+                <div class="wm-progress-meta">
+                    <span class="wm-progress-code">PSY101</span>
+                    <span class="wm-progress-pct">32%</span>
+                </div>
+                <div class="wm-progress-track">
+                    <div class="wm-progress-fill" style="width:32%"></div>
+                </div>
+            </div>
+            <div class="wm-progress-item">
+                <div class="wm-progress-meta">
+                    <span class="wm-progress-code">PSY103</span>
+                    <span class="wm-progress-pct">48%</span>
+                </div>
+                <div class="wm-progress-track">
+                    <div class="wm-progress-fill" style="width:48%"></div>
+                </div>
+            </div>
+            <div class="wm-progress-item">
+                <div class="wm-progress-meta">
+                    <span class="wm-progress-code">SOC101</span>
+                    <span class="wm-progress-pct">18%</span>
+                </div>
+                <div class="wm-progress-track">
+                    <div class="wm-progress-fill" style="width:18%"></div>
+                </div>
+            </div>
+            <p class="wm-progress-note">
+                <i class="fa-solid fa-circle-check" style="color:#D6AD1A; margin-right:6px;"></i>
+                Consistent study outperforms cramming — every session counts.
+            </p>
+        </div>
+    </section>
+
+    <!-- ===== HOW IT WORKS — CYCLE DIAGRAM ===== -->
+    <section class="wm-section wm-section--tinted">
+        <span class="wm-label">How it fits in</span>
+        <h2 class="wm-section__heading"><i class="fa-solid fa-arrows-spin" style="color:#D6AD1A; font-size:0.7em; margin-right:8px; vertical-align:middle;"></i>How Wide Mind fits into your semester</h2>
+        <p class="wm-section__body">A continuous cycle — not a one-time event.</p>
+
+        <div class="wm-cycle" aria-label="Learning cycle diagram">
+            <!-- Centre label -->
+            <div class="wm-cycle__center">
+                <i class="fa-solid fa-brain"></i>
+                <span>Wide Mind</span>
+            </div>
+
+            <!-- Step nodes positioned around the circle -->
+            <div class="wm-cycle__node wm-cycle__node--top">
+                <div class="wm-cycle__bubble">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <span>Register</span>
+            </div>
+
+            <div class="wm-cycle__node wm-cycle__node--right">
+                <div class="wm-cycle__bubble">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <span>Study now</span>
+            </div>
+
+            <div class="wm-cycle__node wm-cycle__node--bottom-right">
+                <div class="wm-cycle__bubble">
+                    <i class="fa-solid fa-rotate"></i>
+                </div>
+                <span>New lessons</span>
+            </div>
+
+            <div class="wm-cycle__node wm-cycle__node--bottom-left">
+                <div class="wm-cycle__bubble wm-cycle__bubble--gold">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <span>Prepare</span>
+            </div>
+
+            <div class="wm-cycle__node wm-cycle__node--left">
+                <div class="wm-cycle__bubble">
+                    <i class="fa-solid fa-headphones"></i>
+                </div>
+                <span>Listen</span>
+            </div>
+
+            <!-- SVG ring with arrows -->
+            <svg class="wm-cycle__ring" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                    <marker id="wm-arrow" markerWidth="6" markerHeight="6"
+                            refX="3" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="#D6AD1A"/>
+                    </marker>
+                </defs>
+                <!-- Dashed ring -->
+                <circle cx="100" cy="100" r="72"
+                        fill="none"
+                        stroke="#D6AD1A"
+                        stroke-width="1.5"
+                        stroke-dasharray="6 4"
+                        opacity="0.5"/>
+                <!-- Arrow indicators at cardinal points -->
+                <path d="M 100 28 L 104 22" stroke="#D6AD1A" stroke-width="1.5"
+                      marker-end="url(#wm-arrow)" fill="none"/>
+                <path d="M 172 100 L 178 104" stroke="#D6AD1A" stroke-width="1.5"
+                      marker-end="url(#wm-arrow)" fill="none"/>
+                <path d="M 100 172 L 96 178" stroke="#D6AD1A" stroke-width="1.5"
+                      marker-end="url(#wm-arrow)" fill="none"/>
+                <path d="M 28 100 L 22 96" stroke="#D6AD1A" stroke-width="1.5"
+                      marker-end="url(#wm-arrow)" fill="none"/>
+            </svg>
+        </div>
+
+        <!-- Mobile fallback: vertical numbered steps -->
+        <div class="wm-steps-mobile">
+            <div class="wm-step">
+                <div class="wm-step__icon"><i class="fa-solid fa-user-plus"></i></div>
+                <div class="wm-step__body">
+                    <strong>Register</strong>
+                    <span>Create your account and verify your email in minutes</span>
+                </div>
+            </div>
+            <div class="wm-step">
+                <div class="wm-step__icon"><i class="fa-solid fa-book-open"></i></div>
+                <div class="wm-step__body">
+                    <strong>Study what you're currently learning</strong>
+                    <span>Access notes and audio sessions relevant to where you are in the semester</span>
+                </div>
+            </div>
+            <div class="wm-step">
+                <div class="wm-step__icon"><i class="fa-solid fa-rotate"></i></div>
+                <div class="wm-step__body">
+                    <strong>New lessons appear as your semester progresses</strong>
+                    <span>Content is added regularly — come back and keep building</span>
+                </div>
+            </div>
+            <div class="wm-step">
+                <div class="wm-step__icon wm-step__icon--gold"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div class="wm-step__body">
+                    <strong>Prepare when exams approach</strong>
+                    <span>Revision resources are uploaded closer to the exam period</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== LEARNING PSYCHOLOGY — GRID ===== -->
+    <section class="wm-section">
+        <span class="wm-label">The psychology of learning</span>
+        <h2 class="wm-section__heading"><i class="fa-solid fa-brain" style="color:#D6AD1A; font-size:0.7em; margin-right:8px; vertical-align:middle;"></i>Learning works better when you return to it.</h2>
+
+        <div class="wm-grid wm-grid--exposure">
+            <div class="wm-card wm-card--interactive wm-card--mini">
+                <div class="wm-card__icon"><i class="fa-solid fa-eye"></i></div>
+                <span>First exposure</span>
+            </div>
+            <div class="wm-exposure__arrow-cell">
+                <i class="fa-solid fa-arrow-right" style="color:#D6AD1A;"></i>
+            </div>
+            <div class="wm-card wm-card--interactive wm-card--mini">
+                <div class="wm-card__icon"><i class="fa-solid fa-comment-dots"></i></div>
+                <span>Explanation</span>
+            </div>
+            <div class="wm-exposure__arrow-cell">
+                <i class="fa-solid fa-arrow-right" style="color:#D6AD1A;"></i>
+            </div>
+            <div class="wm-card wm-card--interactive wm-card--mini">
+                <div class="wm-card__icon"><i class="fa-solid fa-brain"></i></div>
+                <span>Recall</span>
+            </div>
+            <div class="wm-exposure__arrow-cell">
+                <i class="fa-solid fa-arrow-right" style="color:#D6AD1A;"></i>
+            </div>
+            <div class="wm-card wm-card--interactive wm-card--mini">
+                <div class="wm-card__icon"><i class="fa-solid fa-pen-to-square"></i></div>
+                <span>Practice</span>
+            </div>
+            <div class="wm-exposure__arrow-cell">
+                <i class="fa-solid fa-arrow-right" style="color:#D6AD1A;"></i>
+            </div>
+            <div class="wm-card wm-card--interactive wm-card--mini wm-card--gold">
+                <div class="wm-card__icon"><i class="fa-solid fa-star"></i></div>
+                <span>Confidence</span>
+            </div>
+        </div>
+
+        <p class="wm-section__body" style="margin-top:16px; font-style:italic; color:#999; font-size:0.8em;">
+            Wide Mind is structured around this cycle. Materials are designed
+            for return visits, not single-pass reading.
+        </p>
+    </section>
+
+    <!-- ===== FINAL CTA ===== -->
+    <section class="wm-cta-section">
+        <h2 class="wm-cta-section__heading">
+            Start your semester with Wide Mind.
+        </h2>
+        <p class="wm-cta-section__sub">Study at your pace. Keep building.</p>
+        <a href="/register-page" class="wm-btn wm-btn--primary wm-btn--large">
+            Create Your Account
+            <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i>
         </a>
-        <a href="/login-page" class="btn secondary">
-            Login <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
-        </a>
-    </div>
-</section>
-
-<!-- WHAT YOU GET -->
-<div style="display:grid; gap:12px; margin-bottom:24px;">
-
-    <div class="hero-description" style="padding:16px 18px; margin:0;">
-        <div style="display:flex; align-items:flex-start; gap:14px;">
-            <i class="fa-solid fa-file-pdf" style="font-size:22px; color:#8B7500; margin-top:2px; flex-shrink:0;"></i>
-            <div>
-                <p style="margin:0 0 3px; font-weight:700; font-size:14px; color:#3c2f1f;">Full PDF Notes</p>
-                <p style="margin:0; font-size:13px; color:#777; line-height:1.5;">
-                    Comprehensive notes for every course — available from the start of semester.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <div class="hero-description" style="padding:16px 18px; margin:0;">
-        <div style="display:flex; align-items:flex-start; gap:14px;">
-            <i class="fa-solid fa-headphones" style="font-size:22px; color:#8B7500; margin-top:2px; flex-shrink:0;"></i>
-            <div>
-                <p style="margin:0 0 3px; font-weight:700; font-size:14px; color:#3c2f1f;">Audio Lectures</p>
-                <p style="margin:0; font-size:13px; color:#777; line-height:1.5;">
-                    Listen anywhere, any time. New sessions added as the semester advances.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <div class="hero-description" style="padding:16px 18px; margin:0;">
-        <div style="display:flex; align-items:flex-start; gap:14px;">
-            <i class="fa-solid fa-lock" style="font-size:22px; color:#8B7500; margin-top:2px; flex-shrink:0;"></i>
-            <div>
-                <p style="margin:0 0 3px; font-weight:700; font-size:14px; color:#3c2f1f;">Secure & Non-downloadable</p>
-                <p style="margin:0; font-size:13px; color:#777; line-height:1.5;">
-                    Materials are protected. Stream PDFs and audio — no downloads.
-                </p>
-            </div>
-        </div>
-    </div>
+        <p class="wm-trial-note" style="margin-top:12px;">
+            Free 24-hour trial on registration — no payment needed to start.
+        </p>
+    </section>
 
 </div>
 
-<!-- HOW IT WORKS -->
-<div class="hero-description" style="margin:0 0 24px; padding:18px 20px;">
-    <h3 style="font-size:13px; margin:0 0 14px; color:#8B7500; letter-spacing:1px;">
-        HOW IT WORKS
-    </h3>
-    <div style="display:flex; justify-content:space-between; gap:8px; text-align:center;">
-        <div style="flex:1;">
-            <i class="fa-solid fa-user-plus" style="font-size:20px; color:#8B7500; display:block; margin-bottom:6px;"></i>
-            <p style="margin:0; font-size:12px; font-weight:600; color:#3c2f1f;">Register</p>
-        </div>
-        <div style="color:#ccc; font-size:18px; padding-top:4px;">›</div>
-        <div style="flex:1;">
-            <i class="fa-solid fa-envelope-circle-check" style="font-size:20px; color:#8B7500; display:block; margin-bottom:6px;"></i>
-            <p style="margin:0; font-size:12px; font-weight:600; color:#3c2f1f;">Verify Email</p>
-        </div>
-        <div style="color:#ccc; font-size:18px; padding-top:4px;">›</div>
-        <div style="flex:1;">
-            <i class="fa-solid fa-book-open" style="font-size:20px; color:#8B7500; display:block; margin-bottom:6px;"></i>
-            <p style="margin:0; font-size:12px; font-weight:600; color:#3c2f1f;">Start Studying</p>
-        </div>
-    </div>
-</div>
+<style>
+/* =============================================
+   WIDE MIND HOMEPAGE — SCOPED STYLES
+   All scoped under .wm-homepage
+============================================= */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap');
 
-<!-- CLOSING CTA -->
-<div style="text-align:center; padding-bottom:10px;">
-    <p style="font-size:13px; color:#888; margin:0 0 14px;">
-        <i class="fa-solid fa-circle-check" style="color:#8B7500; margin-right:6px;"></i>
-        Free 24-hour trial on registration — no payment needed to start.
-    </p>
-    <a href="/register-page"
-       style="display:inline-block; background:linear-gradient(135deg,#8B7500,#d4af37);
-              color:#fff; padding:13px 28px; border-radius:10px; font-weight:600;
-              font-size:14px; text-decoration:none;">
-        Create Your Account
-        <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i>
-    </a>
-</div>
+.wm-homepage {
+    font-family: 'DM Sans', 'Montserrat', sans-serif;
+    color: #333333;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 2px;
+}
+
+/* ---- LABELS ---- */
+.wm-eyebrow,
+.wm-label {
+    display: block;
+    font-size: 0.68em;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: #D6AD1A;
+    margin-bottom: 10px;
+}
+
+/* ---- HERO ---- */
+.wm-hero {
+    padding: 24px 0 22px;
+    border-bottom: 1px solid #d8d8d8;
+}
+
+.wm-hero__heading {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.9em;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #111111;
+    margin: 0 0 14px;
+    text-align: left;
+    letter-spacing: -0.3px;
+}
+
+.wm-hero__sub {
+    font-size: 0.9em;
+    line-height: 1.75;
+    color: #555555;
+    margin: 0 0 20px;
+}
+
+.wm-hero__cta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.wm-trial-note {
+    font-size: 0.74em;
+    color: #999999;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ---- SECTIONS ---- */
+.wm-section {
+    padding: 26px 0;
+    border-bottom: 1px solid #e4e4e4;
+}
+
+.wm-section--tinted {
+    background: #f5f3ee;
+    padding: 26px 16px;
+    margin: 0 -18px;
+    border-top: 1px solid #e0ddd7;
+    border-bottom: 1px solid #e0ddd7;
+}
+
+.wm-section__heading {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.4em;
+    font-weight: 400;
+    color: #111111;
+    margin: 0 0 10px;
+    text-align: left;
+    line-height: 1.25;
+    letter-spacing: -0.2px;
+}
+
+.wm-section__body {
+    font-size: 0.88em;
+    line-height: 1.7;
+    color: #555555;
+    margin: 0 0 18px;
+}
+
+/* ---- BUTTONS ---- */
+.wm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 22px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88em;
+    font-weight: 600;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    border: 1.5px solid transparent;
+}
+
+.wm-btn--primary {
+    background: #111111;
+    color: #EEEEEE;
+    border-color: #111111;
+}
+
+.wm-btn--primary:hover {
+    background: #333333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.wm-btn--ghost {
+    background: transparent;
+    color: #333333;
+    border-color: #bbbbbb;
+}
+
+.wm-btn--ghost:hover {
+    border-color: #555555;
+    transform: translateY(-2px);
+}
+
+.wm-btn--large {
+    padding: 14px 30px;
+    font-size: 0.95em;
+}
+
+/* ---- GRID ---- */
+.wm-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.wm-grid--2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.wm-grid--1 {
+    grid-template-columns: 1fr;
+}
+
+/* Exposure row — wraps naturally */
+.wm-grid--exposure {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+}
+
+.wm-exposure__arrow-cell {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+/* ---- CARDS ---- */
+.wm-card {
+    background: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+.wm-card strong {
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #111111;
+    line-height: 1.3;
+}
+
+.wm-card span {
+    font-size: 0.76em;
+    color: #666666;
+    line-height: 1.5;
+}
+
+/* Interactive zoom effect */
+.wm-card--interactive {
+    cursor: default;
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow 0.22s ease,
+                border-color 0.18s ease;
+}
+
+.wm-card--interactive:hover,
+.wm-card--interactive:active {
+    transform: scale(1.04);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+    border-color: #D6AD1A;
+}
+
+/* Gold accent card */
+.wm-card--gold {
+    border-color: #D6AD1A;
+    background: #fffbef;
+}
+
+.wm-card--gold .wm-card__icon { color: #D6AD1A; }
+.wm-card--gold strong { color: #7a5f00; }
+
+/* Card icon */
+.wm-card__icon {
+    font-size: 20px;
+    color: #D6AD1A;
+    line-height: 1;
+}
+
+.wm-card__icon--large {
+    font-size: 26px;
+}
+
+/* Resource cards — horizontal layout */
+.wm-card--resource {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    padding: 18px 16px;
+}
+
+.wm-card--resource .wm-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.wm-card--resource .wm-card__body strong { font-size: 0.9em; }
+.wm-card--resource .wm-card__body span  { font-size: 0.8em; }
+
+.wm-card__num {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 0.65em;
+    font-weight: 700;
+    color: #D6AD1A;
+    letter-spacing: 1px;
+}
+
+/* Mini cards for exposure row */
+.wm-card--mini {
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 10px;
+    border-radius: 8px;
+    min-width: 64px;
+    text-align: center;
+    gap: 4px;
+}
+
+.wm-card--mini span {
+    font-size: 0.68em;
+    font-weight: 600;
+    color: #444444;
+    text-align: center;
+}
+
+/* ---- PROGRESS PANEL ---- */
+.wm-progress-panel {
+    background: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    padding: 18px;
+}
+
+.wm-progress-item { margin-bottom: 16px; }
+.wm-progress-item:last-of-type { margin-bottom: 10px; }
+
+.wm-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+}
+
+.wm-progress-code {
+    font-size: 0.8em;
+    font-weight: 700;
+    color: #111111;
+    letter-spacing: 0.5px;
+}
+
+.wm-progress-pct {
+    font-size: 0.72em;
+    font-weight: 600;
+    color: #999999;
+}
+
+.wm-progress-track {
+    height: 5px;
+    background: #eeeeee;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.wm-progress-fill {
+    height: 100%;
+    background: #D6AD1A;
+    border-radius: 3px;
+    animation: wm-fill-in 1.2s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+@keyframes wm-fill-in {
+    from { width: 0 !important; }
+}
+
+.wm-progress-note {
+    font-size: 0.76em;
+    color: #999999;
+    margin: 4px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+    line-height: 1.5;
+}
+
+/* ---- CYCLE DIAGRAM ---- */
+.wm-cycle {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 8px;
+}
+
+/* Hide cycle on very small screens, show steps instead */
+@media (max-width: 380px) {
+    .wm-cycle { display: none; }
+    .wm-steps-mobile { display: flex; }
+}
+
+@media (min-width: 381px) {
+    .wm-steps-mobile { display: none; }
+}
+
+.wm-cycle__ring {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+}
+
+/* Centre brain */
+.wm-cycle__center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 2;
+}
+
+.wm-cycle__center i {
+    font-size: 22px;
+    color: #D6AD1A;
+}
+
+.wm-cycle__center span {
+    font-size: 0.6em;
+    font-weight: 700;
+    color: #555555;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Nodes positioned around the ring */
+.wm-cycle__node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 2;
+}
+
+.wm-cycle__node span {
+    font-size: 0.6em;
+    font-weight: 600;
+    color: #444444;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* r = 72, centre = 110 */
+/* top: (110 - 72) = 38 → y: 38, x: 110 */
+.wm-cycle__node--top    { top: 0px;   left: 50%; transform: translateX(-50%); }
+.wm-cycle__node--right  { top: 50%;  right: -4px; transform: translateY(-50%); }
+.wm-cycle__node--bottom-right { bottom: 6px; right: 12px; }
+.wm-cycle__node--bottom-left  { bottom: 6px; left:  12px; }
+.wm-cycle__node--left   { top: 50%;  left: -4px; transform: translateY(-50%); }
+
+.wm-cycle__bubble {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1.5px solid #d8d8d8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #555555;
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+    cursor: default;
+}
+
+.wm-cycle__bubble:hover {
+    transform: scale(1.18);
+    border-color: #D6AD1A;
+    box-shadow: 0 4px 10px rgba(214,173,26,0.25);
+}
+
+.wm-cycle__bubble--gold {
+    background: #D6AD1A;
+    border-color: #D6AD1A;
+    color: #222222;
+}
+
+/* ---- STEPS (mobile fallback) ---- */
+.wm-steps-mobile {
+    flex-direction: column;
+    gap: 0;
+}
+
+.wm-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 13px 0;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.wm-step:last-child { border-bottom: none; }
+
+.wm-step__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    border: 1px solid #d8d8d8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #555555;
+    flex-shrink: 0;
+}
+
+.wm-step__icon--gold {
+    background: #D6AD1A;
+    border-color: #D6AD1A;
+    color: #222222;
+}
+
+.wm-step__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.wm-step__body strong {
+    font-size: 0.88em;
+    font-weight: 700;
+    color: #111111;
+}
+
+.wm-step__body span {
+    font-size: 0.78em;
+    color: #777777;
+    line-height: 1.5;
+}
+
+/* ---- FINAL CTA ---- */
+.wm-cta-section {
+    padding: 30px 0 14px;
+    text-align: center;
+}
+
+.wm-cta-section__heading {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.45em;
+    font-weight: 400;
+    color: #111111;
+    margin: 0 0 8px;
+    text-align: center;
+    line-height: 1.3;
+    letter-spacing: -0.2px;
+}
+
+.wm-cta-section__sub {
+    font-size: 0.86em;
+    color: #666666;
+    margin: 0 0 18px;
+}
+
+/* ---- FADE IN ---- */
+.wm-hero,
+.wm-section,
+.wm-cta-section {
+    animation: wm-fade-in 0.45s ease-out both;
+}
+
+@keyframes wm-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
 
 {% endblock %}
