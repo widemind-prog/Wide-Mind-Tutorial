@@ -1,47 +1,45 @@
-/* ===================== DARK THEME CORE ===================== */
+/* ===================== DARK THEME ===================== */
 
-[data-theme="dark"] {
-    background-color: #0f1113;
-    color: #e8e8e8;
-    box-sizing: border-box;
-}
-
-[data-theme="dark"], 
-[data-theme="dark"] * {
-    box-sizing: border-box;
-}
-
-/* Page background */
 [data-theme="dark"] body {
-    background: #0f1113;
-    color: #e8e8e8;
-    font-family: 'Poppins', sans-serif;
-    text-align: left;
+  background: #111111;
+  color: #EEEEEE;
 }
 
-/* Force readable text */
+[data-theme="dark"] body::before {
+  opacity: 0.03;
+}
+
+/* ===================== TYPOGRAPHY ===================== */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: #EEEEEE;
+}
+
+[data-theme="dark"] p { color: #cccccc; }
+
 [data-theme="dark"] p,
 [data-theme="dark"] span,
 [data-theme="dark"] li,
-[data-theme="dark"] label {
-    color: #f2f2f2;
+[data-theme="dark"] label { color: #cccccc; }
+
+/* ===================== HEADER ===================== */
+[data-theme="dark"] .site-header {
+  background: #111111;
+  border-bottom-color: #2a2a2a;
 }
 
-/* ===================== MAIN CONTENT ===================== */
+[data-theme="dark"] #notification-bell { color: #EEEEEE; }
 
+/* ===================== MAIN CONTENT ===================== */
 [data-theme="dark"] main.content {
-    background: #14181b;
-    padding: 24px 18px;
-    max-width: 420px;
-    width: 95%;
-    margin: 0 auto;
-    border-radius: 18px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    animation: content-fade-in 0.9s ease-out both;
+  background: transparent;
 }
 
 /* ===================== CARDS ===================== */
-
 [data-theme="dark"] .hero-description,
 [data-theme="dark"] .account-box,
 [data-theme="dark"] .courses-box,
@@ -50,17 +48,11 @@
 [data-theme="dark"] .message-box,
 [data-theme="dark"] .courses-list,
 [data-theme="dark"] .add-course {
-    background: #1d2226;
-    border: 1px solid #2a2f34;
-    border-radius: 18px;
-    padding: 26px 28px;
-    max-width: 100%;
-    width: 95%;
-    margin: 0 auto 20px;
-    color: #e0e0e0;
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #EEEEEE;
 }
 
-/* Card text */
 [data-theme="dark"] .hero-description p,
 [data-theme="dark"] .account-box p,
 [data-theme="dark"] .courses-box p,
@@ -69,434 +61,269 @@
 [data-theme="dark"] .message-box p,
 [data-theme="dark"] .courses-list p,
 [data-theme="dark"] .add-course p {
-    color: #e0e0e0;
-    font-size: 1.05em;
-    line-height: 1.75;
-}
-
-/* ===================== HEADINGS ===================== */
-
-[data-theme="dark"] h1,
-[data-theme="dark"] h2,
-[data-theme="dark"] h3,
-[data-theme="dark"] h4,
-[data-theme="dark"] h5,
-[data-theme="dark"] h6 {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    line-height: 1.2;
-    margin-bottom: 0.5em;
-    font-family: 'Poppins', sans-serif;
-    color: #d4af37;
-    text-align: center;
-}
-
-/* ===================== HERO ===================== */
-
-[data-theme="dark"] .hero {
-    text-align: center;
-    padding: 20px 10px 10px;
-    margin-bottom: 20px;
-}
-
-[data-theme="dark"] .hero h1 {
-    font-size: 2.4em;
-    font-weight: 900;
-    letter-spacing: 1.5px;
-}
-
-[data-theme="dark"] .hero p {
-    font-size: 1.1em;
-    opacity: 0.9;
+  color: #cccccc;
 }
 
 /* ===================== BUTTONS ===================== */
-
 [data-theme="dark"] button,
-[data-theme="dark"] .btn,
-[data-theme="dark"] .btn-pay-now {
-    border-radius: 6px;
-    font-weight: 600;
-    padding: 10px 20px;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.25s ease, box-shadow 0.4s ease;
+[data-theme="dark"] .btn {
+  background: #EEEEEE;
+  color: #222222;
 }
 
-[data-theme="dark"] .btn-primary {
-    background: linear-gradient(135deg, #2a6b2a, #3c9c3c, #2a6b2a);
-    color: #f0e6d2;
-}
-
-[data-theme="dark"] .btn-secondary {
-    background: linear-gradient(135deg, #d4af37, #f1e5ac, #b8962e);
-    color: #fff;
-}
-
+[data-theme="dark"] button:hover,
 [data-theme="dark"] .btn:hover {
-    transform: scale(1.04);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  background: #ffffff;
 }
 
-[data-theme="dark"] .btn:active {
-    transform: scale(0.98);
+[data-theme="dark"] .cta-buttons .btn.primary {
+  background: #EEEEEE;
+  color: #222222;
+  border-color: #EEEEEE;
 }
+
+[data-theme="dark"] .cta-buttons .btn.secondary {
+  background: transparent;
+  color: #EEEEEE;
+  border-color: #EEEEEE;
+}
+
+[data-theme="dark"] .btn-pay-now {
+  background: #D6AD1A;
+  color: #111111;
+}
+
+[data-theme="dark"] .btn-pay-now:hover { background: #b8962e; }
+
+[data-theme="dark"] .back-login-btn {
+  background: #EEEEEE;
+  color: #222222;
+}
+
+[data-theme="dark"] .back-login-btn:hover { background: #ffffff; }
 
 /* ===================== FORMS ===================== */
-
 [data-theme="dark"] form {
-    max-width: 340px;
-    width: 95%;
-    margin: 15px auto;
-    background: #161a1d;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  background: #1a1a1a;
+  border-color: #2a2a2a;
 }
 
 [data-theme="dark"] input,
 [data-theme="dark"] textarea,
 [data-theme="dark"] select {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    background-color: #111315;
-    border-radius: 5px;
-    border: 1px solid #333;
-    font-family: 'Poppins', sans-serif;
-    color: #ffffff;
+  background: #111111;
+  border-color: #333333;
+  color: #EEEEEE;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  border-color: #D6AD1A;
 }
 
 [data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder {
-    color: #888;
-}
+[data-theme="dark"] textarea::placeholder { color: #555555; }
 
-/* ===================== ADMIN STATS ===================== */
-
-[data-theme="dark"] .stat-card {
-    background: #1d2226;
-    border: 1px solid #2a2f34;
-}
-
-[data-theme="dark"] .stat-card h3 {
-    color: #aaa;
-}
+[data-theme="dark"] label { color: #888888; }
 
 /* ===================== TOAST ===================== */
-
 [data-theme="dark"] .toast,
 [data-theme="dark"] .admin-toast {
-    background: #1d2226;
-    border-left: 4px solid #d4af37;
-    color: #e0e0e0;
+  background: #1a1a1a;
+  color: #EEEEEE;
+  border-left-color: #D6AD1A;
 }
 
-/* ===================== FOOTER ===================== */
-
-[data-theme="dark"] .site-footer {
-    background: #0c0e10;
-    border-top: 2px solid #d4af37;
-    color: #bfbfbf;
-    max-width: 360px;
-    margin: 0 auto;
-    padding: 15px 10px;
+/* ===================== FLASH ===================== */
+[data-theme="dark"] .flash.info {
+  background: #D6AD1A;
+  color: #111111;
 }
 
-[data-theme="dark"] .site-footer a {
-    color: #d4af37;
-}
-
-/* ===================== RESPONSIVE ===================== */
-
-@media (max-width: 768px) {
-    [data-theme="dark"] .account-box,
-    [data-theme="dark"] .courses-box,
-    [data-theme="dark"] form {
-        width: 95%;
-        padding: 15px;
-    }
-
-    [data-theme="dark"] main.content {
-        padding: 15px;
-    }
-
-    [data-theme="dark"] .hero h1 {
-        font-size: 1.8em;
-    }
-
-    [data-theme="dark"] .hero p {
-        font-size: 0.95em;
-    }
-}
-
-/* ===================== ANIMATIONS ===================== */
-
-@keyframes content-fade-in {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ===================== DARK THEME NOTIFICATIONS ===================== */
-
-[data-theme="dark"] .notification-wrapper {
-    position: relative;
-    margin-left: auto;
-}
-
-[data-theme="dark"] #notification-bell {
-    font-size: 20px;
-    cursor: pointer;
-    position: relative;
-    color: #e8e8e8;
-}
-
-/* Badge */
+/* ===================== NOTIFICATIONS ===================== */
 [data-theme="dark"] .notif-badge {
-    position: absolute;
-    top: -6px;
-    right: -8px;
-    background: #b91c1c; /* deeper crimson for dark */
-    color: #ffffff;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 50px;
-    box-shadow: 0 0 0 2px #0f1113; /* blends with dark bg */
+  background: #c0392b;
+  box-shadow: 0 0 0 2px #111111;
 }
 
-/* Dropdown Panel */
 [data-theme="dark"] .notif-dropdown {
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    width: 360px;
-    max-height: 500px;
-    overflow-y: auto;
-    background: #1d2226;
-    border: 1px solid #2a2f34;
-    border-radius: 14px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    z-index: 999999;
-    transform: translateY(-10px);
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.25s ease;
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 
-/* Active state */
-[data-theme="dark"] .notif-dropdown.active {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* Notification Items */
 [data-theme="dark"] .notif-item {
-    padding: 12px;
-    border-bottom: 1px solid #2a2f34;
-    cursor: pointer;
-    transition: background 0.2s ease;
+  border-bottom-color: #222222;
 }
 
-[data-theme="dark"] .notif-item:hover {
-    background: #23282d;
-}
+[data-theme="dark"] .notif-item:hover { background: #222222; }
 
-/* Unread state */
 [data-theme="dark"] .notif-item.unread {
-    background: #2a1414; /* subtle dark red tint */
-    border-left: 4px solid #b91c1c;
+  background: #1e1a0a;
+  border-left-color: #D6AD1A;
 }
 
-/* Title */
-[data-theme="dark"] .notif-item h4 {
-    margin: 0 0 4px;
-    font-size: 14px;
-    color: #f2f2f2;
+[data-theme="dark"] .notif-item h4 { color: #EEEEEE; }
+[data-theme="dark"] .notif-item p  { color: #cccccc; }
+[data-theme="dark"] .notif-item small { color: #666666; }
+
+@media (max-width: 480px) {
+  [data-theme="dark"] .notif-dropdown {
+    position: fixed;
+    right: 0; top: 0;
+    height: 100vh; width: 85%;
+    border-radius: 0;
+    transform: translateX(100%);
+  }
+  [data-theme="dark"] .notif-dropdown.active {
+    transform: translateX(0);
+  }
 }
 
-/* Message */
-[data-theme="dark"] .notif-item p {
-    margin: 0 0 4px;
-    font-size: 13px;
-    color: #d0d0d0;
+/* ===================== MESSAGE BOX ===================== */
+[data-theme="dark"] .message-box {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
 }
 
-/* Timestamp */
-[data-theme="dark"] .notif-item small {
-    color: #9a9a9a;
-    font-size: 11px;
+[data-theme="dark"] .message-box.unread {
+  background: #1e1212;
+  border-left-color: #c0392b;
 }
 
-/* ===================== MOBILE ===================== */
+/* ===================== ADMIN DASHBOARD ===================== */
+[data-theme="dark"] .dashboard-title { color: #EEEEEE; }
+[data-theme="dark"] .dashboard-subtitle { color: #888888; }
 
-@media (max-width: 768px) {
-    [data-theme="dark"] .notif-dropdown {
-        position: fixed;
-        right: 0;
-        top: 0;
-        height: 100vh;
-        width: 85%;
-        border-radius: 0;
-        transform: translateX(100%);
-    }
-
-    [data-theme="dark"] .notif-dropdown.active {
-        transform: translateX(0);
-    }
-}/* ===================== BOTTOM TAB BAR ===================== */
-
-[data-theme="dark"] .bottom-tab-bar {
-    background: #1a1a1a;
-    border-top-color: #2a2f34;
+[data-theme="dark"] .dashboard-box {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #EEEEEE;
 }
 
-[data-theme="dark"] .tab-item {
-    color: #666;
+[data-theme="dark"] .dashboard-box:hover { border-color: #D6AD1A; }
+
+[data-theme="dark"] .admin-box {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
 }
 
-[data-theme="dark"] .tab-item.active {
-    color: #d4af37;
+/* ===================== STAT CARDS ===================== */
+[data-theme="dark"] .stat-card {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
 }
 
-/* ===================== LOGIN DRAWER ===================== */
+[data-theme="dark"] .stat-card:hover { border-color: #D6AD1A; }
+[data-theme="dark"] .stat-card h3 { color: #888888; }
+[data-theme="dark"] .stat-card p  { color: #EEEEEE; }
+[data-theme="dark"] .stat-card.paid p    { color: #4caf50; }
+[data-theme="dark"] .stat-card.unpaid p  { color: #ef5350; }
+[data-theme="dark"] .stat-card.suspended p { color: #D6AD1A; }
 
-[data-theme="dark"] .login-drawer {
-    background: #1d2226;
-    border-top: 1px solid #2a2f34;
+[data-theme="dark"] a.stat-card {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #EEEEEE;
 }
 
-[data-theme="dark"] .login-drawer h3 {
-    color: #d4af37;
+[data-theme="dark"] a.stat-card h3 { color: #888888; }
+
+/* ===================== COURSES LIST ===================== */
+[data-theme="dark"] .courses-box li,
+[data-theme="dark"] .courses-list li,
+[data-theme="dark"] .admin-list li {
+  border-bottom-color: #2a2a2a;
+  color: #EEEEEE;
 }
 
-[data-theme="dark"] .login-drawer p {
-    color: #aaa;
-}
-
-[data-theme="dark"] .drawer-handle {
-    background: #444;
-}
-
-/* ===================== SETTINGS PAGE ===================== */
-
-/* Profile card */
-[data-theme="dark"] [style*="background:#fffaf0"],
-[data-theme="dark"] [style*="background: #fffaf0"] {
-    background: #1d2226 !important;
-    border-color: #2a2f34 !important;
-}
-
-/* Menu rows */
-[data-theme="dark"] [style*="background:#fff"],
-[data-theme="dark"] [style*="background: #fff"] {
-    background: #1d2226 !important;
-    border-color: #2a2f34 !important;
-}
-
-[data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #f0e6d2"] {
-    border-bottom-color: #2a2f34 !important;
-}
-
-/* All inline dark text — make readable on dark backgrounds */
-[data-theme="dark"] [style*="color:#3c2f1f"],
-[data-theme="dark"] [style*="color: #3c2f1f"] {
-    color: #e0e0e0 !important;
-}
-
-[data-theme="dark"] [style*="color:#555"],
-[data-theme="dark"] [style*="color: #555"] {
-    color: #aaa !important;
-}
-
-[data-theme="dark"] [style*="color:#777"],
-[data-theme="dark"] [style*="color: #777"] {
-    color: #888 !important;
-}
-
-[data-theme="dark"] [style*="color:#888"],
-[data-theme="dark"] [style*="color: #888"] {
-    color: #777 !important;
-}
-
-[data-theme="dark"] [style*="color:#aaa"],
-[data-theme="dark"] [style*="color: #aaa"] {
-    color: #666 !important;
-}
-
-/* Chevron arrows */
-[data-theme="dark"] [style*="color:#ccc"],
-[data-theme="dark"] [style*="color: #ccc"] {
-    color: #444 !important;
-}
-
-/* ===================== COURSES PAGE CARDS ===================== */
-
-[data-theme="dark"] [style*="background:#fff;"],
-[data-theme="dark"] [style*="background: #fff;"],
-[data-theme="dark"] [style*="background:#ffffff"],
-[data-theme="dark"] [style*="background: #ffffff"] {
-    background: #1d2226 !important;
-    border-color: #2a2f34 !important;
-}
-
-[data-theme="dark"] [style*="color:#3c2f1f"] {
-    color: #e0e0e0 !important;
-}
-
-/* ===================== USER CARD (admin pages) ===================== */
-
+/* ===================== USER CARD ===================== */
 [data-theme="dark"] .user-card {
-    background: #1d2226;
-    border: 1px solid #2a2f34;
-    color: #e0e0e0;
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #EEEEEE;
 }
 
 [data-theme="dark"] .user-card strong,
-[data-theme="dark"] .user-card small {
-    color: #e0e0e0;
+[data-theme="dark"] .user-card small { color: #EEEEEE; }
+
+/* ===================== BOTTOM TAB BAR ===================== */
+[data-theme="dark"] .bottom-tab-bar {
+  background: #111111;
+  border-top-color: #2a2a2a;
 }
 
-/* ===================== STAT CARDS (clickable links) ===================== */
+[data-theme="dark"] .tab-item { color: #555555; }
+[data-theme="dark"] .tab-item.active { color: #D6AD1A; }
 
-[data-theme="dark"] a.stat-card {
-    background: #1d2226;
-    border-color: #2a2f34;
-    color: #e0e0e0;
+/* ===================== SCROLL NAV ===================== */
+[data-theme="dark"] #scroll-track { background: #2a2a2a; }
+[data-theme="dark"] #page-scroll-nav button {
+  background: #2a2a2a;
+  color: #EEEEEE;
+}
+[data-theme="dark"] #page-scroll-nav button:hover { background: #444444; }
+
+/* ===================== FOOTER ===================== */
+[data-theme="dark"] .site-footer {
+  background: #0a0a0a;
+  border-top: 1px solid #2a2a2a;
+  color: #EEEEEE;
 }
 
-[data-theme="dark"] a.stat-card h3 {
-    color: #aaa;
+[data-theme="dark"] .site-footer a { color: #EEEEEE; }
+[data-theme="dark"] .site-footer a:hover { color: #D6AD1A; }
+[data-theme="dark"] .settings-footer { color: #555555; }
+
+/* ===================== INLINE STYLE OVERRIDES ===================== */
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#fffaf0"],
+[data-theme="dark"] [style*="background: #fffaf0"],
+[data-theme="dark"] [style*="background:#fff8e1"],
+[data-theme="dark"] [style*="background: #fff8e1"] {
+  background: #1a1a1a !important;
+  border-color: #2a2a2a !important;
 }
 
-/* ===================== SETTINGS FOOTER ===================== */
+[data-theme="dark"] [style*="color:#3c2f1f"],
+[data-theme="dark"] [style*="color: #3c2f1f"] { color: #EEEEEE !important; }
 
-[data-theme="dark"] .settings-footer {
-    color: #555;
-}
+[data-theme="dark"] [style*="color:#555"],
+[data-theme="dark"] [style*="color: #555"] { color: #aaaaaa !important; }
 
-/* ===================== INLINE BORDER COLORS ===================== */
+[data-theme="dark"] [style*="color:#777"],
+[data-theme="dark"] [style*="color: #777"] { color: #888888 !important; }
+
+[data-theme="dark"] [style*="color:#888"],
+[data-theme="dark"] [style*="color: #888"] { color: #777777 !important; }
+
+[data-theme="dark"] [style*="color:#aaa"],
+[data-theme="dark"] [style*="color: #aaa"] { color: #666666 !important; }
+
+[data-theme="dark"] [style*="color:#ccc"],
+[data-theme="dark"] [style*="color: #ccc"] { color: #444444 !important; }
 
 [data-theme="dark"] [style*="border:1px solid #e6d8b5"],
-[data-theme="dark"] [style*="border: 1px solid #e6d8b5"] {
-    border-color: #2a2f34 !important;
-}
+[data-theme="dark"] [style*="border: 1px solid #e6d8b5"] { border-color: #2a2a2a !important; }
+
+[data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #f0e6d2"] { border-bottom-color: #2a2a2a !important; }
 
 [data-theme="dark"] [style*="border-top:1px solid #e6d8b5"],
-[data-theme="dark"] [style*="border-top: 1px solid #e6d8b5"] {
-    border-top-color: #2a2f34 !important;
-}
+[data-theme="dark"] [style*="border-top: 1px solid #e6d8b5"] { border-top-color: #2a2a2a !important; }
 
-/* ===================== PROFILE CARD INNER BORDER ===================== */
+[data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #eee"] { border-bottom-color: #2a2a2a !important; }
 
-[data-theme="dark"] [style*="border-top:1px solid #e6d8b5"] {
-    border-top-color: #2a2f34 !important;
-}
+/* ===================== TOGGLE PASSWORD ===================== */
+[data-theme="dark"] .toggle-password-icon { color: #888888; }
 
-/* ===================== NOTIF DROPDOWN ON DARK ===================== */
-
-[data-theme="dark"] .notif-dropdown {
-    background: #1d2226;
+/* ===================== ANIMATIONS ===================== */
+@keyframes content-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
