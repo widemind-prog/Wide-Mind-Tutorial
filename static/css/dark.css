@@ -1,7 +1,14 @@
 /* ===================== DARK THEME ===================== */
 
+/* Dark background goes on html (not body), so body::before pseudo-element
+   (which carries the background image at z-index: -1) can show through.
+   This mirrors the same fix applied in main.css for light mode. */
+html[data-theme="dark"] {
+  background-color: #111111;
+}
+
 [data-theme="dark"] body {
-  background: #111111;
+  background: transparent;
   color: #EEEEEE;
 }
 
