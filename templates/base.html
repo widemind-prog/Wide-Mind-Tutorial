@@ -229,6 +229,26 @@
         }
         .wm-sidebar__links a:hover { background: #f7f7f7; color: #111111; }
 
+        .wm-sidebar__footer {
+            margin-top: auto;
+            padding: 16px 18px;
+            border-top: 1px solid #eeeeee;
+        }
+        .wm-sidebar__footer .cta-buttons {
+            flex-direction: column;
+            flex-wrap: nowrap;
+            gap: 8px;
+            margin-top: 0;
+        }
+        .wm-sidebar__footer .cta-buttons .btn {
+            width: 100%;
+        }
+
+        body.dark .wm-sidebar__footer { border-top-color: #2a2a2a; }
+        @media (prefers-color-scheme: dark) {
+            .wm-sidebar__footer { border-top-color: #2a2a2a; }
+        }
+
         body.dark .wm-sidebar-toggle { color: #EEEEEE; }
         body.dark .wm-sidebar { background: #1a1a1a; border-right-color: #2a2a2a; }
         body.dark .wm-sidebar__header { border-bottom-color: #2a2a2a; color: #EEEEEE; }
@@ -295,6 +315,12 @@
         <a href="/privacy"><i class="fa-solid fa-shield-halved"></i>Privacy</a>
         <a href="/contact"><i class="fa-solid fa-envelope"></i>Contact</a>
     </nav>
+    <div class="wm-sidebar__footer">
+        <div class="cta-buttons">
+            <a href="/register-page" class="btn primary">Sign Up</a>
+            <a href="/login-page" class="btn secondary">Login</a>
+        </div>
+    </div>
 </aside>
 {% endif %}
 
