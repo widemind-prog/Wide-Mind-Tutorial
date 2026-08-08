@@ -7,17 +7,23 @@
 }
 
 /* ===================== BASE ===================== */
-html, body {
+/* background-color is on html so the body::before pseudo-element (which
+   carries the skeletal background image, defined in base.html so Flask's
+   url_for resolves the path) can sit at z-index:-1 and show through.
+   body is transparent so it doesn't block the pseudo-element. */
+html {
+  background-color: #EEEEEE;
+}
+
+body {
   margin: 0;
   padding: 0;
   font-family: 'Montserrat', 'Poppins', sans-serif;
-  background-color: #EEEEEE;
+  background-color: transparent;
   color: #222222;
   text-align: left;
   min-height: 100vh;
 }
-
-/* Background handled in base.html via url_for for correct Flask path resolution */
 
 /* ===================== TYPOGRAPHY ===================== */
 h1, h2, h3, h4, h5, h6 {
