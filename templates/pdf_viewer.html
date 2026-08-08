@@ -188,12 +188,11 @@
     /* The actual canvas — never set width/height via CSS, only via JS */
     #pdfCanvas {
       display: block;
-      width: 100%;          /* CSS display width — controlled by JS */
+      width: 100%;
       height: auto;
       box-shadow: 0 8px 40px rgba(0,0,0,0.6);
       border-radius: 4px;
       background: #fff;
-      /* NO transition on opacity here — handled manually */
     }
 
     /* Page-turn loading shimmer */
@@ -307,8 +306,8 @@
     }
     .arrow-btn:hover { background: #2a2a2e; color: var(--text); }
 
-    /* ── SWIPE HINT (mobile) ── */
-    #swipeHint {
+    /* ── NAV HINT (mobile only) ── */
+    #navHint {
       font-size: 11px;
       color: #444;
       text-align: center;
@@ -316,7 +315,7 @@
       letter-spacing: 0.05em;
     }
 
-    @media (min-width: 600px) { #swipeHint { display: none; } }
+    @media (min-width: 600px) { #navHint { display: none; } }
   </style>
 </head>
 
@@ -372,7 +371,8 @@
     </div>
   </div>
 
-  <div id="swipeHint">← swipe to change pages →</div>
+  <!-- Updated hint: swipe thumbnails, tap to change page -->
+  <div id="navHint">pinch to zoom · tap thumbnail to change page</div>
 </div>
 
 <!-- PDF.js -->
@@ -395,13 +395,11 @@ let pdfDoc      = null;
 let currentPage = 1;
 let totalPages  = 0;
 let isRendering = false;
-let pendingPage = null;         // queued page if a render is in progress
-let zoomLevel   = 1.0;          // user zoom multiplier
+let pendingPage = null;
+let zoomLevel   = 1.0;
 const MIN_ZOOM  = 0.5;
 const MAX_ZOOM  = 3.0;
 
-// Cache: stores rendered ImageBitmap objects (lossless, no toDataURL())
-// Key: `${pageNum}_${zoomLevel}`
 const renderCache = new Map();
 
 /* ============================================================
@@ -456,7 +454,7 @@ loadingLbl.textContent = "Connecting…";
 
 const loadTask = pdfjsLib.getDocument({
   url: pdfUrl,
-  rangeChunkSize: 131072,   // 128 KB chunks
+  rangeChunkSize: 131072,
   disableAutoFetch: false,
   disableStream: false,
   cMapUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/",
@@ -485,7 +483,7 @@ loadTask.promise
   .then(() => {
     hideOverlay();
     buildThumbnails();
-    warmCache(2);   // preload next page
+    warmCache(2);
   })
   .catch(err => {
     console.error("PDF load error:", err);
@@ -498,7 +496,6 @@ loadTask.promise
 function renderPage(num, isFirst = false) {
   return new Promise((resolve, reject) => {
 
-    // If already rendering, queue this page and resolve immediately
     if (isRendering) {
       pendingPage = num;
       resolve();
@@ -510,7 +507,6 @@ function renderPage(num, isFirst = false) {
 
     const cacheKey = `${num}_${zoomLevel.toFixed(2)}`;
 
-    // ── Cache HIT: draw the stored ImageBitmap directly (lossless) ──
     if (renderCache.has(cacheKey)) {
       const { bitmap, cssW, cssH } = renderCache.get(cacheKey);
       canvas.width  = bitmap.width;
@@ -523,23 +519,19 @@ function renderPage(num, isFirst = false) {
       return;
     }
 
-    // ── Cache MISS: render via PDF.js ──
     pdfDoc.getPage(num).then(page => {
       const dpr = window.devicePixelRatio || 1;
 
-      // Fit to viewport width, then apply user zoom
       const containerW = Math.min(window.innerWidth - 24, 836);
       const baseViewport = page.getViewport({ scale: 1 });
       const fitScale    = containerW / baseViewport.width;
-      const finalScale  = fitScale * zoomLevel * dpr;   // multiply by DPR for crispness
+      const finalScale  = fitScale * zoomLevel * dpr;
 
       const viewport = page.getViewport({ scale: finalScale });
 
-      // Set canvas PHYSICAL size = pixel-perfect
       canvas.width  = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
 
-      // Set canvas CSS size = display size (divided by DPR)
       const cssW = Math.floor(viewport.width / dpr);
       const cssH = Math.floor(viewport.height / dpr);
       canvas.style.width  = cssW + "px";
@@ -548,16 +540,14 @@ function renderPage(num, isFirst = false) {
       const renderCtx = { canvasContext: ctx, viewport };
 
       page.render(renderCtx).promise.then(() => {
-        // Store lossless ImageBitmap in cache
         createImageBitmap(canvas).then(bitmap => {
           renderCache.set(cacheKey, { bitmap, cssW, cssH });
-          // Limit cache size to avoid memory bloat
           if (renderCache.size > 20) {
             const firstKey = renderCache.keys().next().value;
             renderCache.get(firstKey).bitmap.close();
             renderCache.delete(firstKey);
           }
-        }).catch(() => {}); // createImageBitmap optional — just skip if unsupported
+        }).catch(() => {});
 
         finishRender(num);
         resolve();
@@ -581,7 +571,6 @@ function finishRender(num) {
   pageLoader.classList.remove("show");
   updateUI();
 
-  // If a page was queued while we were rendering, render it now
   if (pendingPage !== null && pendingPage !== currentPage) {
     const next = pendingPage;
     pendingPage = null;
@@ -597,7 +586,6 @@ function warmCache(pageNum) {
   const cacheKey = `${pageNum}_${zoomLevel.toFixed(2)}`;
   if (renderCache.has(cacheKey)) return;
 
-  // Render off-screen into a temp canvas (full quality)
   pdfDoc.getPage(pageNum).then(page => {
     const dpr         = window.devicePixelRatio || 1;
     const containerW  = Math.min(window.innerWidth - 24, 836);
@@ -635,7 +623,7 @@ function updateUI() {
 }
 
 /* ============================================================
-   NAVIGATION
+   NAVIGATION — buttons and thumbnails only; no swipe on canvas
    ============================================================ */
 function goTo(num) {
   if (!pdfDoc || num < 1 || num > totalPages) return;
@@ -657,7 +645,6 @@ function applyZoom(delta) {
   ));
   if (next === zoomLevel) return;
   zoomLevel = next;
-  // Clear cache for the new zoom level (old zoom bitmaps are stale)
   renderCache.clear();
   renderPage(currentPage);
 }
@@ -665,8 +652,13 @@ function applyZoom(delta) {
 zoomInBtn.onclick  = () => applyZoom(+0.25);
 zoomOutBtn.onclick = () => applyZoom(-0.25);
 
-// Pinch-to-zoom
+/* ============================================================
+   TOUCH — pinch-to-zoom on canvas only; no swipe page navigation
+   Swipe on the canvas pans/scrolls the page naturally via the
+   browser's default scroll behaviour — no interference here.
+   ============================================================ */
 let pinchDist = null;
+
 canvas.addEventListener("touchstart", e => {
   if (e.touches.length === 2) {
     pinchDist = Math.hypot(
@@ -676,7 +668,7 @@ canvas.addEventListener("touchstart", e => {
   }
 }, { passive: true });
 
-canvas.addEventListener("touchend", e => { pinchDist = null; }, { passive: true });
+canvas.addEventListener("touchend", () => { pinchDist = null; }, { passive: true });
 
 canvas.addEventListener("touchmove", e => {
   if (e.touches.length !== 2 || !pinchDist) return;
@@ -690,30 +682,15 @@ canvas.addEventListener("touchmove", e => {
   }
 }, { passive: true });
 
-// Mouse wheel zoom (Ctrl + scroll)
+/* ============================================================
+   MOUSE WHEEL ZOOM (Ctrl/Cmd + scroll)
+   ============================================================ */
 window.addEventListener("wheel", e => {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault();
     applyZoom(e.deltaY < 0 ? 0.25 : -0.25);
   }
 }, { passive: false });
-
-/* ============================================================
-   SWIPE NAVIGATION (mobile)
-   ============================================================ */
-let touchStartX = null;
-document.addEventListener("touchstart", e => {
-  if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
-}, { passive: true });
-
-document.addEventListener("touchend", e => {
-  if (touchStartX === null || e.touches.length > 0) return;
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  touchStartX = null;
-  if (Math.abs(dx) > 60) {
-    dx < 0 ? goTo(currentPage + 1) : goTo(currentPage - 1);
-  }
-}, { passive: true });
 
 /* ============================================================
    KEYBOARD
@@ -735,7 +712,6 @@ function buildThumbnails() {
   thumbTrack.innerHTML = "";
 
   for (let i = 1; i <= totalPages; i++) {
-    // Placeholder first
     const wrapper = document.createElement("div");
     wrapper.className = "thumb-item";
     wrapper.dataset.page = i;
@@ -752,7 +728,6 @@ function buildThumbnails() {
     wrapper.onclick = () => goTo(i);
     thumbTrack.appendChild(wrapper);
 
-    // Staggered render — don't block the main thread
     setTimeout(() => renderThumb(i, wrapper, ph), i * 60);
   }
 
@@ -784,7 +759,6 @@ function highlightThumb(num) {
   thumbTrack.querySelectorAll(".thumb-item").forEach(el => {
     el.classList.toggle("active", parseInt(el.dataset.page) === num);
   });
-  // Scroll active thumb into view
   const active = thumbTrack.querySelector(".thumb-item.active");
   if (active) active.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
 }
@@ -798,7 +772,7 @@ thumbRight.onclick = () => thumbTrack.scrollBy({ left:  180, behavior: "smooth" 
 canvas.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ============================================================
-   RESIZE — re-render if window resizes (orientation change etc.)
+   RESIZE
    ============================================================ */
 let resizeTimer;
 window.addEventListener("resize", () => {
