@@ -1,393 +1,303 @@
-/* ===================== DARK THEME ===================== */
+/* =================================================================
+   DARK THEME — Wide Mind Tutorial
+   Driven entirely by prefers-color-scheme. No JS toggle needed.
+   !important is used only on .wm-* homepage classes because their
+   <style> block sits in the template body (after this file in the
+   cascade), so same-specificity rules there would otherwise win.
+================================================================= */
 
-/* Dark background goes on html (not body), so body::before pseudo-element
-   (which carries the background image at z-index: -1) can show through.
-   This mirrors the same fix applied in main.css for light mode. */
-html[data-theme="dark"] {
-  background-color: #111111;
-}
+@media (prefers-color-scheme: dark) {
 
-[data-theme="dark"] body {
+/* ===================== BASE ===================== */
+html { background-color: #111111; }
+
+body {
   background: transparent;
   color: #EEEEEE;
 }
 
-[data-theme="dark"] body::before {
-  opacity: 0.03;
-}
+/* !important needed — base.html inline <style> in <head> comes after
+   this file and sets opacity: 0.07 at the same specificity */
+body::before { opacity: 0.03 !important; }
 
 /* ===================== TYPOGRAPHY ===================== */
-[data-theme="dark"] h1,
-[data-theme="dark"] h2,
-[data-theme="dark"] h3,
-[data-theme="dark"] h4,
-[data-theme="dark"] h5,
-[data-theme="dark"] h6 {
-  color: #EEEEEE;
-}
-
-[data-theme="dark"] p { color: #cccccc; }
-
-[data-theme="dark"] p,
-[data-theme="dark"] span,
-[data-theme="dark"] li,
-[data-theme="dark"] label { color: #cccccc; }
+h1, h2, h3, h4, h5, h6 { color: #EEEEEE; }
+p, span, li, label { color: #cccccc; }
 
 /* ===================== HEADER ===================== */
-[data-theme="dark"] .site-header {
+.site-header {
   background: #111111;
   border-bottom-color: #2a2a2a;
 }
 
-[data-theme="dark"] #notification-bell { color: #EEEEEE; }
+#notification-bell { color: #EEEEEE; }
 
 /* ===================== MAIN CONTENT ===================== */
-[data-theme="dark"] main.content {
-  background: transparent;
-}
+main.content { background: transparent; }
 
 /* ===================== CARDS ===================== */
-[data-theme="dark"] .hero-description,
-[data-theme="dark"] .account-box,
-[data-theme="dark"] .courses-box,
-[data-theme="dark"] .dashboard-box,
-[data-theme="dark"] .admin-box,
-[data-theme="dark"] .message-box,
-[data-theme="dark"] .courses-list,
-[data-theme="dark"] .add-course {
+.hero-description,
+.account-box,
+.courses-box,
+.dashboard-box,
+.admin-box,
+.message-box,
+.courses-list,
+.add-course {
   background: #1a1a1a;
   border-color: #2a2a2a;
   color: #EEEEEE;
 }
 
-[data-theme="dark"] .hero-description p,
-[data-theme="dark"] .account-box p,
-[data-theme="dark"] .courses-box p,
-[data-theme="dark"] .dashboard-box p,
-[data-theme="dark"] .admin-box p,
-[data-theme="dark"] .message-box p,
-[data-theme="dark"] .courses-list p,
-[data-theme="dark"] .add-course p {
-  color: #cccccc;
-}
+.hero-description p,
+.account-box p,
+.courses-box p,
+.dashboard-box p,
+.admin-box p,
+.message-box p,
+.courses-list p,
+.add-course p { color: #cccccc; }
 
 /* ===================== BUTTONS ===================== */
-[data-theme="dark"] button,
-[data-theme="dark"] .btn {
-  background: #EEEEEE;
-  color: #222222;
-}
+button, .btn { background: #EEEEEE; color: #222222; }
+button:hover, .btn:hover { background: #ffffff; }
 
-[data-theme="dark"] button:hover,
-[data-theme="dark"] .btn:hover {
-  background: #ffffff;
-}
+.cta-buttons .btn.primary { background: #EEEEEE; color: #222222; border-color: #EEEEEE; }
+.cta-buttons .btn.secondary { background: transparent; color: #EEEEEE; border-color: #EEEEEE; }
 
-[data-theme="dark"] .cta-buttons .btn.primary {
-  background: #EEEEEE;
-  color: #222222;
-  border-color: #EEEEEE;
-}
+.btn-pay-now { background: #D6AD1A; color: #111111; }
+.btn-pay-now:hover { background: #b8962e; }
 
-[data-theme="dark"] .cta-buttons .btn.secondary {
-  background: transparent;
-  color: #EEEEEE;
-  border-color: #EEEEEE;
-}
-
-[data-theme="dark"] .btn-pay-now {
-  background: #D6AD1A;
-  color: #111111;
-}
-
-[data-theme="dark"] .btn-pay-now:hover { background: #b8962e; }
-
-[data-theme="dark"] .back-login-btn {
-  background: #EEEEEE;
-  color: #222222;
-}
-
-[data-theme="dark"] .back-login-btn:hover { background: #ffffff; }
+.back-login-btn { background: #EEEEEE; color: #222222; }
+.back-login-btn:hover { background: #ffffff; }
 
 /* ===================== FORMS ===================== */
-[data-theme="dark"] form {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-}
+form { background: #1a1a1a; border-color: #2a2a2a; }
 
-[data-theme="dark"] input,
-[data-theme="dark"] textarea,
-[data-theme="dark"] select {
+input, textarea, select {
   background: #111111;
   border-color: #333333;
   color: #EEEEEE;
 }
 
-[data-theme="dark"] input:focus,
-[data-theme="dark"] textarea:focus,
-[data-theme="dark"] select:focus {
-  border-color: #D6AD1A;
-}
-
-[data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder { color: #555555; }
-
-[data-theme="dark"] label { color: #888888; }
+input:focus, textarea:focus, select:focus { border-color: #D6AD1A; }
+input::placeholder, textarea::placeholder { color: #555555; }
+label { color: #888888; }
 
 /* ===================== TOAST ===================== */
-[data-theme="dark"] .toast,
-[data-theme="dark"] .admin-toast {
+.toast, .admin-toast {
   background: #1a1a1a;
   color: #EEEEEE;
   border-left-color: #D6AD1A;
 }
 
 /* ===================== FLASH ===================== */
-[data-theme="dark"] .flash.info {
-  background: #D6AD1A;
-  color: #111111;
-}
+.flash.info { background: #D6AD1A; color: #111111; }
 
 /* ===================== NOTIFICATIONS ===================== */
-[data-theme="dark"] .notif-badge {
-  background: #c0392b;
-  box-shadow: 0 0 0 2px #111111;
-}
+.notif-badge { background: #c0392b; box-shadow: 0 0 0 2px #111111; }
 
-[data-theme="dark"] .notif-dropdown {
+.notif-dropdown {
   background: #1a1a1a;
   border-color: #2a2a2a;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 
-[data-theme="dark"] .notif-item {
-  border-bottom-color: #222222;
-}
-
-[data-theme="dark"] .notif-item:hover { background: #222222; }
-
-[data-theme="dark"] .notif-item.unread {
-  background: #1e1a0a;
-  border-left-color: #D6AD1A;
-}
-
-[data-theme="dark"] .notif-item h4 { color: #EEEEEE; }
-[data-theme="dark"] .notif-item p  { color: #cccccc; }
-[data-theme="dark"] .notif-item small { color: #666666; }
+.notif-item { border-bottom-color: #222222; }
+.notif-item:hover { background: #222222; }
+.notif-item.unread { background: #1e1a0a; border-left-color: #D6AD1A; }
+.notif-item h4 { color: #EEEEEE; }
+.notif-item p  { color: #cccccc; }
+.notif-item small { color: #666666; }
 
 @media (max-width: 480px) {
-  [data-theme="dark"] .notif-dropdown {
+  .notif-dropdown {
     position: fixed;
     right: 0; top: 0;
     height: 100vh; width: 85%;
     border-radius: 0;
     transform: translateX(100%);
   }
-  [data-theme="dark"] .notif-dropdown.active {
-    transform: translateX(0);
-  }
+  .notif-dropdown.active { transform: translateX(0); }
 }
 
 /* ===================== MESSAGE BOX ===================== */
-[data-theme="dark"] .message-box {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-}
-
-[data-theme="dark"] .message-box.unread {
-  background: #1e1212;
-  border-left-color: #c0392b;
-}
+.message-box { background: #1a1a1a; border-color: #2a2a2a; }
+.message-box.unread { background: #1e1212; border-left-color: #c0392b; }
 
 /* ===================== ADMIN DASHBOARD ===================== */
-[data-theme="dark"] .dashboard-title { color: #EEEEEE; }
-[data-theme="dark"] .dashboard-subtitle { color: #888888; }
+.dashboard-title { color: #EEEEEE; }
+.dashboard-subtitle { color: #888888; }
 
-[data-theme="dark"] .dashboard-box {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-  color: #EEEEEE;
-}
-
-[data-theme="dark"] .dashboard-box:hover { border-color: #D6AD1A; }
-
-[data-theme="dark"] .admin-box {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-}
+.dashboard-box { background: #1a1a1a; border-color: #2a2a2a; color: #EEEEEE; }
+.dashboard-box:hover { border-color: #D6AD1A; }
+.admin-box { background: #1a1a1a; border-color: #2a2a2a; }
 
 /* ===================== STAT CARDS ===================== */
-[data-theme="dark"] .stat-card {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-}
-
-[data-theme="dark"] .stat-card:hover { border-color: #D6AD1A; }
-[data-theme="dark"] .stat-card h3 { color: #888888; }
-[data-theme="dark"] .stat-card p  { color: #EEEEEE; }
-[data-theme="dark"] .stat-card.paid p    { color: #4caf50; }
-[data-theme="dark"] .stat-card.unpaid p  { color: #ef5350; }
-[data-theme="dark"] .stat-card.suspended p { color: #D6AD1A; }
-
-[data-theme="dark"] a.stat-card {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-  color: #EEEEEE;
-}
-
-[data-theme="dark"] a.stat-card h3 { color: #888888; }
+.stat-card { background: #1a1a1a; border-color: #2a2a2a; }
+.stat-card:hover { border-color: #D6AD1A; }
+.stat-card h3 { color: #888888; }
+.stat-card p  { color: #EEEEEE; }
+.stat-card.paid p    { color: #4caf50; }
+.stat-card.unpaid p  { color: #ef5350; }
+.stat-card.suspended p { color: #D6AD1A; }
+a.stat-card { background: #1a1a1a; border-color: #2a2a2a; color: #EEEEEE; }
+a.stat-card h3 { color: #888888; }
 
 /* ===================== COURSES LIST ===================== */
-[data-theme="dark"] .courses-box li,
-[data-theme="dark"] .courses-list li,
-[data-theme="dark"] .admin-list li {
-  border-bottom-color: #2a2a2a;
-  color: #EEEEEE;
-}
+.courses-box li,
+.courses-list li,
+.admin-list li { border-bottom-color: #2a2a2a; color: #EEEEEE; }
 
 /* ===================== USER CARD ===================== */
-[data-theme="dark"] .user-card {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
-  color: #EEEEEE;
-}
-
-[data-theme="dark"] .user-card strong,
-[data-theme="dark"] .user-card small { color: #EEEEEE; }
+.user-card { background: #1a1a1a; border-color: #2a2a2a; color: #EEEEEE; }
+.user-card strong, .user-card small { color: #EEEEEE; }
 
 /* ===================== BOTTOM TAB BAR ===================== */
-[data-theme="dark"] .bottom-tab-bar {
-  background: #111111;
-  border-top-color: #2a2a2a;
-}
-
-[data-theme="dark"] .tab-item { color: #555555; }
-[data-theme="dark"] .tab-item.active { color: #D6AD1A; }
+.bottom-tab-bar { background: #111111; border-top-color: #2a2a2a; }
+.tab-item { color: #555555; }
+.tab-item.active { color: #D6AD1A; }
 
 /* ===================== SCROLL NAV ===================== */
-[data-theme="dark"] #scroll-track { background: #2a2a2a; }
-[data-theme="dark"] #page-scroll-nav button {
-  background: #2a2a2a;
-  color: #EEEEEE;
-}
-[data-theme="dark"] #page-scroll-nav button:hover { background: #444444; }
+#scroll-track { background: #2a2a2a; }
+#page-scroll-nav button { background: #2a2a2a; color: #EEEEEE; }
+#page-scroll-nav button:hover { background: #444444; }
 
 /* ===================== FOOTER ===================== */
-[data-theme="dark"] .site-footer {
-  background: #0a0a0a;
-  border-top: 1px solid #2a2a2a;
-  color: #EEEEEE;
-}
+.site-footer { background: #0a0a0a; border-top: 1px solid #2a2a2a; color: #EEEEEE; }
+.site-footer a { color: #EEEEEE; }
+.site-footer a:hover { color: #D6AD1A; }
+.settings-footer { color: #555555; }
 
-[data-theme="dark"] .site-footer a { color: #EEEEEE; }
-[data-theme="dark"] .site-footer a:hover { color: #D6AD1A; }
-[data-theme="dark"] .settings-footer { color: #555555; }
+/* ===================== TOGGLE PASSWORD ===================== */
+.toggle-password-icon { color: #888888; }
 
 /* ===================== INLINE STYLE OVERRIDES ===================== */
 
-/* --- Light background catches --- */
-[data-theme="dark"] [style*="background:#fff"],
-[data-theme="dark"] [style*="background: #fff"],
-[data-theme="dark"] [style*="background:#ffffff"],
-[data-theme="dark"] [style*="background: #ffffff"],
-[data-theme="dark"] [style*="background:white"],
-[data-theme="dark"] [style*="background: white"],
-[data-theme="dark"] [style*="background:#fffaf0"],
-[data-theme="dark"] [style*="background: #fffaf0"],
-[data-theme="dark"] [style*="background:#fff8e1"],
-[data-theme="dark"] [style*="background: #fff8e1"],
-[data-theme="dark"] [style*="background:#fffbef"],
-[data-theme="dark"] [style*="background: #fffbef"],
-[data-theme="dark"] [style*="background:#fafafa"],
-[data-theme="dark"] [style*="background: #fafafa"],
-[data-theme="dark"] [style*="background:#f5f5f5"],
-[data-theme="dark"] [style*="background: #f5f5f5"],
-[data-theme="dark"] [style*="background:#f7f7f7"],
-[data-theme="dark"] [style*="background: #f7f7f7"],
-[data-theme="dark"] [style*="background:#f0f0f0"],
-[data-theme="dark"] [style*="background: #f0f0f0"],
-[data-theme="dark"] [style*="background:#EEEEEE"],
-[data-theme="dark"] [style*="background: #EEEEEE"],
-[data-theme="dark"] [style*="background:#eeeeee"],
-[data-theme="dark"] [style*="background: #eeeeee"],
-[data-theme="dark"] [style*="background:#e8e8e8"],
-[data-theme="dark"] [style*="background: #e8e8e8"],
-[data-theme="dark"] [style*="background:#f5f0e8"],
-[data-theme="dark"] [style*="background: #f5f0e8"],
-[data-theme="dark"] [style*="background:#f0ebe0"],
-[data-theme="dark"] [style*="background: #f0ebe0"],
-[data-theme="dark"] [style*="background:#ede8df"],
-[data-theme="dark"] [style*="background: #ede8df"],
-[data-theme="dark"] [style*="background:#f5f2ec"],
-[data-theme="dark"] [style*="background: #f5f2ec"],
-[data-theme="dark"] [style*="background:#fdf6e3"],
-[data-theme="dark"] [style*="background: #fdf6e3"] {
+/* Light backgrounds */
+[style*="background:#fff"],        [style*="background: #fff"],
+[style*="background:#ffffff"],     [style*="background: #ffffff"],
+[style*="background:white"],       [style*="background: white"],
+[style*="background:#fffaf0"],     [style*="background: #fffaf0"],
+[style*="background:#fff8e1"],     [style*="background: #fff8e1"],
+[style*="background:#fffbef"],     [style*="background: #fffbef"],
+[style*="background:#fafafa"],     [style*="background: #fafafa"],
+[style*="background:#f5f5f5"],     [style*="background: #f5f5f5"],
+[style*="background:#f7f7f7"],     [style*="background: #f7f7f7"],
+[style*="background:#f0f0f0"],     [style*="background: #f0f0f0"],
+[style*="background:#EEEEEE"],     [style*="background: #EEEEEE"],
+[style*="background:#eeeeee"],     [style*="background: #eeeeee"],
+[style*="background:#e8e8e8"],     [style*="background: #e8e8e8"],
+[style*="background:#f5f0e8"],     [style*="background: #f5f0e8"],
+[style*="background:#f0ebe0"],     [style*="background: #f0ebe0"],
+[style*="background:#f5f3ee"],     [style*="background: #f5f3ee"],
+[style*="background:#fdf6e3"],     [style*="background: #fdf6e3"] {
   background: #1a1a1a !important;
   border-color: #2a2a2a !important;
 }
 
-/* --- Dark text color catches (text written for light backgrounds) --- */
-[data-theme="dark"] [style*="color:#222"],
-[data-theme="dark"] [style*="color: #222"],
-[data-theme="dark"] [style*="color:#222222"],
-[data-theme="dark"] [style*="color: #222222"],
-[data-theme="dark"] [style*="color:#333"],
-[data-theme="dark"] [style*="color: #333"],
-[data-theme="dark"] [style*="color:#333333"],
-[data-theme="dark"] [style*="color: #333333"],
-[data-theme="dark"] [style*="color:#3c2f1f"],
-[data-theme="dark"] [style*="color: #3c2f1f"],
-[data-theme="dark"] [style*="color:#000"],
-[data-theme="dark"] [style*="color: #000"],
-[data-theme="dark"] [style*="color:#000000"],
-[data-theme="dark"] [style*="color: #000000"],
-[data-theme="dark"] [style*="color:black"],
-[data-theme="dark"] [style*="color: black"] { color: #EEEEEE !important; }
+/* Dark text written for light backgrounds */
+[style*="color:#222"],     [style*="color: #222"],
+[style*="color:#222222"],  [style*="color: #222222"],
+[style*="color:#333"],     [style*="color: #333"],
+[style*="color:#333333"],  [style*="color: #333333"],
+[style*="color:#111"],     [style*="color: #111"],
+[style*="color:#111111"],  [style*="color: #111111"],
+[style*="color:#000"],     [style*="color: #000"],
+[style*="color:black"],    [style*="color: black"],
+[style*="color:#3c2f1f"],  [style*="color: #3c2f1f"] { color: #EEEEEE !important; }
 
-[data-theme="dark"] [style*="color:#555"],
-[data-theme="dark"] [style*="color: #555"],
-[data-theme="dark"] [style*="color:#555555"],
-[data-theme="dark"] [style*="color: #555555"] { color: #aaaaaa !important; }
+[style*="color:#555"],     [style*="color: #555"],
+[style*="color:#555555"],  [style*="color: #555555"] { color: #aaaaaa !important; }
 
-[data-theme="dark"] [style*="color:#777"],
-[data-theme="dark"] [style*="color: #777"] { color: #888888 !important; }
+[style*="color:#777"],     [style*="color: #777"] { color: #888888 !important; }
+[style*="color:#888"],     [style*="color: #888"] { color: #777777 !important; }
+[style*="color:#aaa"],     [style*="color: #aaa"] { color: #666666 !important; }
+[style*="color:#ccc"],     [style*="color: #ccc"] { color: #444444 !important; }
 
-[data-theme="dark"] [style*="color:#888"],
-[data-theme="dark"] [style*="color: #888"] { color: #777777 !important; }
+/* Borders */
+[style*="border:1px solid #e6d8b5"],  [style*="border: 1px solid #e6d8b5"],
+[style*="border:1px solid #eeeeee"],  [style*="border: 1px solid #eeeeee"],
+[style*="border:1px solid #eee"],     [style*="border: 1px solid #eee"],
+[style*="border:1px solid #d4d4d4"],  [style*="border: 1px solid #d4d4d4"],
+[style*="border:1px solid #d8d8d8"],  [style*="border: 1px solid #d8d8d8"],
+[style*="border:1px solid #cccccc"],  [style*="border: 1px solid #cccccc"] { border-color: #2a2a2a !important; }
 
-[data-theme="dark"] [style*="color:#aaa"],
-[data-theme="dark"] [style*="color: #aaa"] { color: #666666 !important; }
+[style*="border-bottom:1px solid #f0e6d2"], [style*="border-bottom: 1px solid #f0e6d2"],
+[style*="border-bottom:1px solid #eee"],    [style*="border-bottom: 1px solid #eee"],
+[style*="border-bottom:1px solid #eeeeee"], [style*="border-bottom: 1px solid #eeeeee"],
+[style*="border-bottom:1px solid #f0f0f0"], [style*="border-bottom: 1px solid #f0f0f0"] { border-bottom-color: #2a2a2a !important; }
 
-[data-theme="dark"] [style*="color:#ccc"],
-[data-theme="dark"] [style*="color: #ccc"] { color: #444444 !important; }
+[style*="border-top:1px solid #e6d8b5"], [style*="border-top: 1px solid #e6d8b5"],
+[style*="border-top:1px solid #e0ddd7"], [style*="border-top: 1px solid #e0ddd7"] { border-top-color: #2a2a2a !important; }
 
-/* --- Border catches --- */
-[data-theme="dark"] [style*="border:1px solid #e6d8b5"],
-[data-theme="dark"] [style*="border: 1px solid #e6d8b5"],
-[data-theme="dark"] [style*="border:1px solid #eeeeee"],
-[data-theme="dark"] [style*="border: 1px solid #eeeeee"],
-[data-theme="dark"] [style*="border:1px solid #eee"],
-[data-theme="dark"] [style*="border: 1px solid #eee"],
-[data-theme="dark"] [style*="border:1px solid #d4d4d4"],
-[data-theme="dark"] [style*="border: 1px solid #d4d4d4"],
-[data-theme="dark"] [style*="border:1px solid #cccccc"],
-[data-theme="dark"] [style*="border: 1px solid #cccccc"] { border-color: #2a2a2a !important; }
 
-[data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #f0e6d2"],
-[data-theme="dark"] [style*="border-bottom:1px solid #eee"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #eee"],
-[data-theme="dark"] [style*="border-bottom:1px solid #eeeeee"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #eeeeee"] { border-bottom-color: #2a2a2a !important; }
+/* ===================== HOMEPAGE (.wm-*) ===================== */
+/* !important throughout — the template <style> block in the body
+   appears after this file in the cascade and would otherwise win
+   on same-specificity rules. */
 
-[data-theme="dark"] [style*="border-top:1px solid #e6d8b5"],
-[data-theme="dark"] [style*="border-top: 1px solid #e6d8b5"] { border-top-color: #2a2a2a !important; }
+.wm-homepage { color: #EEEEEE; }
 
-/* ===================== TOGGLE PASSWORD ===================== */
-[data-theme="dark"] .toggle-password-icon { color: #888888; }
+/* Hero */
+.wm-hero { border-bottom-color: #2a2a2a !important; }
+.wm-hero__heading { color: #EEEEEE !important; }
+.wm-hero__sub, .wm-trial-note { color: #999999 !important; }
 
-/* ===================== ANIMATIONS ===================== */
-@keyframes content-fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Buttons */
+.wm-btn--primary { background: #EEEEEE !important; color: #111111 !important; border-color: #EEEEEE !important; }
+.wm-btn--primary:hover { background: #ffffff !important; }
+.wm-btn--ghost { background: transparent !important; color: #EEEEEE !important; border-color: #444444 !important; }
+.wm-btn--ghost:hover { border-color: #888888 !important; }
+
+/* Section structure */
+.wm-section { border-bottom-color: #2a2a2a !important; }
+
+.wm-section--tinted {
+  background: #161616 !important;
+  border-top-color: #2a2a2a !important;
+  border-bottom-color: #2a2a2a !important;
 }
+
+.wm-section__heading,
+.wm-cta-section__heading { color: #EEEEEE !important; }
+
+.wm-section__body,
+.wm-cta-section__sub { color: #999999 !important; }
+
+/* Cards — all white surfaces go dark */
+.wm-card { background: #1a1a1a !important; border-color: #2a2a2a !important; }
+.wm-card strong { color: #EEEEEE !important; }
+.wm-card span { color: #888888 !important; }
+.wm-card--interactive:hover,
+.wm-card--interactive:active { border-color: #D6AD1A !important; box-shadow: 0 6px 18px rgba(0,0,0,0.4) !important; }
+
+/* Gold card exception — keep the warm dark tint */
+.wm-card--gold { background: #1e1a0a !important; border-color: #D6AD1A !important; }
+.wm-card--gold strong { color: #D6AD1A !important; }
+
+.wm-card--mini span { color: #aaaaaa !important; }
+
+/* Progress panel */
+.wm-progress-panel { background: #1a1a1a !important; border-color: #2a2a2a !important; }
+.wm-progress-code { color: #EEEEEE !important; }
+.wm-progress-track { background: #2a2a2a !important; }
+.wm-progress-note { color: #666666 !important; border-top-color: #2a2a2a !important; }
+
+/* Cycle diagram */
+.wm-cycle__bubble { background: #1a1a1a !important; border-color: #333333 !important; color: #EEEEEE !important; }
+.wm-cycle__bubble:hover { border-color: #D6AD1A !important; box-shadow: 0 4px 10px rgba(214,173,26,0.25) !important; }
+.wm-cycle__bubble--gold { background: #D6AD1A !important; border-color: #D6AD1A !important; color: #222222 !important; }
+.wm-cycle__center span, .wm-cycle__node span { color: #888888 !important; }
+
+/* Steps — mobile fallback */
+.wm-step { border-bottom-color: #2a2a2a !important; }
+.wm-step__icon { background: #222222 !important; border-color: #333333 !important; color: #EEEEEE !important; }
+.wm-step__icon--gold { background: #D6AD1A !important; border-color: #D6AD1A !important; color: #222222 !important; }
+.wm-step__body strong { color: #EEEEEE !important; }
+.wm-step__body span { color: #888888 !important; }
+
+/* Final CTA */
+.wm-cta-section { border-top-color: #2a2a2a; }
+
+} /* end @media (prefers-color-scheme: dark) */
