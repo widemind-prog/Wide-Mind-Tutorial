@@ -284,23 +284,70 @@ html[data-theme="dark"] {
 [data-theme="dark"] .settings-footer { color: #555555; }
 
 /* ===================== INLINE STYLE OVERRIDES ===================== */
+
+/* --- Light background catches --- */
 [data-theme="dark"] [style*="background:#fff"],
 [data-theme="dark"] [style*="background: #fff"],
 [data-theme="dark"] [style*="background:#ffffff"],
 [data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:white"],
+[data-theme="dark"] [style*="background: white"],
 [data-theme="dark"] [style*="background:#fffaf0"],
 [data-theme="dark"] [style*="background: #fffaf0"],
 [data-theme="dark"] [style*="background:#fff8e1"],
-[data-theme="dark"] [style*="background: #fff8e1"] {
+[data-theme="dark"] [style*="background: #fff8e1"],
+[data-theme="dark"] [style*="background:#fffbef"],
+[data-theme="dark"] [style*="background: #fffbef"],
+[data-theme="dark"] [style*="background:#fafafa"],
+[data-theme="dark"] [style*="background: #fafafa"],
+[data-theme="dark"] [style*="background:#f5f5f5"],
+[data-theme="dark"] [style*="background: #f5f5f5"],
+[data-theme="dark"] [style*="background:#f7f7f7"],
+[data-theme="dark"] [style*="background: #f7f7f7"],
+[data-theme="dark"] [style*="background:#f0f0f0"],
+[data-theme="dark"] [style*="background: #f0f0f0"],
+[data-theme="dark"] [style*="background:#EEEEEE"],
+[data-theme="dark"] [style*="background: #EEEEEE"],
+[data-theme="dark"] [style*="background:#eeeeee"],
+[data-theme="dark"] [style*="background: #eeeeee"],
+[data-theme="dark"] [style*="background:#e8e8e8"],
+[data-theme="dark"] [style*="background: #e8e8e8"],
+[data-theme="dark"] [style*="background:#f5f0e8"],
+[data-theme="dark"] [style*="background: #f5f0e8"],
+[data-theme="dark"] [style*="background:#f0ebe0"],
+[data-theme="dark"] [style*="background: #f0ebe0"],
+[data-theme="dark"] [style*="background:#ede8df"],
+[data-theme="dark"] [style*="background: #ede8df"],
+[data-theme="dark"] [style*="background:#f5f2ec"],
+[data-theme="dark"] [style*="background: #f5f2ec"],
+[data-theme="dark"] [style*="background:#fdf6e3"],
+[data-theme="dark"] [style*="background: #fdf6e3"] {
   background: #1a1a1a !important;
   border-color: #2a2a2a !important;
 }
 
+/* --- Dark text color catches (text written for light backgrounds) --- */
+[data-theme="dark"] [style*="color:#222"],
+[data-theme="dark"] [style*="color: #222"],
+[data-theme="dark"] [style*="color:#222222"],
+[data-theme="dark"] [style*="color: #222222"],
+[data-theme="dark"] [style*="color:#333"],
+[data-theme="dark"] [style*="color: #333"],
+[data-theme="dark"] [style*="color:#333333"],
+[data-theme="dark"] [style*="color: #333333"],
 [data-theme="dark"] [style*="color:#3c2f1f"],
-[data-theme="dark"] [style*="color: #3c2f1f"] { color: #EEEEEE !important; }
+[data-theme="dark"] [style*="color: #3c2f1f"],
+[data-theme="dark"] [style*="color:#000"],
+[data-theme="dark"] [style*="color: #000"],
+[data-theme="dark"] [style*="color:#000000"],
+[data-theme="dark"] [style*="color: #000000"],
+[data-theme="dark"] [style*="color:black"],
+[data-theme="dark"] [style*="color: black"] { color: #EEEEEE !important; }
 
 [data-theme="dark"] [style*="color:#555"],
-[data-theme="dark"] [style*="color: #555"] { color: #aaaaaa !important; }
+[data-theme="dark"] [style*="color: #555"],
+[data-theme="dark"] [style*="color:#555555"],
+[data-theme="dark"] [style*="color: #555555"] { color: #aaaaaa !important; }
 
 [data-theme="dark"] [style*="color:#777"],
 [data-theme="dark"] [style*="color: #777"] { color: #888888 !important; }
@@ -314,17 +361,27 @@ html[data-theme="dark"] {
 [data-theme="dark"] [style*="color:#ccc"],
 [data-theme="dark"] [style*="color: #ccc"] { color: #444444 !important; }
 
+/* --- Border catches --- */
 [data-theme="dark"] [style*="border:1px solid #e6d8b5"],
-[data-theme="dark"] [style*="border: 1px solid #e6d8b5"] { border-color: #2a2a2a !important; }
+[data-theme="dark"] [style*="border: 1px solid #e6d8b5"],
+[data-theme="dark"] [style*="border:1px solid #eeeeee"],
+[data-theme="dark"] [style*="border: 1px solid #eeeeee"],
+[data-theme="dark"] [style*="border:1px solid #eee"],
+[data-theme="dark"] [style*="border: 1px solid #eee"],
+[data-theme="dark"] [style*="border:1px solid #d4d4d4"],
+[data-theme="dark"] [style*="border: 1px solid #d4d4d4"],
+[data-theme="dark"] [style*="border:1px solid #cccccc"],
+[data-theme="dark"] [style*="border: 1px solid #cccccc"] { border-color: #2a2a2a !important; }
 
 [data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #f0e6d2"] { border-bottom-color: #2a2a2a !important; }
+[data-theme="dark"] [style*="border-bottom: 1px solid #f0e6d2"],
+[data-theme="dark"] [style*="border-bottom:1px solid #eee"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #eee"],
+[data-theme="dark"] [style*="border-bottom:1px solid #eeeeee"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #eeeeee"] { border-bottom-color: #2a2a2a !important; }
 
 [data-theme="dark"] [style*="border-top:1px solid #e6d8b5"],
 [data-theme="dark"] [style*="border-top: 1px solid #e6d8b5"] { border-top-color: #2a2a2a !important; }
-
-[data-theme="dark"] [style*="border-bottom:1px solid #f0e6d2"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #eee"] { border-bottom-color: #2a2a2a !important; }
 
 /* ===================== TOGGLE PASSWORD ===================== */
 [data-theme="dark"] .toggle-password-icon { color: #888888; }
