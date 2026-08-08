@@ -130,6 +130,120 @@
             color: #aaa;
             margin-top: 30px;
         }
+
+        /* =============================================
+           SIDEBAR NAV — logged-out users only.
+           Rendered only when there is no session["user_id"],
+           so it shows on index, login, register, forgot-password,
+           etc., and disappears the moment a user is signed in
+           (replaced by the notification bell in the same spot).
+        ============================================= */
+        .wm-sidebar-toggle {
+            font-size: 20px;
+            cursor: pointer;
+            color: #555555;
+            padding: 6px;
+            background: none;
+            border: none;
+            display: block;
+            line-height: 1;
+            transition: color 0.15s ease;
+        }
+        .wm-sidebar-toggle:hover { color: #D6AD1A; }
+
+        .wm-sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        .wm-sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .wm-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 240px;
+            max-width: 80%;
+            background: #ffffff;
+            border-right: 1px solid #d4d4d4;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .wm-sidebar.active { transform: translateX(0); }
+
+        .wm-sidebar__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px;
+            border-bottom: 1px solid #eeeeee;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 1.05em;
+            color: #222222;
+        }
+
+        .wm-sidebar__close {
+            background: none;
+            border: none;
+            color: #555555;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        .wm-sidebar__close:hover { color: #D6AD1A; }
+
+        .wm-sidebar__links {
+            display: flex;
+            flex-direction: column;
+            padding: 10px 0;
+        }
+
+        .wm-sidebar__links a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 18px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #222222;
+            text-decoration: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .wm-sidebar__links a i {
+            width: 16px;
+            text-align: center;
+            color: #D6AD1A;
+            font-size: 0.95em;
+        }
+        .wm-sidebar__links a:hover { background: #f7f7f7; color: #111111; }
+
+        body.dark .wm-sidebar-toggle { color: #EEEEEE; }
+        body.dark .wm-sidebar { background: #1a1a1a; border-right-color: #2a2a2a; }
+        body.dark .wm-sidebar__header { border-bottom-color: #2a2a2a; color: #EEEEEE; }
+        body.dark .wm-sidebar__close { color: #888888; }
+        body.dark .wm-sidebar__links a { color: #EEEEEE; }
+        body.dark .wm-sidebar__links a:hover { background: #222222; color: #ffffff; }
+
+        @media (prefers-color-scheme: dark) {
+            .wm-sidebar-toggle { color: #EEEEEE; }
+            .wm-sidebar { background: #1a1a1a; border-right-color: #2a2a2a; }
+            .wm-sidebar__header { border-bottom-color: #2a2a2a; color: #EEEEEE; }
+            .wm-sidebar__close { color: #888888; }
+            .wm-sidebar__links a { color: #EEEEEE; }
+            .wm-sidebar__links a:hover { background: #222222; color: #ffffff; }
+        }
     </style>
 </head>
 
@@ -159,9 +273,30 @@
             <div id="notif-list"></div>
         </div>
     </div>
+{% elif not session.get("user_id") %}
+    <button id="wm-sidebar-toggle" class="wm-sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="wm-sidebar">
+        <i class="fa-solid fa-bars"></i>
+    </button>
 {% endif %}
     </div>
 </header>
+
+{% if not session.get("user_id") %}
+<div id="wm-sidebar-overlay" class="wm-sidebar-overlay"></div>
+<aside id="wm-sidebar" class="wm-sidebar" aria-hidden="true">
+    <div class="wm-sidebar__header">
+        <span>Menu</span>
+        <button id="wm-sidebar-close" class="wm-sidebar__close" aria-label="Close navigation">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    <nav class="wm-sidebar__links">
+        <a href="/about"><i class="fa-solid fa-circle-info"></i>About</a>
+        <a href="/privacy"><i class="fa-solid fa-shield-halved"></i>Privacy</a>
+        <a href="/contact"><i class="fa-solid fa-envelope"></i>Contact</a>
+    </nav>
+</aside>
+{% endif %}
 
 <main class="content">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -234,6 +369,39 @@ if (logo) {
         setTimeout(function() { logo.classList.remove("tapped"); }, 400);
     });
 }
+</script>
+
+<script>
+(function () {
+    var toggle   = document.getElementById("wm-sidebar-toggle");
+    var closeBtn = document.getElementById("wm-sidebar-close");
+    var sidebar  = document.getElementById("wm-sidebar");
+    var overlay  = document.getElementById("wm-sidebar-overlay");
+
+    if (!toggle || !sidebar || !overlay) return;
+
+    function openSidebar() {
+        sidebar.classList.add("active");
+        overlay.classList.add("active");
+        sidebar.setAttribute("aria-hidden", "false");
+        toggle.setAttribute("aria-expanded", "true");
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove("active");
+        overlay.classList.remove("active");
+        sidebar.setAttribute("aria-hidden", "true");
+        toggle.setAttribute("aria-expanded", "false");
+    }
+
+    toggle.addEventListener("click", openSidebar);
+    if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+    overlay.addEventListener("click", closeSidebar);
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeSidebar();
+    });
+})();
 </script>
 
 {% block scripts %}{% endblock %}
