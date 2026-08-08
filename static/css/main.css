@@ -17,7 +17,7 @@ html, body {
   min-height: 100vh;
 }
 
-/* Subtle background — editorial paper, not wallpaper */
+/* Skeletal background — ghosted, structural, not decorative */
 body::before {
   content: "";
   position: fixed;
@@ -25,7 +25,9 @@ body::before {
   width: 100%; height: 100%;
   background: url('../images/background-picture.png') no-repeat center center;
   background-size: cover;
-  opacity: 0.04;
+  opacity: 0.07;
+  filter: grayscale(100%) contrast(1.1);
+  mix-blend-mode: multiply;
   z-index: -1;
   pointer-events: none;
 }
