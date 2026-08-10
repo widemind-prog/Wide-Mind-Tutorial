@@ -173,6 +173,62 @@ def init_db():
         token_hash TEXT NOT NULL,
         expires_at TEXT NOT NULL,
         used INTEGER DEFAULT 0)""")
+conn.execute("""CREATE TABLE IF NOT EXISTS study_tips_subscribers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        whatsapp TEXT NOT NULL UNIQUE,
+        department TEXT,
+        level TEXT,
+        semester INTEGER,
+        preferred_categories TEXT,
+        consent INTEGER DEFAULT 1,
+        consent_at TEXT,
+        source TEXT DEFAULT 'website',
+        opted_out INTEGER DEFAULT 0,
+        opted_out_at TEXT,
+        created_at TEXT DEFAULT (datetime('now')))""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS study_tips (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        body TEXT NOT NULL,
+        category TEXT NOT NULL,
+        tip_type TEXT,
+        course_id INTEGER,
+        level TEXT,
+        semester INTEGER,
+        department TEXT,
+        source_notes TEXT,
+        is_ai_generated INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')),
+        created_by INTEGER)""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS content_index (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id INTEGER,
+        material_id INTEGER,
+        content_type TEXT,
+        content_chunk TEXT NOT NULL,
+        indexed_at TEXT DEFAULT (datetime('now')))""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS study_director_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subscriber_id INTEGER,
+        tip_id INTEGER,
+        category TEXT,
+        course_id INTEGER,
+        source_material_id INTEGER,
+        whatsapp_number TEXT,
+        message_body TEXT,
+        status TEXT DEFAULT 'queued',
+        provider_message_id TEXT,
+        failure_reason TEXT,
+        retry_count INTEGER DEFAULT 0,
+        queued_at TEXT DEFAULT (datetime('now')),
+        sent_at TEXT,
+        delivered_at TEXT)""")
     # Safe migrations for existing deployments
     migrations = [
         "ALTER TABLE users ADD COLUMN semester INTEGER DEFAULT 2",
@@ -184,6 +240,7 @@ def init_db():
         "ALTER TABLE materials ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE progress ADD COLUMN opened_at TEXT",
         "ALTER TABLE progress ADD COLUMN updated_at TEXT",
+        "ALTER TABLE materials ADD COLUMN description TEXT",
     ]
     for sql in migrations:
         try:
