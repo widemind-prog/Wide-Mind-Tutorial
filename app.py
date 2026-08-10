@@ -17,6 +17,7 @@ from backend.webhook import webhook_bp
 from backend.otp import otp_bp
 from backend.progress import progress_bp, get_trial_status
 import hashlib, random
+from backend.study_director import study_director_bp
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecret")
@@ -45,6 +46,7 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(webhook_bp)
 app.register_blueprint(otp_bp)
 app.register_blueprint(progress_bp)
+app.register_blueprint(study_director_bp)
 
 init_db()
 
