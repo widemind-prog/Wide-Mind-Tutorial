@@ -608,7 +608,63 @@ def settings():
     conn.close()
     payment_status = payment["status"] if payment else "unpaid"
     return render_template("settings.html", user=user, payment_status=payment_status)
+# =====================
+# PROFILE PAGE
+# =====================
+@app.route("/profile")
+def profile_page():
+    if "user_id" not in session:
+        return redirect("/login-page")
+    if is_admin(session["user_id"]):
+        return redirect("/admin")
 
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE id=?", (session["user_id"],))
+    user = c.fetchone()
+    if not user:
+        conn.close()
+        session.clear()
+        return redirect("/login-page")
+
+    c.execute("""
+        SELECT COALESCE(admin_override_status, status) AS payment_status
+        FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1
+    """, (session["user_id"],))
+    payment_row = c.fetchone()
+    conn.close()
+
+    payment_status = payment_row["payment_status"] if payment_row else "unpaid"
+    return render_template("profile.html", user=user, payment_status=payment_status)
+
+# =====================
+# DELETE ACCOUNT
+# =====================
+@app.route("/api/account/delete", methods=["POST"])
+def delete_account():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    user_id = session["user_id"]
+    if is_admin(user_id):
+        return jsonify({"error": "Admin accounts cannot be self-deleted"}), 403
+
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM push_subscriptions WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM notifications WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM password_resets WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM progress WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM email_otps WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM rerun_passes WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM payments WHERE user_id=?", (user_id,))
+        conn.execute("UPDATE study_tips_subscribers SET user_id=NULL WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+    except Exception as e:
+        print(f"[DELETE ACCOUNT] Failed for user {user_id}: {e}")
+        return jsonify({"error": "Deletion failed. Please try again."}), 500
+
+    session.clear()
+    return jsonify({"success": True})
 @app.route("/logout")
 def logout():
     session.clear()
