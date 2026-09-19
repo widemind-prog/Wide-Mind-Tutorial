@@ -342,7 +342,7 @@ def delete_user(user_id):
     conn = get_db()
     c = conn.cursor()
     for table in ["payments", "rerun_passes", "email_otps", "progress",
-                  "notifications", "push_subscriptions", "password_resets"]:
+                  "notifications", "push_subscriptions", "password_resets", "course_grants"]:
         c.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
     c.execute("DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
@@ -691,6 +691,7 @@ def delete_course(course_id):
     conn = get_db()
     c = conn.cursor()
     c.execute("DELETE FROM progress WHERE material_id IN (SELECT id FROM materials WHERE course_id=?)", (course_id,))
+    c.execute("DELETE FROM course_grants WHERE course_id=?", (course_id,))
     c.execute("DELETE FROM materials WHERE course_id=?", (course_id,))
     c.execute("DELETE FROM courses WHERE id=?", (course_id,))
     conn.commit()
@@ -830,3 +831,72 @@ def edit_material_duration(material_id):
     conn.close()
     flash("Duration updated.", "success")
     return redirect(f"/admin/courses/edit/{material['course_id']}")
+
+# =====================
+# COURSE GRANTS
+# =====================
+@admin_bp.route("/course-grants")
+@admin_required
+def course_grants_page():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, name, email, level, semester FROM users WHERE role!='admin' ORDER BY name ASC")
+    all_users = c.fetchall()
+    users_list = [{"id": u["id"], "name": u["name"], "email": u["email"],
+                   "level": u["level"], "semester": u["semester"]} for u in all_users]
+
+    selected_user = None
+    courses = []
+    main_paid = False
+
+    user_id = request.args.get("user_id", type=int)
+    if user_id:
+        c.execute("SELECT id, name, level, semester FROM users WHERE id=?", (user_id,))
+        selected_user = c.fetchone()
+        if selected_user:
+            c.execute("""SELECT COALESCE(admin_override_status, status) AS payment_status
+                         FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 1""", (user_id,))
+            payment = c.fetchone()
+            main_paid = bool(payment and payment["payment_status"] == "paid")
+
+            if not main_paid:
+                # Only list courses at this student's own level/semester —
+                # paying already unlocks all of those, so there's nothing
+                # left to individually grant once main_paid is true.
+                c.execute("""SELECT id, course_code, course_title FROM courses
+                             WHERE TRIM(level)=? AND semester=? ORDER BY id DESC""",
+                          (str(selected_user["level"]).strip(), selected_user["semester"]))
+                course_rows = c.fetchall()
+                c.execute("SELECT course_id, status FROM course_grants WHERE user_id=?", (user_id,))
+                grants = {g["course_id"]: g["status"] for g in c.fetchall()}
+                for course in course_rows:
+                    courses.append({
+                        "id": course["id"], "code": course["course_code"], "title": course["course_title"],
+                        "granted": grants.get(course["id"]) == "active"
+                    })
+    conn.close()
+    return render_template("admin/course_grants.html",
+                           users_json=json.dumps(users_list),
+                           selected_user=selected_user,
+                           main_paid=main_paid,
+                           courses=courses)
+
+
+@admin_bp.route("/course-grants/toggle/<int:user_id>/<int:course_id>", methods=["POST"])
+@admin_required
+def toggle_course_grant(user_id, course_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, status FROM course_grants WHERE user_id=? AND course_id=?", (user_id, course_id))
+    existing = c.fetchone()
+    if not existing:
+        c.execute("""INSERT INTO course_grants (user_id, course_id, status, granted_by)
+                     VALUES (?, ?, 'active', ?)""", (user_id, course_id, session["user_id"]))
+        new_status = "active"
+    else:
+        new_status = "revoked" if existing["status"] == "active" else "active"
+        c.execute("UPDATE course_grants SET status=? WHERE id=?", (new_status, existing["id"]))
+    conn.commit()
+    conn.close()
+    flash(f"Course access {'granted' if new_status == 'active' else 'revoked'}", "success")
+    return redirect(url_for("admin_bp.course_grants_page", user_id=user_id))
