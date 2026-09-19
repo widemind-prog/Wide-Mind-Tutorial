@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+{% block title %}Course Access Grants{% endblock %}
+
+{% block content %}
+<h2>Individual Course Access</h2>
+<p style="color:#777; font-size:14px; margin-bottom:16px;">
+    Grant a student access to one specific course, independent of their level/semester payment.
+</p>
+
+<div style="margin-bottom:20px;">
+    <label for="user-select" style="display:block; font-weight:600; margin-bottom:6px;">Student</label>
+    <select id="user-select" onchange="if(this.value) window.location='/admin/course-grants?user_id='+this.value;"
+            style="padding:10px; border-radius:8px; border:1px solid #ccc; min-width:260px;">
+        <option value="">— Select a student —</option>
+        {% set users = users_json|tojson %}
+    </select>
+</div>
+
+<script>
+    const users = {{ users_json|safe }};
+    const select = document.getElementById("user-select");
+    const selectedId = {{ selected_user.id if selected_user else "null" }};
+    users.forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u.id;
+        opt.textContent = `${u.name} — ${u.level || "N/A"}L Sem ${u.semester || ""} (${u.email})`;
+        if (selectedId === u.id) opt.selected = true;
+        select.appendChild(opt);
+    });
+</script>
+
+{% if selected_user %}
+    <h3>{{ selected_user.name }} — {{ selected_user.level }}L Semester {{ selected_user.semester }}</h3>
+
+    {% if main_paid %}
+        <p style="color:green;">This student has already paid for full access at this level — no individual grants needed.</p>
+    {% elif not courses %}
+        <p style="color:#777;">No courses found for this student's level and semester.</p>
+    {% else %}
+        <table style="width:100%; border-collapse:collapse; margin-top:12px;">
+            <thead>
+                <tr style="text-align:left; border-bottom:1px solid #ddd;">
+                    <th style="padding:8px;">Course</th>
+                    <th style="padding:8px;">Status</th>
+                    <th style="padding:8px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr style="border-bottom:1px solid #f0f0f0;">
+                    <td style="padding:8px;">{{ course.code }} — {{ course.title }}</td>
+                    <td style="padding:8px; color:{{ 'green' if course.granted else '#999' }};">
+                        {{ "Granted" if course.granted else "Not granted" }}
+                    </td>
+                    <td style="padding:8px;">
+                        <form method="POST" action="/admin/course-grants/toggle/{{ selected_user.id }}/{{ course.id }}">
+                            <button type="submit">{{ "Revoke" if course.granted else "Grant" }}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endif %}
+{% endblock %}
