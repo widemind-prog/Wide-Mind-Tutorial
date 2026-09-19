@@ -8,3 +8,4 @@ gevent-websocket
 flask-socketio
 sendgrid
 pywebpush
+packaging
