@@ -226,6 +226,15 @@ def init_db():
         queued_at TEXT DEFAULT (datetime('now')),
         sent_at TEXT,
         delivered_at TEXT)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS course_grants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        course_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'active',
+        granted_by INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(course_id) REFERENCES courses(id))""")
     # Safe migrations for existing deployments
     migrations = [
         "ALTER TABLE users ADD COLUMN semester INTEGER DEFAULT 2",
@@ -261,6 +270,16 @@ def get_trial_course_for(level, semester):
     course = c.fetchone()
     conn.close()
     return course
+def has_course_grant(user_id, course_id):
+    """True if this user has been individually granted access to this
+    specific course, independent of level/semester payment or rerun passes."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM course_grants WHERE user_id=? AND course_id=? AND status='active'",
+              (user_id, course_id))
+    result = c.fetchone()
+    conn.close()
+    return bool(result)
 def hash_password(password):
     return generate_password_hash(password)
 if __name__ == "__main__":
