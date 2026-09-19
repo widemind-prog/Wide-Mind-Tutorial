@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 from extensions import socketio
-from backend.db import init_db, get_db, is_admin, get_trial_course_for
+from backend.db import init_db, get_db, is_admin, get_trial_course_for, has_course_grant
 from backend.auth import auth_bp
 from backend.email_service import send_welcome_email, send_otp_email
 from backend.admin import admin_bp
@@ -413,6 +413,9 @@ def course_page(course_id):
             has_access = True
 
     if not has_access:
+        has_access = has_course_grant(session["user_id"], course_id)
+
+    if not has_access:
         conn.close()
         if access["state"] in ("trial", "trial_expired"):
             trial_course = access.get("trial_course") if access["state"] == "trial" else get_trial_course_for(user["level"], user["semester"])
@@ -462,6 +465,10 @@ def pdf_viewer(course_id, material_id):
         trial_id = access.get("trial_course_id")
         if trial_id and str(course_id) == str(trial_id):
             has_access = True
+
+    if not has_access:
+        has_access = has_course_grant(session["user_id"], course_id)
+
     if not has_access:
         conn.close()
         return redirect("/account")
@@ -508,17 +515,21 @@ def check_course_access(user_id, course_id):
                       (user_id, course["level"]))
             rpass = c.fetchone()
             conn.close()
-            return bool(rpass and (rpass["status"] == "paid" or rpass["admin_override_status"] == "paid"))
+            if rpass and (rpass["status"] == "paid" or rpass["admin_override_status"] == "paid"):
+                return True
+            return has_course_grant(user_id, course_id)
         conn.close()
-        return False
+        return has_course_grant(user_id, course_id)
     elif access["state"] == "trial":
         trial_id = access.get("trial_course_id")
         conn = get_db()
         c = conn.cursor()
         c.execute("SELECT course_id FROM materials WHERE id=? LIMIT 1", (course_id,))
         conn.close()
-        return trial_id and str(course_id) == str(trial_id)
-    return False
+        if trial_id and str(course_id) == str(trial_id):
+            return True
+        return has_course_grant(user_id, course_id)
+    return has_course_grant(user_id, course_id)
 
 @app.route("/stream/audio/<int:material_id>")
 def stream_audio(material_id):
@@ -657,6 +668,7 @@ def delete_account():
         conn.execute("DELETE FROM email_otps WHERE user_id=?", (user_id,))
         conn.execute("DELETE FROM rerun_passes WHERE user_id=?", (user_id,))
         conn.execute("DELETE FROM payments WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM course_grants WHERE user_id=?", (user_id,))
         conn.execute("UPDATE study_tips_subscribers SET user_id=NULL WHERE user_id=?", (user_id,))
         conn.execute("DELETE FROM users WHERE id=?", (user_id,))
     except Exception as e:
